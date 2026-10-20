@@ -153,6 +153,9 @@ introduced without replacing the workout model or synchronization core.
 - TypeScript, ESLint, and Prettier provide static and formatting checks.
 - Vitest is the unit and integration test runner.
 - Vite builds and serves the React client in development.
+- `better-sqlite3` provides synchronous transaction boundaries. Ordered
+  migrations run at startup, UUIDs and UTC timestamps use text columns, and
+  file-backed databases use WAL mode.
 
 These are implementation choices, not commitments for authentication, units,
 tenancy, or other open product questions.

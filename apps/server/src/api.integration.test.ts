@@ -1,0 +1,157 @@
+import { randomUUID } from 'node:crypto';
+
+import request from 'supertest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+
+import type { Workout } from '@spotter/shared';
+
+import { createApp } from './app.js';
+import type { AppConfig } from './config.js';
+import { openDatabase } from './database.js';
+import { SpotterStore } from './store.js';
+
+const config: AppConfig = {
+  NODE_ENV: 'test',
+  PORT: 3000,
+  DATABASE_PATH: ':memory:',
+  APP_VERSION: '0.1.0',
+  GIT_COMMIT: 'test',
+};
+
+describe('catalogue, templates, and synchronization API', () => {
+  let store: SpotterStore;
+  let app: ReturnType<typeof createApp>;
+
+  beforeEach(() => {
+    const database = openDatabase(':memory:');
+    store = new SpotterStore(database);
+    app = createApp(config, { isDatabaseReady: () => database.open, store });
+  });
+
+  afterEach(() => store.close());
+
+  it('manages catalogue records and protects dependencies', async () => {
+    const muscleId = randomUUID();
+    const exerciseId = randomUUID();
+    const templateId = randomUUID();
+
+    await request(app)
+      .post('/api/muscles')
+      .send({ id: muscleId, name: 'Chest' })
+      .expect(201);
+    await request(app)
+      .post('/api/exercises')
+      .send({
+        id: exerciseId,
+        name: 'Bench press',
+        instructions: 'Control the descent',
+        muscles: [{ muscleId, role: 'primary' }],
+      })
+      .expect(201);
+
+    const dependency = await request(app)
+      .delete(`/api/muscles/${muscleId}`)
+      .expect(409);
+    expect(dependency.body.error.code).toBe('DEPENDENCY_EXISTS');
+
+    const template = await request(app)
+      .post('/api/templates')
+      .send({
+        id: templateId,
+        name: 'Push day',
+        notes: null,
+        exercises: [{ exerciseId, notes: null, targetSets: 3, targetReps: 8 }],
+      })
+      .expect(201);
+    expect(template.body.exercises[0].exerciseName).toBe('Bench press');
+
+    const duplicate = await request(app)
+      .post(`/api/templates/${templateId}/duplicate`)
+      .expect(201);
+    expect(duplicate.body.name).toBe('Push day copy');
+
+    const reference = await request(app).get('/api/reference').expect(200);
+    expect(reference.body.changed).toBe(true);
+    expect(reference.body.templates).toHaveLength(2);
+    await request(app)
+      .get(`/api/reference?cursor=${reference.body.revision}`)
+      .expect(200)
+      .expect((response) => expect(response.body.changed).toBe(false));
+  });
+
+  it('applies a workout exactly once and preserves its exercise snapshot', async () => {
+    const exerciseId = randomUUID();
+    await request(app)
+      .post('/api/exercises')
+      .send({
+        id: exerciseId,
+        name: 'Air squat',
+        instructions: null,
+        muscles: [],
+      })
+      .expect(201);
+
+    const now = new Date().toISOString();
+    const workout: Workout = {
+      id: randomUUID(),
+      templateId: null,
+      name: 'Leg session',
+      status: 'completed',
+      startedAt: now,
+      completedAt: now,
+      notes: null,
+      updatedAt: now,
+      exercises: [
+        {
+          id: randomUUID(),
+          exerciseId,
+          exerciseName: 'Air squat',
+          position: 0,
+          notes: null,
+          targetSets: null,
+          targetReps: null,
+          sets: [
+            {
+              id: randomUUID(),
+              position: 0,
+              reps: 12,
+              weight: 0,
+              weightUnit: 'kg',
+              notes: null,
+              completed: true,
+            },
+          ],
+        },
+      ],
+    };
+    const operationId = randomUUID();
+    const body = {
+      operations: [
+        { operationId, kind: 'upsert_workout', createdAt: now, workout },
+      ],
+    };
+
+    const applied = await request(app).post('/api/sync').send(body).expect(200);
+    expect(applied.body.results[0].status).toBe('applied');
+    const replayed = await request(app)
+      .post('/api/sync')
+      .send(body)
+      .expect(200);
+    expect(replayed.body.results[0].status).toBe('duplicate');
+
+    await request(app).delete(`/api/exercises/${exerciseId}`).expect(204);
+    const history = await request(app).get('/api/workouts').expect(200);
+    expect(history.body).toHaveLength(1);
+    expect(history.body[0].exercises[0].exerciseName).toBe('Air squat');
+    expect(history.body[0].exercises[0].exerciseId).toBeNull();
+    expect(history.body[0].exercises[0].sets).toHaveLength(1);
+  });
+
+  it('returns stable validation errors', async () => {
+    const response = await request(app)
+      .post('/api/muscles')
+      .send({ name: '' })
+      .expect(400);
+    expect(response.body.error.code).toBe('VALIDATION_ERROR');
+  });
+});

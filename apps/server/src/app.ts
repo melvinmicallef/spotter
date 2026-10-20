@@ -3,11 +3,16 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import express from 'express';
+import { ZodError } from 'zod';
 
+import { createApiRouter } from './api.js';
 import type { AppConfig } from './config.js';
+import { AppError } from './errors.js';
+import type { SpotterStore } from './store.js';
 
 export interface AppDependencies {
   isDatabaseReady: () => boolean;
+  store?: SpotterStore;
 }
 
 const moduleDirectory = dirname(fileURLToPath(import.meta.url));
@@ -40,11 +45,50 @@ export function createApp(config: AppConfig, dependencies: AppDependencies) {
     });
   });
 
+  if (dependencies.store) app.use('/api', createApiRouter(dependencies.store));
+
   app.use('/api', (_request, response) => {
     response.status(404).json({
       error: { code: 'NOT_FOUND', message: 'API endpoint not found' },
     });
   });
+
+  app.use(
+    (
+      error: unknown,
+      _request: express.Request,
+      response: express.Response,
+      _next: express.NextFunction,
+    ) => {
+      void _next;
+      if (error instanceof ZodError) {
+        response.status(400).json({
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Request validation failed',
+            details: error.issues,
+          },
+        });
+        return;
+      }
+      if (error instanceof AppError) {
+        response.status(error.status).json({
+          error: {
+            code: error.code,
+            message: error.message,
+            details: error.details,
+          },
+        });
+        return;
+      }
+      console.error(
+        JSON.stringify({ level: 'error', message: 'Unhandled request error' }),
+      );
+      response.status(500).json({
+        error: { code: 'INTERNAL_ERROR', message: 'Unexpected server error' },
+      });
+    },
+  );
 
   const webDist = config.WEB_DIST_PATH
     ? resolve(config.WEB_DIST_PATH)

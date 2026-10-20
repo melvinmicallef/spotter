@@ -274,6 +274,13 @@ runner, while ESLint and Prettier provide linting and formatting. These choices
 are intentionally conventional and can be upgraded without changing product
 behavior.
 
-The SQLite driver, migration mechanism, IndexedDB wrapper, authentication
-model, units, active-workout limit, and completed-workout editing policy remain
-open until the slices that require them are implemented.
+The server uses `better-sqlite3` with small ordered migrations applied inside
+transactions at startup. UUIDs are stored as canonical text, timestamps are ISO
+8601 UTC text, foreign keys are enabled on every connection, and file-backed
+databases use WAL mode. API errors use a stable `{ error: { code, message,
+details? } }` envelope. The first migration establishes catalogue, template,
+workout, outbox-idempotency, metadata, and migration tables.
+
+The IndexedDB wrapper, authentication model, units, active-workout limit, and
+completed-workout editing policy remain open until the slices that require
+them are implemented.
