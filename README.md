@@ -4,9 +4,9 @@ Spotter is a self-hosted, installable workout-tracking PWA. It combines a
 React and TypeScript client with an Express API and SQLite database, delivered
 as a single Docker image.
 
-The project is currently specification-complete for its initial baseline but
-has not yet been scaffolded. The default branch is `develop`, and the first
-planned development release is `0.1.0`.
+The project is under active implementation on the `develop` branch. Its npm
+workspace contains the React client, Express server, and shared wire contracts.
+The first planned development release is `0.1.0`.
 
 ## Product principles
 
@@ -19,14 +19,14 @@ planned development release is `0.1.0`.
 
 ## Planned architecture
 
-| Area | Technology | Responsibility |
-| --- | --- | --- |
-| Web application | React, TypeScript, Vite | Installable PWA and workout UI |
-| Offline storage | IndexedDB | Active workouts and pending synchronization |
-| API | Express, TypeScript | Validation, persistence, and synchronization |
-| Server storage | SQLite | Canonical application data |
-| Deployment | Docker | One production image serving the API and PWA |
-| Releases | GitHub Actions, GHCR | Build images for release tags and manual runs |
+| Area            | Technology              | Responsibility                                |
+| --------------- | ----------------------- | --------------------------------------------- |
+| Web application | React, TypeScript, Vite | Installable PWA and workout UI                |
+| Offline storage | IndexedDB               | Active workouts and pending synchronization   |
+| API             | Express, TypeScript     | Validation, persistence, and synchronization  |
+| Server storage  | SQLite                  | Canonical application data                    |
+| Deployment      | Docker                  | One production image serving the API and PWA  |
+| Releases        | GitHub Actions, GHCR    | Build images for release tags and manual runs |
 
 In production, Express will serve the compiled PWA and expose the API under
 `/api`. SQLite data will live in a mounted `/data` directory so application
@@ -86,9 +86,21 @@ The following decisions are settled for the initial implementation:
 Choices explicitly listed as open in the documentation are not finalized and
 must not be silently treated as requirements.
 
-## Repository status
+## Development
 
-The application has not been scaffolded yet. The implementation order is:
+Use Node.js 20.20 or newer and npm 10 or newer:
+
+```bash
+npm ci
+npm run dev
+```
+
+The client runs on `http://localhost:5173` and proxies API requests to the
+Express server on `http://localhost:3000`. Validate the complete workspace with
+`npm run check`; build it with `npm run build`; and serve the compiled client
+and API together with `npm start`.
+
+The implementation order is:
 
 1. establish the TypeScript workspace and shared validation schemas;
 2. implement the SQLite schema and Express API;
@@ -97,8 +109,9 @@ The application has not been scaffolded yet. The implementation order is:
 5. package the application as one Docker image; and
 6. add validation and release workflows.
 
-Development, testing, and deployment commands will be added with the project
-scaffolding.
+The workspace skeleton and health/version vertical slice are implemented. The
+catalogue, templates, workout domain, and offline synchronization follow in the
+next slices.
 
 ## Continuing in a new AI chat
 

@@ -14,7 +14,7 @@ enhancement.
 Each milestone must leave the repository buildable and update documentation
 with commands and decisions that now exist in code.
 
-## Milestone 0: Workspace and executable skeleton
+## Milestone 0: Workspace and executable skeleton (implemented)
 
 ### Deliverables
 
@@ -217,18 +217,18 @@ run validation.
 
 ## Required test matrix
 
-| Area | Minimum coverage |
-| --- | --- |
+| Area             | Minimum coverage                                                            |
+| ---------------- | --------------------------------------------------------------------------- |
 | Shared contracts | Valid and invalid wire payloads; backward-compatible parsing where promised |
-| SQLite | Fresh migration, upgrade migration, foreign keys, uniqueness, transactions |
-| Catalogue | CRUD, associations, deletion dependencies, validation |
-| Templates | Ordering, duplication, snapshots, changed/deleted references |
-| Workout domain | Lifecycle, ordering, set edits, completion, history snapshots |
-| IndexedDB | Repository operations, version upgrades, atomic workout/outbox writes |
-| Synchronization | Duplicate replay, retry, partial failures, interrupted acknowledgement |
-| PWA | Offline shell, route reload, update with active workout |
-| Container | Startup, health, migrations, persistent volume, graceful stop |
-| Workflows | Normal commit does not publish; tag/manual run produces intended tags |
+| SQLite           | Fresh migration, upgrade migration, foreign keys, uniqueness, transactions  |
+| Catalogue        | CRUD, associations, deletion dependencies, validation                       |
+| Templates        | Ordering, duplication, snapshots, changed/deleted references                |
+| Workout domain   | Lifecycle, ordering, set edits, completion, history snapshots               |
+| IndexedDB        | Repository operations, version upgrades, atomic workout/outbox writes       |
+| Synchronization  | Duplicate replay, retry, partial failures, interrupted acknowledgement      |
+| PWA              | Offline shell, route reload, update with active workout                     |
+| Container        | Startup, health, migrations, persistent volume, graceful stop               |
+| Workflows        | Normal commit does not publish; tag/manual run produces intended tags       |
 
 ## Documentation required before `v0.1.0`
 

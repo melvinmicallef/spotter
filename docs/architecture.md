@@ -60,14 +60,14 @@ records queryable by application code.
 The initial client database should expose repositories rather than raw storage
 calls throughout the UI. Proposed logical stores are:
 
-| Store | Contents |
-| --- | --- |
-| `workouts` | Active and locally retained workout sessions |
-| `outbox` | Ordered, retryable synchronization operations |
-| `exercises` | Read-only cached exercise catalogue |
-| `muscles` | Read-only cached muscle catalogue |
-| `templates` | Read-only cached template snapshots |
-| `metadata` | Schema version, sync cursor, and timestamps |
+| Store       | Contents                                      |
+| ----------- | --------------------------------------------- |
+| `workouts`  | Active and locally retained workout sessions  |
+| `outbox`    | Ordered, retryable synchronization operations |
+| `exercises` | Read-only cached exercise catalogue           |
+| `muscles`   | Read-only cached muscle catalogue             |
+| `templates` | Read-only cached template snapshots           |
+| `metadata`  | Schema version, sync cursor, and timestamps   |
 
 IndexedDB schema upgrades must be versioned and tested with data from the
 previous supported version.
@@ -220,7 +220,7 @@ Image publication runs on:
 on:
   push:
     tags:
-      - "v*"
+      - 'v*'
   workflow_dispatch:
 ```
 
@@ -265,3 +265,15 @@ than copying an actively changing database file without coordination.
 - Authentication and deployment exposure expectations.
 - Required unit system and non-repetition exercise measurements.
 - Whether completed workouts can be edited offline.
+
+## Recorded implementation decisions
+
+The initial workspace uses npm 10 workspaces and supports Node.js 20.20 or
+newer. Zod owns wire-format and environment validation. Vitest is the test
+runner, while ESLint and Prettier provide linting and formatting. These choices
+are intentionally conventional and can be upgraded without changing product
+behavior.
+
+The SQLite driver, migration mechanism, IndexedDB wrapper, authentication
+model, units, active-workout limit, and completed-workout editing policy remain
+open until the slices that require them are implemented.

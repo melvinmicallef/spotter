@@ -14,8 +14,8 @@ questions.
 The repository is public at `https://github.com/melvinmicallef/spotter`.
 
 - Default branch: `develop`
-- Application status: specification only; no application code or package
-  manifests have been created yet
+- Application status: implementation in progress; the npm workspace, shared
+  contracts, React shell, and Express health/version slice are present
 - Planned first release: `0.1.0`
 - Planned first release tag: `v0.1.0`
 - Planned image: `ghcr.io/melvinmicallef/spotter`
@@ -37,25 +37,25 @@ online-only. The complete application ships as one Docker image.
 These requirements have been explicitly agreed and should be treated as the
 baseline.
 
-| Area | Decision |
-| --- | --- |
-| Client | React with TypeScript |
-| Distribution | Installable progressive web application |
-| Server | Express with TypeScript |
-| Canonical database | SQLite |
-| Offline database | IndexedDB |
-| Offline writes | Active workout tracking, including starting, resuming, recording, and finishing |
-| Offline reference data | Cached read-only muscles, exercises, and templates needed to log a workout |
-| Online-only writes | Creating, editing, reordering, or deleting muscles, exercises, and templates |
-| Synchronization | Durable outbox, client-generated IDs, idempotent server application, automatic retry after reconnect |
-| Production topology | One Docker image and one application process |
-| HTTP serving | Express serves both `/api/*` and the compiled PWA |
-| Persistent path | SQLite and related files under `/data` |
-| Image registry | `ghcr.io/melvinmicallef/spotter` |
-| Image triggers | Pushed `v*` tags and optional manual workflow dispatch |
-| Ordinary CI | Validate commits and pull requests without publishing an image |
-| Default branch | `develop` |
-| Versioning | Semantic versioning beginning at `0.1.0`; remain on `0.x` during active development |
+| Area                   | Decision                                                                                             |
+| ---------------------- | ---------------------------------------------------------------------------------------------------- |
+| Client                 | React with TypeScript                                                                                |
+| Distribution           | Installable progressive web application                                                              |
+| Server                 | Express with TypeScript                                                                              |
+| Canonical database     | SQLite                                                                                               |
+| Offline database       | IndexedDB                                                                                            |
+| Offline writes         | Active workout tracking, including starting, resuming, recording, and finishing                      |
+| Offline reference data | Cached read-only muscles, exercises, and templates needed to log a workout                           |
+| Online-only writes     | Creating, editing, reordering, or deleting muscles, exercises, and templates                         |
+| Synchronization        | Durable outbox, client-generated IDs, idempotent server application, automatic retry after reconnect |
+| Production topology    | One Docker image and one application process                                                         |
+| HTTP serving           | Express serves both `/api/*` and the compiled PWA                                                    |
+| Persistent path        | SQLite and related files under `/data`                                                               |
+| Image registry         | `ghcr.io/melvinmicallef/spotter`                                                                     |
+| Image triggers         | Pushed `v*` tags and optional manual workflow dispatch                                               |
+| Ordinary CI            | Validate commits and pull requests without publishing an image                                       |
+| Default branch         | `develop`                                                                                            |
+| Versioning             | Semantic versioning beginning at `0.1.0`; remain on `0.x` during active development                  |
 
 ## Required user experience
 
@@ -144,24 +144,23 @@ introduced without replacing the workout model or synchronization core.
 - Do not silently choose product behavior for an explicitly open question.
 - Do not tag `v0.1.0` until its acceptance criteria are met.
 
+## Implemented scaffolding decisions
+
+- npm 10 workspaces manage `apps/web`, `apps/server`, and `packages/shared`.
+- Node.js 20.20 is the minimum supported local runtime. Production may use a
+  newer active LTS after the container is added.
+- Zod defines and validates versioned wire contracts and environment input.
+- TypeScript, ESLint, and Prettier provide static and formatting checks.
+- Vitest is the unit and integration test runner.
+- Vite builds and serves the React client in development.
+
+These are implementation choices, not commitments for authentication, units,
+tenancy, or other open product questions.
+
 ## Recommended next task
 
-Create the initial workspace and a deliberately small vertical slice:
-
-1. choose and document the package manager, active Node.js LTS baseline,
-   validation library, SQLite stack, migration tool, and IndexedDB access layer;
-2. scaffold `apps/web`, `apps/server`, and `packages/shared`;
-3. add shared health/version response schemas;
-4. implement `GET /api/health` and `GET /api/version`;
-5. serve the built PWA through Express in production mode;
-6. add formatting, linting, type-checking, unit tests, and production builds;
-7. add a development workflow without publishing a container; and
-8. update these documents with the selected implementation choices and actual
-   commands.
-
-This slice should prove the workspace and client/server/shared-package
-boundaries. It should not attempt the complete workout domain in the first
-commit.
+Implement the SQLite catalogue and template slices, then the workout domain and
+offline synchronization. Keep each slice tested and independently buildable.
 
 ## Starter prompt for a new AI chat
 
