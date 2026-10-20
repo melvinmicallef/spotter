@@ -4,8 +4,9 @@ Spotter is a self-hosted, installable workout-tracking PWA. It combines a
 React and TypeScript client with an Express API and SQLite database, delivered
 as a single Docker image.
 
-The project is currently in its specification and initial implementation
-phase.
+The project is currently specification-complete for its initial baseline but
+has not yet been scaffolded. The default branch is `develop`, and the first
+planned development release is `0.1.0`.
 
 ## Product principles
 
@@ -45,14 +46,49 @@ Creating or editing exercises, muscles, and templates requires a connection.
 The interface will disable those actions while offline and explain that they
 will become available after reconnecting.
 
-See the [product specification](docs/product-spec.md) for feature boundaries
-and acceptance criteria, and the [architecture](docs/architecture.md) for the
-proposed system design and delivery model.
+## Documentation
+
+The repository documentation is intended to be sufficient for a contributor or
+a new AI chat to continue without access to the original planning conversation.
+
+Read the documents in this order:
+
+1. [Project context and AI handoff](docs/project-context.md) — settled decisions,
+   current state, constraints, and a ready-to-use continuation prompt.
+2. [Product specification](docs/product-spec.md) — feature boundaries, user
+   behavior, and acceptance criteria.
+3. [Architecture](docs/architecture.md) — system boundaries, persistence,
+   synchronization, container, and CI design.
+4. [Implementation plan](docs/implementation-plan.md) — phased build order,
+   deliverables, tests, and completion gates.
+
+`AGENTS.md` contains concise repository-level instructions for AI coding agents.
+
+## Finalized baseline
+
+The following decisions are settled for the initial implementation:
+
+- React and TypeScript installable PWA;
+- Express and TypeScript server;
+- SQLite canonical server database;
+- IndexedDB local workout state and synchronization outbox;
+- offline workout tracking after the application and reference data have been
+  loaded at least once;
+- online-only creation and editing of templates, exercises, and muscles;
+- one production Docker image serving the PWA and API;
+- one persistent `/data` volume for SQLite;
+- GitHub Container Registry at `ghcr.io/melvinmicallef/spotter`;
+- image publication only for pushed `v*` tags or manual workflow dispatch;
+- `develop` as the default branch; and
+- semantic versioning beginning at `0.1.0`, remaining on `0.x` during active
+  development.
+
+Choices explicitly listed as open in the documentation are not finalized and
+must not be silently treated as requirements.
 
 ## Repository status
 
-The application has not been scaffolded yet. The proposed implementation order
-is:
+The application has not been scaffolded yet. The implementation order is:
 
 1. establish the TypeScript workspace and shared validation schemas;
 2. implement the SQLite schema and Express API;
@@ -63,6 +99,16 @@ is:
 
 Development, testing, and deployment commands will be added with the project
 scaffolding.
+
+## Continuing in a new AI chat
+
+Open the repository at its root and ask the new chat to read `AGENTS.md` and the
+documentation listed above before changing files. A complete starter prompt is
+available in [the project handoff](docs/project-context.md#starter-prompt-for-a-new-ai-chat).
+
+The first implementation task should establish the TypeScript workspace and a
+minimal end-to-end health-check slice without prematurely choosing answers to
+the documented open product decisions.
 
 ## Release policy
 

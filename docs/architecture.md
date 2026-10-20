@@ -1,6 +1,7 @@
 # Spotter Architecture
 
-Status: Initial proposal
+Status: Approved architecture baseline. Items in "Decisions to confirm during
+scaffolding" remain unresolved implementation choices.
 
 ## System overview
 

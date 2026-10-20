@@ -1,6 +1,7 @@
 # Spotter Product Specification
 
-Status: Initial draft
+Status: Approved initial baseline. Items in "Open product decisions" remain
+unresolved.
 
 ## Purpose
 
