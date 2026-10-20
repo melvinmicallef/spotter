@@ -199,6 +199,11 @@ The runtime image should:
 
 Validation and publication are separate workflows or jobs.
 
+Spotter follows semantic versioning beginning at `0.1.0`. While the application
+is under active development, releases use `0.MINOR.PATCH`: a minor release may
+introduce breaking product, data, or API changes, while a patch release contains
+compatible fixes. Version `1.0.0` will declare the first stable public contract.
+
 Validation runs for pull requests and ordinary pushes and performs:
 
 - dependency installation from the lockfile;
@@ -222,9 +227,10 @@ It uses GitHub's short-lived workflow token, grants only `contents: read` and
 `packages: write`, builds with Docker Buildx, and publishes to
 `ghcr.io/melvinmicallef/spotter`.
 
-For a semantic version tag such as `v1.2.3`, image metadata should produce
-`1.2.3`, `1.2`, and `1`. `latest` should move only for a stable release rather
-than for prerelease tags. A manual run should use a supplied tag or a unique
+The first release tag is `v0.1.0`. Its image metadata should produce `0.1.0`
+and `0.1`; later semantic version tags follow the same scheme. `latest` may move
+for a normal `0.x` release, but not for prerelease tags such as
+`v0.2.0-beta.1`. A manual run should use a supplied tag or a unique
 `sha-<commit>` tag so it cannot silently overwrite a release.
 
 ## Testing strategy

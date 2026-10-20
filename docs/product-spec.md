@@ -162,6 +162,9 @@ The initial conflict policy is deliberately narrow:
 - The SQLite file and related database files live under `/data` in production.
 - Runtime configuration is supplied through environment variables.
 - The container exposes an HTTP health endpoint suitable for orchestration.
+- The first development release is version `0.1.0`; subsequent development
+  releases remain in the `0.x` range until the product and its public contracts
+  are ready for `1.0.0`.
 - GitHub Actions publishes to `ghcr.io/melvinmicallef/spotter` only for pushed
   `v*` tags or a manual workflow dispatch.
 - Pull requests and ordinary branch pushes validate the application without
@@ -180,8 +183,8 @@ The first usable release is complete when:
 6. catalogue and template edit controls cannot mutate data offline;
 7. the application and API run from one container with a mounted data volume;
 8. automated tests cover the critical offline and synchronization paths; and
-9. a pushed `v*` tag publishes a versioned image to GHCR, while a normal commit
-   does not.
+9. the initial `v0.1.0` tag publishes a versioned image to GHCR, while a normal
+   commit does not.
 
 ## Open product decisions
 

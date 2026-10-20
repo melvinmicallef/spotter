@@ -69,9 +69,13 @@ scaffolding.
 Ordinary commits and pull requests should run validation such as linting,
 type-checking, tests, and a production build. They should not publish an image.
 
+The first application version will be `0.1.0`. Spotter will remain on `0.x`
+versions while its product behavior, data model, and API are still under active
+development. Version `1.0.0` will mark the first stable public contract.
+
 Container publishing will be triggered by:
 
-- pushing a tag matching `v*`, for example `v0.1.0`; or
+- pushing a tag matching `v*`, beginning with `v0.1.0`; or
 - starting the release workflow manually through GitHub Actions.
 
 Images will be published to `ghcr.io/melvinmicallef/spotter`.
