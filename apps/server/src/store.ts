@@ -22,8 +22,7 @@ type Row = Record<string, unknown>;
 
 export interface MediaInput {
   id: string;
-  kind: 'gif';
-  mimeType: 'image/gif';
+  mimeType: ExerciseMedia['mimeType'];
   byteSize: number;
   originalName: string;
 }
@@ -105,10 +104,11 @@ export class SpotterStore {
   listExercises(): Exercise[] {
     return this.database
       .prepare(
-        `SELECT exercises.*, exercise_media.byte_size AS media_byte_size,
-          exercise_media.original_name AS media_original_name,
-          exercise_media.created_at AS media_created_at
-         FROM exercises LEFT JOIN exercise_media ON exercise_media.id = exercises.media_id
+        `SELECT exercises.*, exercise_images.mime_type AS image_mime_type,
+          exercise_images.byte_size AS image_byte_size,
+          exercise_images.original_name AS image_original_name,
+          exercise_images.created_at AS image_created_at
+         FROM exercises LEFT JOIN exercise_images ON exercise_images.id = exercises.image_id
          ORDER BY exercises.name COLLATE NOCASE`,
       )
       .all()
@@ -123,7 +123,7 @@ export class SpotterStore {
         this.database
           .prepare(
             `INSERT INTO exercises
-             (id, name, exercise_type, instructions, media_id, source_url, source_title,
+             (id, name, exercise_type, instructions, image_id, source_url, source_title,
               source_media_url, source_imported_at, created_at, updated_at)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           )
@@ -158,7 +158,7 @@ export class SpotterStore {
         this.assertExerciseTypeChangeIsCompatible(id, input.exerciseType);
         const result = this.database
           .prepare(
-            `UPDATE exercises SET name = ?, exercise_type = ?, instructions = ?, media_id = ?,
+            `UPDATE exercises SET name = ?, exercise_type = ?, instructions = ?, image_id = ?,
              source_url = ?, source_title = ?, source_media_url = ?,
              source_imported_at = ?, updated_at = ? WHERE id = ?`,
           )
@@ -189,12 +189,13 @@ export class SpotterStore {
     return this.getExercise(id);
   }
 
-  deleteExercise(id: string): string | null {
-    const mediaId = (
+  deleteExercise(id: string): ExerciseMedia | null {
+    const imageId = (
       this.database
-        .prepare('SELECT media_id FROM exercises WHERE id = ?')
-        .get(id) as { media_id: string | null } | undefined
-    )?.media_id;
+        .prepare('SELECT image_id FROM exercises WHERE id = ?')
+        .get(id) as { image_id: string | null } | undefined
+    )?.image_id;
+    const media = imageId ? this.getMedia(imageId) : null;
     try {
       this.database.transaction(() => {
         const result = this.database
@@ -215,20 +216,19 @@ export class SpotterStore {
       }
       throw error;
     }
-    return mediaId ?? null;
+    return media;
   }
 
   createMedia(input: MediaInput): ExerciseMedia {
     const createdAt = new Date().toISOString();
     this.database
       .prepare(
-        `INSERT INTO exercise_media
-         (id, kind, mime_type, byte_size, original_name, created_at)
-         VALUES (?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO exercise_images
+         (id, mime_type, byte_size, original_name, created_at)
+         VALUES (?, ?, ?, ?, ?)`,
       )
       .run(
         input.id,
-        input.kind,
         input.mimeType,
         input.byteSize,
         input.originalName,
@@ -239,7 +239,7 @@ export class SpotterStore {
 
   getMedia(id: string): ExerciseMedia {
     const row = this.database
-      .prepare('SELECT * FROM exercise_media WHERE id = ?')
+      .prepare('SELECT * FROM exercise_images WHERE id = ?')
       .get(id) as Row | undefined;
     if (!row) throw new AppError(404, 'NOT_FOUND', 'Exercise media not found');
     return mapMedia(row);
@@ -248,7 +248,7 @@ export class SpotterStore {
   deleteMedia(id: string): ExerciseMedia {
     const media = this.getMedia(id);
     this.database.transaction(() => {
-      this.database.prepare('DELETE FROM exercise_media WHERE id = ?').run(id);
+      this.database.prepare('DELETE FROM exercise_images WHERE id = ?').run(id);
       this.incrementReferenceRevision();
     })();
     return media;
@@ -266,11 +266,21 @@ export class SpotterStore {
     const now = new Date().toISOString();
     try {
       this.database.transaction(() => {
+        const hasActive = this.database
+          .prepare('SELECT 1 FROM workout_templates WHERE is_active = 1')
+          .get();
+        const isActive = input.isActive || !hasActive;
+        if (isActive)
+          this.database
+            .prepare('UPDATE workout_templates SET is_active = 0')
+            .run();
         this.database
           .prepare(
-            'INSERT INTO workout_templates (id, name, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
+            `INSERT INTO workout_templates
+             (id, name, is_active, notes, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?)`,
           )
-          .run(id, input.name, input.notes, now, now);
+          .run(id, input.name, Number(isActive), input.notes, now, now);
         this.replaceTemplateExercises(id, input.exercises);
         this.incrementReferenceRevision();
       })();
@@ -286,11 +296,28 @@ export class SpotterStore {
   updateTemplate(id: string, input: WorkoutTemplateInput): WorkoutTemplate {
     try {
       this.database.transaction(() => {
+        const existing = this.database
+          .prepare('SELECT is_active FROM workout_templates WHERE id = ?')
+          .get(id) as { is_active: number } | undefined;
+        if (!existing)
+          throw new AppError(404, 'NOT_FOUND', 'Template not found');
+        const isActive = input.isActive || Boolean(existing.is_active);
+        if (isActive)
+          this.database
+            .prepare('UPDATE workout_templates SET is_active = 0 WHERE id <> ?')
+            .run(id);
         const result = this.database
           .prepare(
-            'UPDATE workout_templates SET name = ?, notes = ?, updated_at = ? WHERE id = ?',
+            `UPDATE workout_templates SET name = ?, is_active = ?, notes = ?, updated_at = ?
+             WHERE id = ?`,
           )
-          .run(input.name, input.notes, new Date().toISOString(), id);
+          .run(
+            input.name,
+            Number(isActive),
+            input.notes,
+            new Date().toISOString(),
+            id,
+          );
         if (result.changes === 0)
           throw new AppError(404, 'NOT_FOUND', 'Template not found');
         this.replaceTemplateExercises(id, input.exercises);
@@ -310,6 +337,7 @@ export class SpotterStore {
     const source = this.getTemplate(id);
     return this.createTemplate({
       name: this.availableTemplateCopyName(source.name),
+      isActive: false,
       notes: source.notes,
       exercises: source.exercises.map((exercise) => ({
         exerciseId: exercise.exerciseId,
@@ -326,11 +354,23 @@ export class SpotterStore {
 
   deleteTemplate(id: string): void {
     this.database.transaction(() => {
+      const wasActive = this.database
+        .prepare('SELECT is_active FROM workout_templates WHERE id = ?')
+        .get(id) as { is_active: number } | undefined;
       const result = this.database
         .prepare('DELETE FROM workout_templates WHERE id = ?')
         .run(id);
       if (result.changes === 0)
         throw new AppError(404, 'NOT_FOUND', 'Template not found');
+      if (wasActive?.is_active)
+        this.database
+          .prepare(
+            `UPDATE workout_templates SET is_active = 1
+             WHERE id = (
+               SELECT id FROM workout_templates ORDER BY created_at, id LIMIT 1
+             )`,
+          )
+          .run();
       this.incrementReferenceRevision();
     })();
   }
@@ -412,10 +452,11 @@ export class SpotterStore {
   private getExercise(id: string): Exercise {
     const row = this.database
       .prepare(
-        `SELECT exercises.*, exercise_media.byte_size AS media_byte_size,
-          exercise_media.original_name AS media_original_name,
-          exercise_media.created_at AS media_created_at
-         FROM exercises LEFT JOIN exercise_media ON exercise_media.id = exercises.media_id
+        `SELECT exercises.*, exercise_images.mime_type AS image_mime_type,
+          exercise_images.byte_size AS image_byte_size,
+          exercise_images.original_name AS image_original_name,
+          exercise_images.created_at AS image_created_at
+         FROM exercises LEFT JOIN exercise_images ON exercise_images.id = exercises.image_id
          WHERE exercises.id = ?`,
       )
       .get(id) as Row | undefined;
@@ -451,15 +492,15 @@ export class SpotterStore {
       exerciseType: row.exercise_type as Exercise['exerciseType'],
       instructions: nullableString(row.instructions),
       muscles,
-      media: row.media_id
+      media: row.image_id
         ? {
-            id: String(row.media_id),
-            kind: 'gif',
-            url: `/api/media/${String(row.media_id)}`,
-            mimeType: 'image/gif',
-            byteSize: Number(row.media_byte_size),
-            originalName: String(row.media_original_name),
-            createdAt: String(row.media_created_at),
+            id: String(row.image_id),
+            kind: 'image',
+            url: `/api/media/${String(row.image_id)}`,
+            mimeType: row.image_mime_type as ExerciseMedia['mimeType'],
+            byteSize: Number(row.image_byte_size),
+            originalName: String(row.image_original_name),
+            createdAt: String(row.image_created_at),
           }
         : null,
       source: row.source_url
@@ -504,6 +545,7 @@ export class SpotterStore {
     return {
       id: String(row.id),
       name: String(row.name),
+      isActive: Boolean(row.is_active),
       notes: nullableString(row.notes),
       exercises,
       createdAt: String(row.created_at),
@@ -808,9 +850,9 @@ function mapMuscle(row: Row): Muscle {
 function mapMedia(row: Row): ExerciseMedia {
   return {
     id: String(row.id),
-    kind: 'gif',
+    kind: 'image',
     url: `/api/media/${String(row.id)}`,
-    mimeType: 'image/gif',
+    mimeType: row.mime_type as ExerciseMedia['mimeType'],
     byteSize: Number(row.byte_size),
     originalName: String(row.original_name),
     createdAt: String(row.created_at),

@@ -357,6 +357,56 @@ describe('catalogue, templates, and synchronization API', () => {
     });
   });
 
+  it('keeps exactly one active weekly template', async () => {
+    const first = await request(app)
+      .post('/api/templates')
+      .send({ name: 'First plan', notes: null, exercises: [] })
+      .expect(201);
+    expect(first.body.isActive).toBe(true);
+
+    const second = await request(app)
+      .post('/api/templates')
+      .send({ name: 'Second plan', notes: null, exercises: [] })
+      .expect(201);
+    expect(second.body.isActive).toBe(false);
+
+    const activated = await request(app)
+      .patch(`/api/templates/${second.body.id}`)
+      .send({
+        name: 'Second plan',
+        isActive: true,
+        notes: null,
+        exercises: [],
+      })
+      .expect(200);
+    expect(activated.body.isActive).toBe(true);
+
+    const templates = await request(app).get('/api/templates').expect(200);
+    expect(
+      templates.body.filter((template: { isActive: boolean }) =>
+        Boolean(template.isActive),
+      ),
+    ).toHaveLength(1);
+    expect(
+      templates.body.find((template: { isActive: boolean }) =>
+        Boolean(template.isActive),
+      ).id,
+    ).toBe(second.body.id);
+
+    const duplicate = await request(app)
+      .post(`/api/templates/${second.body.id}/duplicate`)
+      .expect(201);
+    expect(duplicate.body.isActive).toBe(false);
+
+    await request(app).delete(`/api/templates/${second.body.id}`).expect(204);
+    const afterDelete = await request(app).get('/api/templates').expect(200);
+    expect(
+      afterDelete.body.filter((template: { isActive: boolean }) =>
+        Boolean(template.isActive),
+      ),
+    ).toHaveLength(1);
+  });
+
   it('returns stable validation errors', async () => {
     const response = await request(app)
       .post('/api/muscles')
@@ -391,43 +441,59 @@ describe('catalogue, templates, and synchronization API', () => {
     ]);
   });
 
-  it('stores validated GIF media under a stable exercise URL and deletes it with the exercise', async () => {
-    const gif = Buffer.from(
-      'R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==',
-      'base64',
-    );
-    const upload = await request(app)
-      .post('/api/media/gif')
-      .set('Content-Type', 'image/gif')
-      .set('X-File-Name', 'demo.gif')
-      .send(gif)
-      .expect(201);
-    expect(upload.body.byteSize).toBe(gif.byteLength);
+  it.each([
+    ['image/gif', 'demo.gif', Buffer.from('GIF89a payload')],
+    [
+      'image/png',
+      'demo.png',
+      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    ],
+    ['image/jpeg', 'demo.jpg', Buffer.from([0xff, 0xd8, 0xff, 0xe0])],
+  ])(
+    'stores a validated %s under a stable exercise URL and deletes it with the exercise',
+    async (mimeType, filename, image) => {
+      const upload = await request(app)
+        .post('/api/media/image')
+        .set('Content-Type', mimeType)
+        .set('X-File-Name', filename)
+        .send(image)
+        .expect(201);
+      expect(upload.body).toMatchObject({
+        kind: 'image',
+        mimeType,
+        byteSize: image.byteLength,
+        originalName: filename,
+      });
 
-    const exerciseId = randomUUID();
-    const exercise = await request(app)
-      .post('/api/exercises')
-      .send({
-        id: exerciseId,
-        name: 'Imported curl',
-        instructions: 'Keep the elbow still',
-        muscles: [],
-        mediaId: upload.body.id,
-        source: {
-          url: 'https://example.com/curl',
-          title: 'Curl guide',
-          mediaUrl: 'https://example.com/curl.gif',
-        },
-      })
-      .expect(201);
-    expect(exercise.body.media.url).toBe(`/api/media/${upload.body.id}`);
-    expect(exercise.body.source.url).toBe('https://example.com/curl');
+      const exerciseId = randomUUID();
+      const exercise = await request(app)
+        .post('/api/exercises')
+        .send({
+          id: exerciseId,
+          name: `Exercise ${mimeType}`,
+          instructions: 'Keep moving',
+          muscles: [],
+          mediaId: upload.body.id,
+        })
+        .expect(201);
+      expect(exercise.body.media.url).toBe(`/api/media/${upload.body.id}`);
 
-    await request(app)
-      .get(`/api/media/${upload.body.id}`)
-      .expect('Content-Type', /image\/gif/)
-      .expect(200);
-    await request(app).delete(`/api/exercises/${exerciseId}`).expect(204);
-    await request(app).get(`/api/media/${upload.body.id}`).expect(404);
+      await request(app)
+        .get(`/api/media/${upload.body.id}`)
+        .expect('Content-Type', new RegExp(mimeType.replace('/', '\\/')))
+        .expect(200);
+      await request(app).delete(`/api/exercises/${exerciseId}`).expect(204);
+      await request(app).get(`/api/media/${upload.body.id}`).expect(404);
+    },
+  );
+
+  it('rejects an image whose bytes do not match its declared type', async () => {
+    const response = await request(app)
+      .post('/api/media/image')
+      .set('Content-Type', 'image/png')
+      .set('X-File-Name', 'renamed.png')
+      .send(Buffer.from('GIF89a payload'))
+      .expect(415);
+    expect(response.body.error.code).toBe('INVALID_MEDIA_TYPE');
   });
 });

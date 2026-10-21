@@ -17,11 +17,11 @@ describe('database migrations', () => {
           .prepare('SELECT COUNT(*) AS count FROM schema_migrations')
           .get() as { count: number }
       ).count,
-    ).toBe(3);
+    ).toBe(4);
     expect(
       database
         .prepare(
-          "SELECT 1 FROM pragma_table_info('exercises') WHERE name = 'media_id'",
+          "SELECT 1 FROM pragma_table_info('exercises') WHERE name = 'image_id'",
         )
         .get(),
     ).toBeTruthy();
@@ -68,7 +68,7 @@ describe('database migrations', () => {
           .prepare('SELECT MAX(version) AS version FROM schema_migrations')
           .get() as { version: number }
       ).version,
-    ).toBe(3);
+    ).toBe(4);
     upgraded.close();
     rmSync(directory, { recursive: true, force: true });
   });
@@ -79,6 +79,7 @@ describe('database migrations', () => {
     const legacy = new Database(path);
     const timestamp = '2026-10-20T10:00:00.000Z';
     const exerciseId = '34d43cac-2469-44f0-92e4-3fe2bd59af83';
+    const mediaId = '9920d274-a80b-484a-8bb1-7e8a4a3af726';
     const templateId = '13c278ce-b0cb-45dd-885c-4c6637af95c7';
     const templateExerciseId = 'fb0b70d8-bbad-4c52-90fe-f2f29d34a89d';
     const workoutId = 'ea35e18d-6868-4d37-a79b-3b1b129705dc';
@@ -100,10 +101,18 @@ describe('database migrations', () => {
     recordMigration.run(2, migrations[1].name, timestamp);
     legacy
       .prepare(
-        `INSERT INTO exercises (id, name, instructions, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?)`,
+        `INSERT INTO exercise_media
+         (id, kind, mime_type, byte_size, original_name, created_at)
+         VALUES (?, 'gif', 'image/gif', ?, ?, ?)`,
       )
-      .run(exerciseId, 'Legacy press', null, timestamp, timestamp);
+      .run(mediaId, 128, 'legacy.gif', timestamp);
+    legacy
+      .prepare(
+        `INSERT INTO exercises
+         (id, name, instructions, media_id, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+      )
+      .run(exerciseId, 'Legacy press', null, mediaId, timestamp, timestamp);
     legacy
       .prepare(
         `INSERT INTO workout_templates (id, name, notes, created_at, updated_at)
@@ -164,6 +173,23 @@ describe('database migrations', () => {
         .prepare('SELECT exercise_type FROM exercises WHERE id = ?')
         .get(exerciseId),
     ).toEqual({ exercise_type: 'strength' });
+    expect(
+      upgraded
+        .prepare(
+          `SELECT exercises.image_id, exercise_images.mime_type,
+            exercise_images.original_name, workout_templates.is_active
+           FROM exercises
+           JOIN exercise_images ON exercise_images.id = exercises.image_id
+           JOIN workout_templates ON workout_templates.id = ?
+           WHERE exercises.id = ?`,
+        )
+        .get(templateId, exerciseId),
+    ).toEqual({
+      image_id: mediaId,
+      mime_type: 'image/gif',
+      original_name: 'legacy.gif',
+      is_active: 1,
+    });
     expect(
       upgraded
         .prepare(

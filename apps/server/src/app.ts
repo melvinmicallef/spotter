@@ -10,13 +10,11 @@ import type { AppConfig } from './config.js';
 import { AppError } from './errors.js';
 import type { SpotterStore } from './store.js';
 import type { MediaStorage } from './media.js';
-import type { WebsiteImportDependencies } from './website-import.js';
 
 export interface AppDependencies {
   isDatabaseReady: () => boolean;
   store?: SpotterStore;
   mediaStorage?: MediaStorage;
-  websiteImportDependencies?: WebsiteImportDependencies;
 }
 
 const moduleDirectory = dirname(fileURLToPath(import.meta.url));
@@ -54,7 +52,6 @@ export function createApp(config: AppConfig, dependencies: AppDependencies) {
       '/api',
       createApiRouter(dependencies.store, {
         mediaStorage: dependencies.mediaStorage,
-        websiteImportDependencies: dependencies.websiteImportDependencies,
       }),
     );
 

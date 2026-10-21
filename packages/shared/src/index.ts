@@ -62,9 +62,9 @@ export const httpUrlSchema = z
 
 export const exerciseMediaSchema = z.object({
   id: uuidSchema,
-  kind: z.literal('gif'),
+  kind: z.literal('image'),
   url: z.string().startsWith('/api/media/'),
-  mimeType: z.literal('image/gif'),
+  mimeType: z.enum(['image/gif', 'image/png', 'image/jpeg']),
   byteSize: z
     .number()
     .int()
@@ -115,14 +115,6 @@ export const exerciseInputSchema = z.object({
     ),
 });
 
-export const websiteImportPreviewInputSchema = z.object({ url: httpUrlSchema });
-export const websiteImportPreviewSchema = z.object({
-  sourceUrl: httpUrlSchema,
-  title: z.string().trim().min(1).max(300),
-  description: z.string().trim().max(2_000).nullable(),
-  gifUrl: httpUrlSchema.nullable(),
-});
-
 export const templateExerciseSchema = z
   .object({
     id: uuidSchema,
@@ -151,6 +143,7 @@ export const templateExerciseSchema = z
 export const workoutTemplateSchema = z.object({
   id: uuidSchema,
   name: nameSchema,
+  isActive: z.boolean(),
   notes: nullableNoteSchema,
   exercises: z.array(templateExerciseSchema),
   createdAt: isoDateTimeSchema,
@@ -160,6 +153,7 @@ export const workoutTemplateSchema = z.object({
 export const workoutTemplateInputSchema = z.object({
   id: uuidSchema.optional(),
   name: nameSchema,
+  isActive: z.boolean().default(false),
   notes: nullableNoteSchema,
   exercises: z
     .array(
@@ -355,7 +349,6 @@ export type DistanceUnit = z.infer<typeof distanceUnitSchema>;
 export type DayOfWeek = z.infer<typeof dayOfWeekSchema>;
 export type ExerciseMedia = z.infer<typeof exerciseMediaSchema>;
 export type ExerciseSource = z.infer<typeof exerciseSourceSchema>;
-export type WebsiteImportPreview = z.infer<typeof websiteImportPreviewSchema>;
 export type WorkoutTemplate = z.infer<typeof workoutTemplateSchema>;
 export type WorkoutTemplateInput = z.infer<typeof workoutTemplateInputSchema>;
 export type Workout = z.infer<typeof workoutSchema>;

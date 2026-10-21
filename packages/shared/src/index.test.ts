@@ -6,7 +6,6 @@ import {
   healthResponseSchema,
   templateExerciseSchema,
   versionResponseSchema,
-  websiteImportPreviewInputSchema,
   workoutExerciseSchema,
 } from './index.js';
 
@@ -32,7 +31,7 @@ describe('service contracts', () => {
     expect(() => healthResponseSchema.parse({ status: 'fine' })).toThrow();
   });
 
-  it('validates exercise media, sources, and public import URL schemes', () => {
+  it('validates exercise media and preserved source metadata', () => {
     const now = '2026-10-20T10:00:00.000Z';
     const id = '52ebad50-675f-46cf-bb76-64a89693dc80';
     expect(
@@ -43,7 +42,7 @@ describe('service contracts', () => {
         muscles: [],
         media: {
           id,
-          kind: 'gif',
+          kind: 'image',
           url: `/api/media/${id}`,
           mimeType: 'image/gif',
           byteSize: 1024,
@@ -67,9 +66,6 @@ describe('service contracts', () => {
         muscles: [],
       }),
     ).toMatchObject({ mediaId: null, source: null });
-    expect(() =>
-      websiteImportPreviewInputSchema.parse({ url: 'file:///etc/passwd' }),
-    ).toThrow();
   });
 
   it('validates ISO weekdays and type-specific template targets', () => {

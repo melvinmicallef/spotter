@@ -9,23 +9,16 @@ import {
   muscleInputSchema,
   syncOperationSchema,
   uuidSchema,
-  websiteImportPreviewInputSchema,
-  websiteImportPreviewSchema,
   workoutTemplateInputSchema,
 } from '@spotter/shared';
 
 import { AppError } from './errors.js';
-import { MAX_GIF_BYTES } from './media.js';
+import { isSupportedImageMimeType, MAX_IMAGE_BYTES } from './media.js';
 import type { MediaStorage } from './media.js';
 import type { SpotterStore } from './store.js';
-import {
-  previewWebsiteImport,
-  type WebsiteImportDependencies,
-} from './website-import.js';
 
 interface ApiRouterOptions {
   mediaStorage?: MediaStorage;
-  websiteImportDependencies?: WebsiteImportDependencies;
 }
 
 export function createApiRouter(
@@ -72,17 +65,20 @@ export function createApiRouter(
     );
   });
   router.delete('/exercises/:id', (request, response) => {
-    const mediaId = store.deleteExercise(uuidSchema.parse(request.params.id));
-    if (mediaId && options.mediaStorage) {
-      store.deleteMedia(mediaId);
-      options.mediaStorage.remove(mediaId);
+    const media = store.deleteExercise(uuidSchema.parse(request.params.id));
+    if (media && options.mediaStorage) {
+      store.deleteMedia(media.id);
+      options.mediaStorage.remove(media.id, media.mimeType);
     }
     response.status(204).end();
   });
 
   router.post(
-    '/media/gif',
-    raw({ type: 'image/gif', limit: MAX_GIF_BYTES }),
+    '/media/image',
+    raw({
+      type: ['image/gif', 'image/png', 'image/jpeg'],
+      limit: MAX_IMAGE_BYTES,
+    }),
     (request, response) => {
       if (!options.mediaStorage)
         throw new AppError(
@@ -90,27 +86,28 @@ export function createApiRouter(
           'MEDIA_UNAVAILABLE',
           'Media storage is unavailable',
         );
-      if (!Buffer.isBuffer(request.body))
+      const mimeType = request.header('content-type')?.split(';')[0]?.trim();
+      if (!Buffer.isBuffer(request.body) || !isSupportedImageMimeType(mimeType))
         throw new AppError(
           415,
           'INVALID_MEDIA_TYPE',
-          'Upload a GIF using the image/gif content type',
+          'Upload a GIF, PNG, or JPEG using its matching image content type',
         );
       const id = randomUUID();
-      options.mediaStorage.store(id, request.body);
+      options.mediaStorage.store(id, request.body, mimeType);
       try {
         const media = store.createMedia({
           id,
-          kind: 'gif',
-          mimeType: 'image/gif',
+          mimeType,
           byteSize: request.body.byteLength,
           originalName: options.mediaStorage.safeOriginalName(
             request.header('x-file-name'),
+            mimeType,
           ),
         });
         response.status(201).json(exerciseMediaSchema.parse(media));
       } catch (error) {
-        options.mediaStorage.remove(id);
+        options.mediaStorage.remove(id, mimeType);
         throw error;
       }
     },
@@ -130,7 +127,7 @@ export function createApiRouter(
         'Content-Length': String(media.byteSize),
         'Cache-Control': 'public, max-age=31536000, immutable',
       })
-      .send(options.mediaStorage.read(id));
+      .send(options.mediaStorage.read(id, media.mimeType));
   });
   router.delete('/media/:id', (request, response) => {
     if (!options.mediaStorage)
@@ -140,18 +137,9 @@ export function createApiRouter(
         'Media storage is unavailable',
       );
     const id = uuidSchema.parse(request.params.id);
-    store.deleteMedia(id);
-    options.mediaStorage.remove(id);
+    const media = store.deleteMedia(id);
+    options.mediaStorage.remove(id, media.mimeType);
     response.status(204).end();
-  });
-
-  router.post('/imports/website/preview', async (request, response) => {
-    const input = websiteImportPreviewInputSchema.parse(request.body);
-    const preview = await previewWebsiteImport(
-      input.url,
-      options.websiteImportDependencies,
-    );
-    response.json(websiteImportPreviewSchema.parse(preview));
   });
 
   router.get('/templates', (_request, response) =>

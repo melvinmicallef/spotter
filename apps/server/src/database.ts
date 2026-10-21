@@ -169,6 +169,39 @@ export const migrations = [
         CHECK (distance_unit IN ('km', 'mi'));
     `,
   },
+  {
+    version: 4,
+    name: 'active_templates_and_exercise_images',
+    sql: `
+      ALTER TABLE workout_templates ADD COLUMN is_active INTEGER NOT NULL DEFAULT 0
+        CHECK (is_active IN (0, 1));
+      UPDATE workout_templates SET is_active = 1
+      WHERE id = (
+        SELECT id FROM workout_templates ORDER BY created_at, id LIMIT 1
+      );
+      CREATE UNIQUE INDEX workout_templates_one_active_idx
+        ON workout_templates(is_active) WHERE is_active = 1;
+
+      CREATE TABLE exercise_images (
+        id TEXT PRIMARY KEY,
+        mime_type TEXT NOT NULL
+          CHECK (mime_type IN ('image/gif', 'image/png', 'image/jpeg')),
+        byte_size INTEGER NOT NULL CHECK (byte_size > 0 AND byte_size <= 5242880),
+        original_name TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+      INSERT INTO exercise_images (id, mime_type, byte_size, original_name, created_at)
+      SELECT id, mime_type, byte_size, original_name, created_at
+      FROM exercise_media;
+      ALTER TABLE exercises ADD COLUMN image_id TEXT
+        REFERENCES exercise_images(id) ON DELETE SET NULL;
+      UPDATE exercises SET image_id = media_id WHERE media_id IS NOT NULL;
+      UPDATE exercises SET media_id = NULL;
+      DELETE FROM exercise_media;
+      CREATE UNIQUE INDEX exercises_image_id_idx ON exercises(image_id)
+        WHERE image_id IS NOT NULL;
+    `,
+  },
 ] as const;
 
 export type SpotterDatabase = Database.Database;
