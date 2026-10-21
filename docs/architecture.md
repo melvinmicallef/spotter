@@ -118,6 +118,12 @@ day; the session stores the chosen template day and snapshots only that day's
 entries. Legacy open-workout rows remain readable after migration, but the
 client cannot create new ones.
 
+Each template day opens the same client-side exercise picker over the cached
+exercise reference data. The picker filters locally by case-insensitive name or
+associated muscle and renders uploaded demonstration GIFs from their existing
+media URLs; choosing an exercise only updates the template draft until the user
+saves it through the online template API.
+
 ### Exercise media and website import
 
 Exercise GIFs are uploaded as raw `image/gif` bodies to a bounded endpoint.

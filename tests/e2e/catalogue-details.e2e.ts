@@ -129,15 +129,27 @@ test('manages roles, reviewed imports, GIFs, notes, and detailed history', async
   const template = page.locator('.template-card').filter({
     has: page.getByLabel(`${planName} name`),
   });
-  await template
-    .getByLabel('Add exercise to Monday')
-    .selectOption({ label: `${gifExerciseName} (strength)` });
-  await template
-    .getByLabel('Add exercise to Monday')
-    .selectOption({ label: 'Imported row (cardio)' });
-  await template
-    .getByLabel('Add exercise to Tuesday')
-    .selectOption({ label: 'Imported row (cardio)' });
+  await template.getByLabel('Add exercise to Monday').click();
+  let picker = page.getByRole('dialog', { name: 'Choose exercises' });
+  await picker.getByLabel('Filter by muscle').selectOption({
+    label: primaryName,
+  });
+  await picker.getByLabel('Filter by name').fill(gifExerciseName);
+  await expect(
+    picker.getByRole('img', {
+      name: `${gifExerciseName} demonstration`,
+    }),
+  ).toBeVisible();
+  await picker.getByRole('button', { name: 'Add to Monday' }).click();
+  await picker.getByLabel('Filter by name').fill('Imported row');
+  await picker.getByRole('button', { name: 'Add to Monday' }).click();
+  await picker.getByRole('button', { name: 'Done' }).click();
+
+  await template.getByLabel('Add exercise to Tuesday').click();
+  picker = page.getByRole('dialog', { name: 'Choose exercises' });
+  await picker.getByLabel('Filter by name').fill('Imported row');
+  await picker.getByRole('button', { name: 'Add to Tuesday' }).click();
+  await picker.getByRole('button', { name: 'Done' }).click();
   await template
     .getByLabel(`${gifExerciseName} template notes on Monday`)
     .fill('Template exercise note');

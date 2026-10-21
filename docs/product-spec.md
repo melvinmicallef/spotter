@@ -119,7 +119,8 @@ source attribution but is never silently copied into Spotter media storage.
 While online, a user can:
 
 - create, rename, duplicate, edit, and delete a weekly template;
-- add multiple exercises to any day of the week;
+- add multiple exercises to any day of the week from a visual picker that shows
+  demonstration GIFs and filters by exercise name or muscle;
 - remove and reorder exercises within each day; and
 - configure exercise-level notes and type-appropriate initial targets.
 
