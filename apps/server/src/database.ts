@@ -120,6 +120,55 @@ export const migrations = [
         WHERE media_id IS NOT NULL;
     `,
   },
+  {
+    version: 3,
+    name: 'typed_exercises_and_weekly_templates',
+    sql: `
+      ALTER TABLE exercises ADD COLUMN exercise_type TEXT NOT NULL DEFAULT 'strength'
+        CHECK (exercise_type IN ('strength', 'cardio'));
+
+      ALTER TABLE template_exercises RENAME TO template_exercises_v2;
+      CREATE TABLE template_exercises (
+        id TEXT PRIMARY KEY,
+        template_id TEXT NOT NULL REFERENCES workout_templates(id) ON DELETE CASCADE,
+        exercise_id TEXT NOT NULL REFERENCES exercises(id) ON DELETE RESTRICT,
+        day_of_week INTEGER NOT NULL CHECK (day_of_week BETWEEN 1 AND 7),
+        position INTEGER NOT NULL CHECK (position >= 0),
+        notes TEXT,
+        target_sets INTEGER CHECK (target_sets > 0),
+        target_reps INTEGER CHECK (target_reps > 0),
+        target_duration_seconds INTEGER CHECK (target_duration_seconds > 0),
+        target_distance REAL CHECK (target_distance > 0),
+        target_distance_unit TEXT NOT NULL DEFAULT 'km'
+          CHECK (target_distance_unit IN ('km', 'mi')),
+        UNIQUE (template_id, day_of_week, position)
+      );
+      INSERT INTO template_exercises
+        (id, template_id, exercise_id, day_of_week, position, notes,
+         target_sets, target_reps, target_duration_seconds, target_distance,
+         target_distance_unit)
+      SELECT id, template_id, exercise_id, 1, position, notes,
+        target_sets, target_reps, NULL, NULL, 'km'
+      FROM template_exercises_v2;
+      DROP TABLE template_exercises_v2;
+
+      ALTER TABLE workout_sessions ADD COLUMN template_day INTEGER
+        CHECK (template_day BETWEEN 1 AND 7);
+      ALTER TABLE workout_exercises ADD COLUMN exercise_type TEXT NOT NULL DEFAULT 'strength'
+        CHECK (exercise_type IN ('strength', 'cardio'));
+      ALTER TABLE workout_exercises ADD COLUMN target_duration_seconds INTEGER
+        CHECK (target_duration_seconds > 0);
+      ALTER TABLE workout_exercises ADD COLUMN target_distance REAL
+        CHECK (target_distance > 0);
+      ALTER TABLE workout_exercises ADD COLUMN target_distance_unit TEXT NOT NULL DEFAULT 'km'
+        CHECK (target_distance_unit IN ('km', 'mi'));
+      ALTER TABLE workout_sets ADD COLUMN duration_seconds INTEGER
+        CHECK (duration_seconds >= 0);
+      ALTER TABLE workout_sets ADD COLUMN distance REAL CHECK (distance >= 0);
+      ALTER TABLE workout_sets ADD COLUMN distance_unit TEXT NOT NULL DEFAULT 'km'
+        CHECK (distance_unit IN ('km', 'mi'));
+    `,
+  },
 ] as const;
 
 export type SpotterDatabase = Database.Database;

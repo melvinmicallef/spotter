@@ -4,8 +4,10 @@ import {
   exerciseInputSchema,
   exerciseSchema,
   healthResponseSchema,
+  templateExerciseSchema,
   versionResponseSchema,
   websiteImportPreviewInputSchema,
+  workoutExerciseSchema,
 } from './index.js';
 
 describe('service contracts', () => {
@@ -68,5 +70,105 @@ describe('service contracts', () => {
     expect(() =>
       websiteImportPreviewInputSchema.parse({ url: 'file:///etc/passwd' }),
     ).toThrow();
+  });
+
+  it('validates ISO weekdays and type-specific template targets', () => {
+    const base = {
+      id: '52ebad50-675f-46cf-bb76-64a89693dc80',
+      exerciseId: '720f12fb-ec82-44c6-8377-d8af853970b5',
+      exerciseName: 'Intervals',
+      position: 0,
+      notes: null,
+      targetSets: null,
+      targetReps: null,
+      targetDurationSeconds: 1_800,
+      targetDistance: 5,
+    };
+
+    expect(
+      templateExerciseSchema.parse({
+        ...base,
+        exerciseType: 'cardio',
+        dayOfWeek: 7,
+        targetDistanceUnit: 'km',
+      }),
+    ).toMatchObject({ exerciseType: 'cardio', dayOfWeek: 7 });
+    expect(() =>
+      templateExerciseSchema.parse({
+        ...base,
+        exerciseType: 'cardio',
+        dayOfWeek: 0,
+      }),
+    ).toThrow();
+    expect(() =>
+      templateExerciseSchema.parse({
+        ...base,
+        exerciseType: 'strength',
+        dayOfWeek: 1,
+      }),
+    ).toThrow(/duration or distance targets/);
+    expect(() =>
+      templateExerciseSchema.parse({
+        ...base,
+        exerciseType: 'cardio',
+        dayOfWeek: 1,
+        targetSets: 3,
+      }),
+    ).toThrow(/set or rep targets/);
+  });
+
+  it('keeps strength and cardio set measurements separate', () => {
+    const base = {
+      id: '52ebad50-675f-46cf-bb76-64a89693dc80',
+      exerciseId: null,
+      exerciseName: 'Snapshot',
+      position: 0,
+      notes: null,
+      targetSets: null,
+      targetReps: null,
+      targetDurationSeconds: null,
+      targetDistance: null,
+    };
+    const set = {
+      id: '720f12fb-ec82-44c6-8377-d8af853970b5',
+      position: 0,
+      reps: null,
+      weight: null,
+      weightUnit: 'kg',
+      durationSeconds: null,
+      distance: null,
+      distanceUnit: 'km',
+      notes: null,
+      completed: false,
+    };
+
+    expect(
+      workoutExerciseSchema.parse({
+        ...base,
+        exerciseType: 'strength',
+        sets: [{ ...set, reps: 8, weight: 60 }],
+      }),
+    ).toBeTruthy();
+    expect(
+      workoutExerciseSchema.parse({
+        ...base,
+        exerciseType: 'cardio',
+        sets: [{ ...set, durationSeconds: 900, distance: 3 }],
+      }),
+    ).toBeTruthy();
+    expect(() =>
+      workoutExerciseSchema.parse({
+        ...base,
+        exerciseType: 'cardio',
+        sets: [{ ...set, reps: 8 }],
+      }),
+    ).toThrow(/cannot contain reps or weight/);
+    expect(() =>
+      workoutExerciseSchema.parse({
+        ...base,
+        exerciseType: 'strength',
+        sets: [{ ...set, distance: 3 }],
+      }),
+    ).toThrow(/cannot contain duration or distance/);
   });
 });

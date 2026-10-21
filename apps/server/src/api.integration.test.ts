@@ -109,6 +109,7 @@ describe('catalogue, templates, and synchronization API', () => {
     const workout: Workout = {
       id: randomUUID(),
       templateId: null,
+      templateDay: null,
       name: 'Leg session',
       status: 'completed',
       startedAt: now,
@@ -120,10 +121,14 @@ describe('catalogue, templates, and synchronization API', () => {
           id: randomUUID(),
           exerciseId,
           exerciseName: 'Air squat',
+          exerciseType: 'strength',
           position: 0,
           notes: null,
           targetSets: null,
           targetReps: null,
+          targetDurationSeconds: null,
+          targetDistance: null,
+          targetDistanceUnit: 'km',
           sets: [
             {
               id: randomUUID(),
@@ -131,6 +136,9 @@ describe('catalogue, templates, and synchronization API', () => {
               reps: 12,
               weight: 0,
               weightUnit: 'kg',
+              durationSeconds: null,
+              distance: null,
+              distanceUnit: 'km',
               notes: null,
               completed: true,
             },
@@ -159,6 +167,194 @@ describe('catalogue, templates, and synchronization API', () => {
     expect(history.body[0].exercises[0].exerciseName).toBe('Air squat');
     expect(history.body[0].exercises[0].exerciseId).toBeNull();
     expect(history.body[0].exercises[0].sets).toHaveLength(1);
+  });
+
+  it('stores weekly template ordering and typed cardio workout snapshots', async () => {
+    const strengthId = randomUUID();
+    const cardioId = randomUUID();
+    await request(app)
+      .post('/api/exercises')
+      .send({
+        id: strengthId,
+        name: 'Front squat',
+        exerciseType: 'strength',
+        instructions: null,
+        muscles: [],
+      })
+      .expect(201);
+    await request(app)
+      .post('/api/exercises')
+      .send({
+        id: cardioId,
+        name: 'Outdoor run',
+        exerciseType: 'cardio',
+        instructions: null,
+        muscles: [],
+      })
+      .expect(201);
+
+    const templateId = randomUUID();
+    const template = await request(app)
+      .post('/api/templates')
+      .send({
+        id: templateId,
+        name: 'Weekly plan',
+        notes: null,
+        exercises: [
+          {
+            exerciseId: strengthId,
+            dayOfWeek: 1,
+            notes: null,
+            targetSets: 3,
+            targetReps: 8,
+          },
+          {
+            exerciseId: cardioId,
+            dayOfWeek: 1,
+            notes: 'Easy pace',
+            targetDurationSeconds: 1_800,
+            targetDistance: 5,
+            targetDistanceUnit: 'km',
+          },
+          {
+            exerciseId: cardioId,
+            dayOfWeek: 5,
+            notes: null,
+            targetDurationSeconds: 2_400,
+            targetDistance: null,
+            targetDistanceUnit: 'mi',
+          },
+        ],
+      })
+      .expect(201);
+    expect(template.body.exercises).toEqual([
+      expect.objectContaining({
+        exerciseType: 'strength',
+        dayOfWeek: 1,
+        position: 0,
+      }),
+      expect.objectContaining({
+        exerciseType: 'cardio',
+        dayOfWeek: 1,
+        position: 1,
+      }),
+      expect.objectContaining({
+        exerciseType: 'cardio',
+        dayOfWeek: 5,
+        position: 0,
+      }),
+    ]);
+
+    const invalidTargets = await request(app)
+      .patch(`/api/templates/${templateId}`)
+      .send({
+        name: 'Weekly plan',
+        notes: null,
+        exercises: [
+          {
+            exerciseId: cardioId,
+            dayOfWeek: 1,
+            notes: null,
+            targetSets: 3,
+            targetReps: 10,
+          },
+        ],
+      })
+      .expect(400);
+    expect(invalidTargets.body.error.code).toBe('INVALID_TEMPLATE_TARGETS');
+
+    const typeConflict = await request(app)
+      .patch(`/api/exercises/${strengthId}`)
+      .send({
+        name: 'Front squat',
+        exerciseType: 'cardio',
+        instructions: null,
+        muscles: [],
+      })
+      .expect(409);
+    expect(typeConflict.body.error.code).toBe('EXERCISE_TYPE_CONFLICT');
+
+    const now = new Date().toISOString();
+    const workoutId = randomUUID();
+    await request(app)
+      .post('/api/sync')
+      .send({
+        operations: [
+          {
+            operationId: randomUUID(),
+            kind: 'upsert_workout',
+            createdAt: now,
+            workout: {
+              id: workoutId,
+              templateId,
+              templateDay: 1,
+              name: 'Monday run',
+              status: 'completed',
+              startedAt: now,
+              completedAt: now,
+              notes: 'Felt steady',
+              updatedAt: now,
+              exercises: [
+                {
+                  id: randomUUID(),
+                  exerciseId: cardioId,
+                  exerciseName: 'Outdoor run',
+                  exerciseType: 'cardio',
+                  position: 0,
+                  notes: 'Negative split',
+                  targetSets: null,
+                  targetReps: null,
+                  targetDurationSeconds: 1_800,
+                  targetDistance: 5,
+                  targetDistanceUnit: 'km',
+                  sets: [
+                    {
+                      id: randomUUID(),
+                      position: 0,
+                      reps: null,
+                      weight: null,
+                      weightUnit: 'kg',
+                      durationSeconds: 1_720,
+                      distance: 5,
+                      distanceUnit: 'km',
+                      notes: 'Strong finish',
+                      completed: true,
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        ],
+      })
+      .expect(200)
+      .expect((response) =>
+        expect(response.body.results[0].status).toBe('applied'),
+      );
+
+    const history = await request(app)
+      .get(`/api/workouts/${workoutId}`)
+      .expect(200);
+    expect(history.body).toMatchObject({
+      templateId,
+      templateDay: 1,
+      exercises: [
+        {
+          exerciseType: 'cardio',
+          targetDurationSeconds: 1_800,
+          targetDistance: 5,
+          sets: [
+            {
+              reps: null,
+              weight: null,
+              durationSeconds: 1_720,
+              distance: 5,
+              distanceUnit: 'km',
+            },
+          ],
+        },
+      ],
+    });
   });
 
   it('returns stable validation errors', async () => {

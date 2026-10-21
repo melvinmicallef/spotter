@@ -4,6 +4,7 @@ import type {
   Exercise,
   ExerciseInput,
   ExerciseMedia,
+  ExerciseType,
   Muscle,
   MuscleInput,
   ReferenceData,
@@ -122,13 +123,14 @@ export class SpotterStore {
         this.database
           .prepare(
             `INSERT INTO exercises
-             (id, name, instructions, media_id, source_url, source_title,
+             (id, name, exercise_type, instructions, media_id, source_url, source_title,
               source_media_url, source_imported_at, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           )
           .run(
             id,
             input.name,
+            input.exerciseType,
             input.instructions,
             input.mediaId,
             input.source?.url ?? null,
@@ -153,14 +155,16 @@ export class SpotterStore {
   updateExercise(id: string, input: ExerciseInput): Exercise {
     try {
       this.database.transaction(() => {
+        this.assertExerciseTypeChangeIsCompatible(id, input.exerciseType);
         const result = this.database
           .prepare(
-            `UPDATE exercises SET name = ?, instructions = ?, media_id = ?,
+            `UPDATE exercises SET name = ?, exercise_type = ?, instructions = ?, media_id = ?,
              source_url = ?, source_title = ?, source_media_url = ?,
              source_imported_at = ?, updated_at = ? WHERE id = ?`,
           )
           .run(
             input.name,
+            input.exerciseType,
             input.instructions,
             input.mediaId,
             input.source?.url ?? null,
@@ -309,9 +313,13 @@ export class SpotterStore {
       notes: source.notes,
       exercises: source.exercises.map((exercise) => ({
         exerciseId: exercise.exerciseId,
+        dayOfWeek: exercise.dayOfWeek,
         notes: exercise.notes,
         targetSets: exercise.targetSets,
         targetReps: exercise.targetReps,
+        targetDurationSeconds: exercise.targetDurationSeconds,
+        targetDistance: exercise.targetDistance,
+        targetDistanceUnit: exercise.targetDistanceUnit,
       })),
     });
   }
@@ -440,6 +448,7 @@ export class SpotterStore {
     return {
       id: String(row.id),
       name: String(row.name),
+      exerciseType: row.exercise_type as Exercise['exerciseType'],
       instructions: nullableString(row.instructions),
       muscles,
       media: row.media_id
@@ -469,19 +478,28 @@ export class SpotterStore {
   private mapTemplate(row: Row): WorkoutTemplate {
     const exercises = this.database
       .prepare(
-        `SELECT template_exercises.*, exercises.name AS exercise_name
+        `SELECT template_exercises.*, exercises.name AS exercise_name,
+          exercises.exercise_type AS exercise_type
          FROM template_exercises JOIN exercises ON exercises.id = template_exercises.exercise_id
-         WHERE template_exercises.template_id = ? ORDER BY template_exercises.position`,
+         WHERE template_exercises.template_id = ?
+         ORDER BY template_exercises.day_of_week, template_exercises.position`,
       )
       .all(row.id)
       .map((entry) => ({
         id: String((entry as Row).id),
         exerciseId: String((entry as Row).exercise_id),
         exerciseName: String((entry as Row).exercise_name),
+        exerciseType: (entry as Row).exercise_type as Exercise['exerciseType'],
+        dayOfWeek: Number((entry as Row).day_of_week),
         position: Number((entry as Row).position),
         notes: nullableString((entry as Row).notes),
         targetSets: nullableNumber((entry as Row).target_sets),
         targetReps: nullableNumber((entry as Row).target_reps),
+        targetDurationSeconds: nullableNumber(
+          (entry as Row).target_duration_seconds,
+        ),
+        targetDistance: nullableNumber((entry as Row).target_distance),
+        targetDistanceUnit: (entry as Row).target_distance_unit as 'km' | 'mi',
       }));
     return {
       id: String(row.id),
@@ -512,6 +530,9 @@ export class SpotterStore {
             reps: nullableNumber((setRow as Row).reps),
             weight: nullableNumber((setRow as Row).weight),
             weightUnit: (setRow as Row).weight_unit as 'kg' | 'lb',
+            durationSeconds: nullableNumber((setRow as Row).duration_seconds),
+            distance: nullableNumber((setRow as Row).distance),
+            distanceUnit: (setRow as Row).distance_unit as 'km' | 'mi',
             notes: nullableString((setRow as Row).notes),
             completed: Boolean((setRow as Row).completed),
           }));
@@ -519,16 +540,23 @@ export class SpotterStore {
           id: String(exercise.id),
           exerciseId: nullableString(exercise.exercise_id),
           exerciseName: String(exercise.exercise_name),
+          exerciseType: exercise.exercise_type as Exercise['exerciseType'],
           position: Number(exercise.position),
           notes: nullableString(exercise.notes),
           targetSets: nullableNumber(exercise.target_sets),
           targetReps: nullableNumber(exercise.target_reps),
+          targetDurationSeconds: nullableNumber(
+            exercise.target_duration_seconds,
+          ),
+          targetDistance: nullableNumber(exercise.target_distance),
+          targetDistanceUnit: exercise.target_distance_unit as 'km' | 'mi',
           sets,
         };
       });
     return {
       id: String(row.id),
       templateId: nullableString(row.template_id),
+      templateDay: nullableNumber(row.template_day),
       name: String(row.name),
       status: row.status as Workout['status'],
       startedAt: String(row.started_at),
@@ -556,25 +584,102 @@ export class SpotterStore {
     id: string,
     exercises: WorkoutTemplateInput['exercises'],
   ) {
+    const findExercise = this.database.prepare(
+      'SELECT exercise_type FROM exercises WHERE id = ?',
+    );
+    for (const exercise of exercises) {
+      const catalogueExercise = findExercise.get(exercise.exerciseId) as
+        { exercise_type: ExerciseType } | undefined;
+      if (!catalogueExercise) continue;
+      this.assertTemplateTargetsMatchType(
+        catalogueExercise.exercise_type,
+        exercise,
+      );
+    }
     this.database
       .prepare('DELETE FROM template_exercises WHERE template_id = ?')
       .run(id);
     const insert = this.database.prepare(
       `INSERT INTO template_exercises
-       (id, template_id, exercise_id, position, notes, target_sets, target_reps)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+       (id, template_id, exercise_id, day_of_week, position, notes,
+        target_sets, target_reps, target_duration_seconds, target_distance,
+        target_distance_unit)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     );
-    exercises.forEach((exercise, position) =>
+    const positions = new Map<number, number>();
+    exercises.forEach((exercise) => {
+      const position = positions.get(exercise.dayOfWeek) ?? 0;
+      positions.set(exercise.dayOfWeek, position + 1);
       insert.run(
         exercise.id ?? randomUUID(),
         id,
         exercise.exerciseId,
+        exercise.dayOfWeek,
         position,
         exercise.notes,
         exercise.targetSets,
         exercise.targetReps,
-      ),
-    );
+        exercise.targetDurationSeconds,
+        exercise.targetDistance,
+        exercise.targetDistanceUnit,
+      );
+    });
+  }
+
+  private assertExerciseTypeChangeIsCompatible(
+    id: string,
+    exerciseType: ExerciseType,
+  ) {
+    const current = this.database
+      .prepare('SELECT exercise_type FROM exercises WHERE id = ?')
+      .get(id) as { exercise_type: ExerciseType } | undefined;
+    if (!current || current.exercise_type === exerciseType) return;
+
+    const incompatible = this.database
+      .prepare(
+        exerciseType === 'strength'
+          ? `SELECT 1 FROM template_exercises
+             WHERE exercise_id = ?
+               AND (target_duration_seconds IS NOT NULL OR target_distance IS NOT NULL)
+             LIMIT 1`
+          : `SELECT 1 FROM template_exercises
+             WHERE exercise_id = ?
+               AND (target_sets IS NOT NULL OR target_reps IS NOT NULL)
+             LIMIT 1`,
+      )
+      .get(id);
+    if (incompatible) {
+      throw new AppError(
+        409,
+        'EXERCISE_TYPE_CONFLICT',
+        'Update the exercise targets in its templates before changing its type',
+        { exerciseId: id, exerciseType },
+      );
+    }
+  }
+
+  private assertTemplateTargetsMatchType(
+    exerciseType: ExerciseType,
+    exercise: WorkoutTemplateInput['exercises'][number],
+  ) {
+    const hasStrengthTargets =
+      exercise.targetSets !== null || exercise.targetReps !== null;
+    const hasCardioTargets =
+      exercise.targetDurationSeconds !== null ||
+      exercise.targetDistance !== null;
+    if (
+      (exerciseType === 'strength' && hasCardioTargets) ||
+      (exerciseType === 'cardio' && hasStrengthTargets)
+    ) {
+      throw new AppError(
+        400,
+        'INVALID_TEMPLATE_TARGETS',
+        exerciseType === 'strength'
+          ? 'Strength exercises use set and rep targets'
+          : 'Cardio exercises use duration and distance targets',
+        { exerciseId: exercise.exerciseId, exerciseType },
+      );
+    }
   }
 
   private upsertWorkout(workout: Workout) {
@@ -591,15 +696,17 @@ export class SpotterStore {
     this.database
       .prepare(
         `INSERT INTO workout_sessions
-         (id, template_id, name, status, started_at, completed_at, notes, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-         ON CONFLICT(id) DO UPDATE SET template_id = excluded.template_id, name = excluded.name,
+         (id, template_id, template_day, name, status, started_at, completed_at, notes, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(id) DO UPDATE SET template_id = excluded.template_id,
+           template_day = excluded.template_day, name = excluded.name,
            status = excluded.status, started_at = excluded.started_at,
            completed_at = excluded.completed_at, notes = excluded.notes, updated_at = excluded.updated_at`,
       )
       .run(
         workout.id,
         templateExists ? workout.templateId : null,
+        workout.templateDay,
         workout.name,
         workout.status,
         workout.startedAt,
@@ -612,13 +719,16 @@ export class SpotterStore {
       .run(workout.id);
     const insertExercise = this.database.prepare(
       `INSERT INTO workout_exercises
-       (id, workout_id, exercise_id, exercise_name, position, notes, target_sets, target_reps)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+       (id, workout_id, exercise_id, exercise_name, exercise_type, position,
+        notes, target_sets, target_reps, target_duration_seconds,
+        target_distance, target_distance_unit)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     );
     const insertSet = this.database.prepare(
       `INSERT INTO workout_sets
-       (id, workout_exercise_id, position, reps, weight, weight_unit, notes, completed)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+       (id, workout_exercise_id, position, reps, weight, weight_unit,
+        duration_seconds, distance, distance_unit, notes, completed)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     );
     for (const exercise of workout.exercises) {
       const exerciseExists = exercise.exerciseId
@@ -631,10 +741,14 @@ export class SpotterStore {
         workout.id,
         exerciseExists ? exercise.exerciseId : null,
         exercise.exerciseName,
+        exercise.exerciseType,
         exercise.position,
         exercise.notes,
         exercise.targetSets,
         exercise.targetReps,
+        exercise.targetDurationSeconds,
+        exercise.targetDistance,
+        exercise.targetDistanceUnit,
       );
       for (const set of exercise.sets) {
         insertSet.run(
@@ -644,6 +758,9 @@ export class SpotterStore {
           set.reps,
           set.weight,
           set.weightUnit,
+          set.durationSeconds,
+          set.distance,
+          set.distanceUnit,
           set.notes,
           Number(set.completed),
         );

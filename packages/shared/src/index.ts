@@ -42,6 +42,9 @@ export const muscleInputSchema = z.object({
   name: nameSchema,
 });
 export const muscleRoleSchema = z.enum(['primary', 'secondary']);
+export const exerciseTypeSchema = z.enum(['strength', 'cardio']);
+export const distanceUnitSchema = z.enum(['km', 'mi']);
+export const dayOfWeekSchema = z.number().int().min(1).max(7);
 
 export const exerciseMuscleSchema = z.object({
   id: uuidSchema,
@@ -85,6 +88,7 @@ export const exerciseSourceInputSchema = exerciseSourceSchema.omit({
 export const exerciseSchema = z.object({
   id: uuidSchema,
   name: nameSchema,
+  exerciseType: exerciseTypeSchema.default('strength'),
   instructions: nullableNoteSchema,
   muscles: z.array(exerciseMuscleSchema),
   media: exerciseMediaSchema.nullable(),
@@ -96,6 +100,7 @@ export const exerciseSchema = z.object({
 export const exerciseInputSchema = z.object({
   id: uuidSchema.optional(),
   name: nameSchema,
+  exerciseType: exerciseTypeSchema.default('strength'),
   instructions: nullableNoteSchema,
   mediaId: uuidSchema.nullable().default(null),
   source: exerciseSourceInputSchema.nullable().default(null),
@@ -118,15 +123,30 @@ export const websiteImportPreviewSchema = z.object({
   gifUrl: httpUrlSchema.nullable(),
 });
 
-export const templateExerciseSchema = z.object({
-  id: uuidSchema,
-  exerciseId: uuidSchema,
-  exerciseName: nameSchema,
-  position: z.number().int().nonnegative(),
-  notes: nullableNoteSchema,
-  targetSets: z.number().int().positive().max(99).nullable(),
-  targetReps: z.number().int().positive().max(999).nullable(),
-});
+export const templateExerciseSchema = z
+  .object({
+    id: uuidSchema,
+    exerciseId: uuidSchema,
+    exerciseName: nameSchema,
+    exerciseType: exerciseTypeSchema.default('strength'),
+    dayOfWeek: dayOfWeekSchema.default(1),
+    position: z.number().int().nonnegative(),
+    notes: nullableNoteSchema,
+    targetSets: z.number().int().positive().max(99).nullable(),
+    targetReps: z.number().int().positive().max(999).nullable(),
+    targetDurationSeconds: z
+      .number()
+      .int()
+      .positive()
+      .max(7 * 24 * 60 * 60)
+      .nullable()
+      .default(null),
+    targetDistance: z.number().positive().max(100_000).nullable().default(null),
+    targetDistanceUnit: distanceUnitSchema.default('km'),
+  })
+  .superRefine((exercise, context) => {
+    validateTargetMetrics(exercise, context);
+  });
 
 export const workoutTemplateSchema = z.object({
   id: uuidSchema,
@@ -146,6 +166,7 @@ export const workoutTemplateInputSchema = z.object({
       z.object({
         id: uuidSchema.optional(),
         exerciseId: uuidSchema,
+        dayOfWeek: dayOfWeekSchema.default(1),
         notes: nullableNoteSchema,
         targetSets: z
           .number()
@@ -161,6 +182,20 @@ export const workoutTemplateInputSchema = z.object({
           .max(999)
           .nullable()
           .default(null),
+        targetDurationSeconds: z
+          .number()
+          .int()
+          .positive()
+          .max(7 * 24 * 60 * 60)
+          .nullable()
+          .default(null),
+        targetDistance: z
+          .number()
+          .positive()
+          .max(100_000)
+          .nullable()
+          .default(null),
+        targetDistanceUnit: distanceUnitSchema.default('km'),
       }),
     )
     .max(100)
@@ -174,25 +209,104 @@ export const workoutSetSchema = z.object({
   reps: z.number().int().nonnegative().max(9_999).nullable(),
   weight: z.number().nonnegative().max(100_000).nullable(),
   weightUnit: weightUnitSchema,
+  durationSeconds: z
+    .number()
+    .int()
+    .nonnegative()
+    .max(7 * 24 * 60 * 60)
+    .nullable()
+    .default(null),
+  distance: z.number().nonnegative().max(100_000).nullable().default(null),
+  distanceUnit: distanceUnitSchema.default('km'),
   notes: nullableNoteSchema,
   completed: z.boolean(),
 });
 
-export const workoutExerciseSchema = z.object({
-  id: uuidSchema,
-  exerciseId: uuidSchema.nullable(),
-  exerciseName: nameSchema,
-  position: z.number().int().nonnegative(),
-  notes: nullableNoteSchema,
-  targetSets: z.number().int().positive().max(99).nullable(),
-  targetReps: z.number().int().positive().max(999).nullable(),
-  sets: z.array(workoutSetSchema).max(200),
-});
+export const workoutExerciseSchema = z
+  .object({
+    id: uuidSchema,
+    exerciseId: uuidSchema.nullable(),
+    exerciseName: nameSchema,
+    exerciseType: exerciseTypeSchema.default('strength'),
+    position: z.number().int().nonnegative(),
+    notes: nullableNoteSchema,
+    targetSets: z.number().int().positive().max(99).nullable(),
+    targetReps: z.number().int().positive().max(999).nullable(),
+    targetDurationSeconds: z
+      .number()
+      .int()
+      .positive()
+      .max(7 * 24 * 60 * 60)
+      .nullable()
+      .default(null),
+    targetDistance: z.number().positive().max(100_000).nullable().default(null),
+    targetDistanceUnit: distanceUnitSchema.default('km'),
+    sets: z.array(workoutSetSchema).max(200),
+  })
+  .superRefine((exercise, context) => {
+    validateTargetMetrics(exercise, context);
+    exercise.sets.forEach((set, index) => {
+      if (
+        exercise.exerciseType === 'strength' &&
+        (set.durationSeconds !== null || set.distance !== null)
+      ) {
+        context.addIssue({
+          code: 'custom',
+          path: ['sets', index],
+          message: 'Strength sets cannot contain duration or distance',
+        });
+      }
+      if (
+        exercise.exerciseType === 'cardio' &&
+        (set.reps !== null || set.weight !== null)
+      ) {
+        context.addIssue({
+          code: 'custom',
+          path: ['sets', index],
+          message: 'Cardio sets cannot contain reps or weight',
+        });
+      }
+    });
+  });
+
+function validateTargetMetrics(
+  exercise: {
+    exerciseType: z.infer<typeof exerciseTypeSchema>;
+    targetSets: number | null;
+    targetReps: number | null;
+    targetDurationSeconds: number | null;
+    targetDistance: number | null;
+  },
+  context: z.RefinementCtx,
+) {
+  if (
+    exercise.exerciseType === 'strength' &&
+    (exercise.targetDurationSeconds !== null ||
+      exercise.targetDistance !== null)
+  ) {
+    context.addIssue({
+      code: 'custom',
+      path: ['exerciseType'],
+      message: 'Strength exercises cannot contain duration or distance targets',
+    });
+  }
+  if (
+    exercise.exerciseType === 'cardio' &&
+    (exercise.targetSets !== null || exercise.targetReps !== null)
+  ) {
+    context.addIssue({
+      code: 'custom',
+      path: ['exerciseType'],
+      message: 'Cardio exercises cannot contain set or rep targets',
+    });
+  }
+}
 
 export const workoutStatusSchema = z.enum(['in_progress', 'completed']);
 export const workoutSchema = z.object({
   id: uuidSchema,
   templateId: uuidSchema.nullable(),
+  templateDay: dayOfWeekSchema.nullable().default(null),
   name: nameSchema,
   status: workoutStatusSchema,
   startedAt: isoDateTimeSchema,
@@ -236,6 +350,9 @@ export type Muscle = z.infer<typeof muscleSchema>;
 export type MuscleInput = z.infer<typeof muscleInputSchema>;
 export type Exercise = z.infer<typeof exerciseSchema>;
 export type ExerciseInput = z.infer<typeof exerciseInputSchema>;
+export type ExerciseType = z.infer<typeof exerciseTypeSchema>;
+export type DistanceUnit = z.infer<typeof distanceUnitSchema>;
+export type DayOfWeek = z.infer<typeof dayOfWeekSchema>;
 export type ExerciseMedia = z.infer<typeof exerciseMediaSchema>;
 export type ExerciseSource = z.infer<typeof exerciseSourceSchema>;
 export type WebsiteImportPreview = z.infer<typeof websiteImportPreviewSchema>;
