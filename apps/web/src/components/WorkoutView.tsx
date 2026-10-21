@@ -6,13 +6,18 @@ import type {
   WorkoutTemplate,
 } from '@spotter/shared';
 
-import { todayDayOfWeek, weekdayName, WEEKDAYS } from '../weekdays.js';
+import { weekdayName, WEEKDAYS } from '../weekdays.js';
 
 interface WorkoutViewProps {
   workout?: Workout;
   exercises: Exercise[];
-  templates: WorkoutTemplate[];
+  activeTemplate?: WorkoutTemplate;
+  today: DayOfWeek;
+  scheduledDay: DayOfWeek;
+  weekKey: string;
   onStart: (template: WorkoutTemplate, dayOfWeek: DayOfWeek) => void;
+  onSwapToday: (dayOfWeek: DayOfWeek) => void;
+  onResetWeek: () => void;
   onChange: (update: (workout: Workout) => Workout) => void;
   actions: {
     addExercise: (workout: Workout, exercise: Exercise) => Workout;
@@ -43,70 +48,100 @@ interface WorkoutViewProps {
 export function WorkoutView({
   workout,
   exercises,
-  templates,
+  activeTemplate,
+  today,
+  scheduledDay,
+  weekKey,
   onStart,
+  onSwapToday,
+  onResetWeek,
   onChange,
   actions,
 }: WorkoutViewProps) {
   if (!workout) {
-    const today = todayDayOfWeek();
-    const hasScheduledDays = templates.some((template) =>
-      template.exercises.some(() => true),
-    );
+    const scheduledExercises =
+      activeTemplate?.exercises.filter(
+        (exercise) => exercise.dayOfWeek === scheduledDay,
+      ) ?? [];
     return (
       <section className="page-section">
         <div className="section-heading">
           <div>
             <span className="eyebrow">TODAY · {weekdayName(today)}</span>
-            <h2>Start a scheduled workout</h2>
+            <h2>Today&apos;s workout</h2>
           </div>
         </div>
-        {!hasScheduledDays && (
+        {!activeTemplate ? (
           <p className="empty-state">
-            Create a weekly template and add exercises to a day before starting
-            a workout.
+            Create a weekly template and set it active before starting a
+            workout.
           </p>
+        ) : (
+          <article className="card today-workout-card">
+            <div>
+              <span className="active-badge">Active plan</span>
+              <h3>{activeTemplate.name}</h3>
+              {scheduledDay !== today && (
+                <p className="notice compact-notice">
+                  Using {weekdayName(scheduledDay)}&apos;s workout today for{' '}
+                  {weekKey}.
+                </p>
+              )}
+              <p>
+                {scheduledExercises.length === 0
+                  ? `${weekdayName(scheduledDay)} is a rest day.`
+                  : `${scheduledExercises.length} exercise${scheduledExercises.length === 1 ? '' : 's'} scheduled from ${weekdayName(scheduledDay)}.`}
+              </p>
+              {scheduledExercises.length > 0 && (
+                <ol className="scheduled-exercise-list">
+                  {scheduledExercises.map((entry) => (
+                    <li key={entry.id}>{entry.exerciseName}</li>
+                  ))}
+                </ol>
+              )}
+            </div>
+            <button
+              type="button"
+              disabled={scheduledExercises.length === 0}
+              onClick={() => onStart(activeTemplate, scheduledDay)}
+            >
+              Start today&apos;s workout
+            </button>
+            <div className="week-swap-panel">
+              <strong>Swap today for this week</strong>
+              <p>
+                Choose another day&apos;s plan. The reusable template will not
+                be changed.
+              </p>
+              <div className="day-swap-actions">
+                {WEEKDAYS.filter((day) => day.value !== today).map((day) => {
+                  const count = activeTemplate.exercises.filter(
+                    (entry) => entry.dayOfWeek === day.value,
+                  ).length;
+                  return (
+                    <button
+                      className="secondary"
+                      type="button"
+                      key={day.value}
+                      onClick={() => onSwapToday(day.value)}
+                    >
+                      {day.label} ({count})
+                    </button>
+                  );
+                })}
+              </div>
+              {scheduledDay !== today && (
+                <button
+                  className="secondary danger-text"
+                  type="button"
+                  onClick={onResetWeek}
+                >
+                  Reset this week&apos;s swaps
+                </button>
+              )}
+            </div>
+          </article>
         )}
-        <div className="grid cards-grid">
-          {templates.map((template) => {
-            const scheduledDays = WEEKDAYS.filter((day) =>
-              template.exercises.some(
-                (exercise) => exercise.dayOfWeek === day.value,
-              ),
-            );
-            if (scheduledDays.length === 0) return null;
-            return (
-              <article className="card workout-template-card" key={template.id}>
-                <div>
-                  <strong>{template.name}</strong>
-                  <small>
-                    {template.exercises.length} exercises across{' '}
-                    {scheduledDays.length} days
-                  </small>
-                </div>
-                <div className="day-start-actions">
-                  {scheduledDays.map((day) => {
-                    const count = template.exercises.filter(
-                      (entry) => entry.dayOfWeek === day.value,
-                    ).length;
-                    return (
-                      <button
-                        className={
-                          day.value === today ? 'primary' : 'secondary'
-                        }
-                        type="button"
-                        key={day.value}
-                        onClick={() => onStart(template, day.value)}
-                      >
-                        Start {day.label} ({count})
-                      </button>
-                    );
-                  })}
-                </div>
-              </article>
-            );
-          })}
-        </div>
       </section>
     );
   }

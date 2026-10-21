@@ -33,6 +33,7 @@ const cardioExercise: Exercise = {
 const template: WorkoutTemplate = {
   id: crypto.randomUUID(),
   name: 'Weekly plan',
+  isActive: true,
   notes: null,
   exercises: [
     templateEntry(strengthExercise, 1, 0, { targetSets: 3, targetReps: 5 }),

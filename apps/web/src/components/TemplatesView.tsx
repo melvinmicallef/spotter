@@ -53,7 +53,12 @@ export function TemplatesView(props: TemplatesViewProps) {
             event.preventDefault();
             if (!name.trim()) return;
             void run(async () => {
-              await api.createTemplate({ name, notes: null, exercises: [] });
+              await api.createTemplate({
+                name,
+                isActive: false,
+                notes: null,
+                exercises: [],
+              });
               setName('');
             });
           }}
@@ -125,11 +130,31 @@ function TemplateCard({
 
   return (
     <article className="form-card template-card">
-      <input
-        aria-label={`${template.name} name`}
-        value={draft.name}
-        onChange={(event) => setDraft({ ...draft, name: event.target.value })}
-      />
+      <div className="template-title-row">
+        <input
+          aria-label={`${template.name} name`}
+          value={draft.name}
+          onChange={(event) => setDraft({ ...draft, name: event.target.value })}
+        />
+        {template.isActive ? (
+          <span className="active-badge">Active</span>
+        ) : (
+          <button
+            className="secondary"
+            type="button"
+            onClick={() =>
+              void run(() =>
+                api.updateTemplate(template.id, {
+                  ...draft,
+                  isActive: true,
+                }),
+              )
+            }
+          >
+            Set active
+          </button>
+        )}
+      </div>
       <textarea
         aria-label={`${template.name} notes`}
         placeholder="Weekly template notes"
@@ -495,7 +520,7 @@ function ExercisePicker({
                     className="exercise-picker-placeholder"
                     aria-hidden="true"
                   >
-                    No GIF
+                    No image
                   </div>
                 )}
                 <div className="exercise-picker-details">
@@ -536,6 +561,7 @@ function ExercisePicker({
 function toInput(template: WorkoutTemplate): WorkoutTemplateInput {
   return {
     name: template.name,
+    isActive: template.isActive,
     notes: template.notes,
     exercises: template.exercises.map((entry) => ({
       id: entry.id,

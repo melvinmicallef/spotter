@@ -133,17 +133,23 @@ small {
   width: min(1120px, 100%);
   min-height: 100vh;
   margin: 0 auto;
-  padding: 0 22px 100px;
+  padding: 82px 22px 100px;
 }
 .app-header {
-  position: sticky;
+  position: fixed;
   z-index: 20;
   top: 0;
+  right: 0;
+  left: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  width: 100%;
+  min-height: 68px;
   gap: 20px;
-  padding: 16px 0;
+  padding: calc(12px + env(safe-area-inset-top))
+    max(22px, calc((100vw - 1120px) / 2 + 22px)) 12px;
+  border-bottom: 1px solid var(--border);
   background: var(--header-bg);
   backdrop-filter: blur(16px);
 }
@@ -858,6 +864,61 @@ small {
   color: var(--text-muted);
   text-align: center;
 }
+.template-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.active-badge {
+  display: inline-flex;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: 5px 9px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  font-size: 0.72rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+.today-workout-card {
+  display: flex;
+  max-width: 720px;
+  flex-direction: column;
+  gap: 18px;
+  padding: 22px;
+}
+.today-workout-card h3 {
+  margin: 12px 0 5px;
+  color: var(--text);
+  font-size: 1.45rem;
+}
+.compact-notice {
+  margin: 12px 0;
+}
+.scheduled-exercise-list {
+  display: grid;
+  gap: 6px;
+  padding-left: 24px;
+  color: var(--text-secondary);
+}
+.week-swap-panel {
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+.week-swap-panel p {
+  margin: 5px 0 12px;
+  color: var(--text-muted);
+}
+.day-swap-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.day-swap-actions button {
+  padding: 8px 10px;
+  font-size: 0.82rem;
+}
 .bottom-nav {
   position: fixed;
   z-index: 30;
@@ -900,11 +961,11 @@ small {
 }
 @media (max-width: 760px) {
   .app-shell {
-    padding-right: 14px;
-    padding-left: 14px;
+    padding: 82px 14px 100px;
   }
   .app-header {
-    align-items: flex-start;
+    padding-right: 14px;
+    padding-left: 14px;
   }
   .status-bar {
     max-width: 210px;

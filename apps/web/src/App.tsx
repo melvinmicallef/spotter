@@ -17,9 +17,16 @@ import { StatusBar } from './components/StatusBar.js';
 import { TemplatesView } from './components/TemplatesView.js';
 import { WorkoutView } from './components/WorkoutView.js';
 import { localRepository } from './db.js';
+import {
+  isoWeekKey,
+  scheduledTemplateDay,
+  swapWeekDays,
+  type WeekSchedule,
+} from './schedule.js';
 import { drainOutbox, refreshReferences } from './sync.js';
 import { applyTheme, initialTheme } from './theme.js';
 import type { Theme } from './theme.js';
+import { todayDayOfWeek } from './weekdays.js';
 import {
   addExercise,
   addSet,
@@ -45,6 +52,7 @@ export function App() {
   const [muscles, setMuscles] = useState<Muscle[]>([]);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [templates, setTemplates] = useState<WorkoutTemplate[]>([]);
+  const [weekSchedule, setWeekSchedule] = useState<WeekSchedule>({});
   const [pending, setPending] = useState(0);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [syncErrorDetails, setSyncErrorDetails] = useState<unknown>();
@@ -53,8 +61,33 @@ export function App() {
   const [ready, setReady] = useState(false);
   const activeWorkoutRef = useRef<Workout | undefined>(undefined);
   const saveQueueRef = useRef(Promise.resolve());
+  const today = todayDayOfWeek();
+  const currentWeekKey = isoWeekKey();
+  const activeTemplate = useMemo(
+    () => templates.find((template) => template.isActive),
+    [templates],
+  );
+  const scheduledDay = scheduledTemplateDay(today, weekSchedule);
 
   useEffect(() => applyTheme(theme), [theme]);
+
+  useEffect(() => {
+    if (!activeTemplate) {
+      // This state mirrors the currently selected template's IndexedDB record.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setWeekSchedule({});
+      return;
+    }
+    let cancelled = false;
+    void localRepository
+      .weekSchedule(activeTemplate.id, currentWeekKey)
+      .then((schedule) => {
+        if (!cancelled) setWeekSchedule(schedule);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTemplate, currentWeekKey]);
 
   const loadLocal = useCallback(async () => {
     const [active, workouts, references, outbox] = await Promise.all([
@@ -166,6 +199,35 @@ export function App() {
     persistWorkout(workout);
   }
 
+  function swapToday(dayOfWeek: DayOfWeek) {
+    if (!activeTemplate) return;
+    const next = swapWeekDays(weekSchedule, today, dayOfWeek);
+    setWeekSchedule(next);
+    void localRepository
+      .saveWeekSchedule(activeTemplate.id, currentWeekKey, next)
+      .catch((error: unknown) =>
+        setMessage(
+          error instanceof Error
+            ? `The weekly swap could not be saved: ${error.message}`
+            : 'The weekly swap could not be saved',
+        ),
+      );
+  }
+
+  function resetWeekSchedule() {
+    if (!activeTemplate) return;
+    setWeekSchedule({});
+    void localRepository
+      .saveWeekSchedule(activeTemplate.id, currentWeekKey, {})
+      .catch((error: unknown) =>
+        setMessage(
+          error instanceof Error
+            ? `The weekly swap could not be reset: ${error.message}`
+            : 'The weekly swap could not be reset',
+        ),
+      );
+  }
+
   const refreshOnlineReferences = useCallback(async () => {
     const references = await refreshReferences();
     setMuscles(references.muscles);
@@ -246,8 +308,13 @@ export function App() {
           <WorkoutView
             workout={activeWorkout}
             exercises={exercises}
-            templates={templates}
+            activeTemplate={activeTemplate}
+            today={today}
+            scheduledDay={scheduledDay}
+            weekKey={currentWeekKey}
             onStart={start}
+            onSwapToday={swapToday}
+            onResetWeek={resetWeekSchedule}
             onChange={mutateWorkout}
             actions={{
               addExercise,

@@ -56,6 +56,23 @@ describe('local workout repository', () => {
     expect((await localRepository.references()).muscles[0]?.name).toBe('Back');
   });
 
+  it('persists schedule swaps per active template and ISO week', async () => {
+    const templateId = crypto.randomUUID();
+    await localRepository.saveWeekSchedule(templateId, '2026-W43', {
+      1: 5,
+      5: 1,
+    });
+    await localRepository.resetConnectionForTests();
+
+    expect(await localRepository.weekSchedule(templateId, '2026-W43')).toEqual({
+      1: 5,
+      5: 1,
+    });
+    expect(await localRepository.weekSchedule(templateId, '2026-W44')).toEqual(
+      {},
+    );
+  });
+
   it('persists session, exercise, and set notes for offline reload', async () => {
     const workout = exampleWorkout();
     workout.notes = 'Session note';
@@ -237,6 +254,7 @@ describe('local workout repository', () => {
       targetDistance: null,
       targetDistanceUnit: 'km',
     });
+    expect(references.templates[0]?.isActive).toBe(true);
     expect((await localRepository.activeWorkout())?.exercises[0]).toMatchObject(
       {
         exerciseType: 'strength',
@@ -245,6 +263,49 @@ describe('local workout repository', () => {
       },
     );
     expect((await localRepository.outbox())[0]?.workout.templateDay).toBeNull();
+  });
+
+  it('upgrades a version-three cache with exactly one active template', async () => {
+    const now = new Date().toISOString();
+    const firstId = crypto.randomUUID();
+    const secondId = crypto.randomUUID();
+    const legacy = await openDB('spotter', 3, {
+      upgrade(database) {
+        const workouts = database.createObjectStore('workouts', {
+          keyPath: 'id',
+        });
+        workouts.createIndex('by-status', 'status');
+        const outbox = database.createObjectStore('outbox', {
+          keyPath: 'operationId',
+        });
+        outbox.createIndex('by-sequence', 'sequence', { unique: true });
+        database.createObjectStore('muscles', { keyPath: 'id' });
+        database.createObjectStore('exercises', { keyPath: 'id' });
+        database.createObjectStore('templates', { keyPath: 'id' });
+        database.createObjectStore('metadata', { keyPath: 'key' });
+      },
+    });
+    await legacy.put('templates', {
+      id: secondId,
+      name: 'Later plan',
+      notes: null,
+      exercises: [],
+      createdAt: '2026-10-21T10:00:00.000Z',
+      updatedAt: now,
+    });
+    await legacy.put('templates', {
+      id: firstId,
+      name: 'Earlier plan',
+      notes: null,
+      exercises: [],
+      createdAt: '2026-10-20T10:00:00.000Z',
+      updatedAt: now,
+    });
+    legacy.close();
+
+    const templates = (await localRepository.references()).templates;
+    expect(templates.filter((template) => template.isActive)).toHaveLength(1);
+    expect(templates.find((template) => template.isActive)?.id).toBe(firstId);
   });
 });
 

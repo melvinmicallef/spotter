@@ -9,6 +9,8 @@ import type {
   WorkoutTemplate,
 } from '@spotter/shared';
 
+import { parseWeekSchedule, type WeekSchedule } from './schedule.js';
+
 export interface OutboxRecord extends SyncOperation {
   sequence: number;
   attempts: number;
@@ -47,7 +49,7 @@ interface SpotterDatabaseSchema extends DBSchema {
 let databasePromise: Promise<IDBPDatabase<SpotterDatabaseSchema>> | undefined;
 
 function database() {
-  databasePromise ??= openDB<SpotterDatabaseSchema>('spotter', 3, {
+  databasePromise ??= openDB<SpotterDatabaseSchema>('spotter', 4, {
     async upgrade(db, oldVersion, _newVersion, transaction) {
       if (oldVersion < 1) {
         const workouts = db.createObjectStore('workouts', { keyPath: 'id' });
@@ -104,6 +106,21 @@ function database() {
           await outboxStore.put({
             ...operation,
             workout: normalizeWorkout(operation.workout),
+          });
+        }
+      }
+      if (oldVersion < 4) {
+        const templateStore = transaction.objectStore('templates');
+        const cachedTemplates = (await templateStore.getAll()).sort(
+          (left, right) =>
+            left.createdAt.localeCompare(right.createdAt) ||
+            left.id.localeCompare(right.id),
+        );
+        const hasActive = cachedTemplates.some((template) => template.isActive);
+        for (const [index, template] of cachedTemplates.entries()) {
+          await templateStore.put({
+            ...template,
+            isActive: hasActive ? Boolean(template.isActive) : index === 0,
           });
         }
       }
@@ -220,6 +237,30 @@ export const localRepository = {
     return { muscles, exercises, templates };
   },
 
+  async weekSchedule(
+    templateId: string,
+    weekKey: string,
+  ): Promise<WeekSchedule> {
+    const record = await (
+      await database()
+    ).get('metadata', scheduleMetadataKey(templateId, weekKey));
+    return parseWeekSchedule(record?.value);
+  },
+
+  async saveWeekSchedule(
+    templateId: string,
+    weekKey: string,
+    schedule: WeekSchedule,
+  ): Promise<void> {
+    const key = scheduleMetadataKey(templateId, weekKey);
+    await (
+      await database()
+    ).put('metadata', {
+      key,
+      value: JSON.stringify(schedule),
+    });
+  },
+
   async resetConnectionForTests() {
     const db = await databasePromise;
     db?.close();
@@ -240,6 +281,7 @@ function normalizeTemplate(
 ): WorkoutTemplate {
   return {
     ...template,
+    isActive: template.isActive ?? false,
     exercises: template.exercises.map((entry) => ({
       ...entry,
       exerciseType:
@@ -250,6 +292,10 @@ function normalizeTemplate(
       targetDistanceUnit: entry.targetDistanceUnit ?? 'km',
     })),
   };
+}
+
+function scheduleMetadataKey(templateId: string, weekKey: string): string {
+  return `weekSchedule:${templateId}:${weekKey}`;
 }
 
 function normalizeWorkout(workout: Workout): Workout {
