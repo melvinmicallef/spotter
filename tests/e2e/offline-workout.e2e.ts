@@ -89,11 +89,32 @@ test('installs its shell and synchronizes one offline workout after reload', asy
   const exerciseResponse = await request.post('/api/exercises', {
     data: {
       name: exerciseName,
+      exerciseType: 'strength',
       instructions: 'Cached by the browser test',
       muscles: [{ muscleId: muscle.id, role: 'primary' }],
     },
   });
   expect(exerciseResponse.ok()).toBe(true);
+  const exercise = (await exerciseResponse.json()) as { id: string };
+  const templateResponse = await request.post('/api/templates', {
+    data: {
+      name: `Offline week ${suffix}`,
+      notes: null,
+      exercises: [
+        {
+          exerciseId: exercise.id,
+          dayOfWeek: 1,
+          notes: null,
+          targetSets: 1,
+          targetReps: 8,
+          targetDurationSeconds: null,
+          targetDistance: null,
+          targetDistanceUnit: 'km',
+        },
+      ],
+    },
+  });
+  expect(templateResponse.ok()).toBe(true);
 
   await page.goto('/');
   await expect(page.getByRole('status')).toContainText('Online');
@@ -125,22 +146,24 @@ test('installs its shell and synchronizes one offline workout after reload', asy
   await context.setOffline(true);
   await expect(page.getByRole('status')).toContainText('Offline');
 
-  await page.getByRole('button', { name: 'Start an open workout' }).click();
   await expect(
-    page.getByRole('heading', { name: 'Open workout' }),
+    page.getByRole('button', { name: 'Start an open workout' }),
+  ).toHaveCount(0);
+  await page.getByRole('button', { name: 'Start Monday (1)' }).click();
+  await expect(
+    page.getByRole('heading', { name: /Offline week .* · Monday/ }),
   ).toBeVisible();
-  await page.getByLabel('Add exercise').selectOption({ label: exerciseName });
   await expect(
     page.getByRole('article').getByText(exerciseName, { exact: true }),
   ).toBeVisible();
 
-  await page.getByLabel('Weight', { exact: true }).fill('42.5');
+  await page.getByLabel(`${exerciseName} weight set 1`).fill('42.5');
   await expect
     .poll(async () => (await activeSetSnapshot(page))?.weight)
     .toBe(42.5);
-  await page.getByLabel('Repetitions').fill('8');
+  await page.getByLabel(`${exerciseName} repetitions set 1`).fill('8');
   await expect.poll(async () => (await activeSetSnapshot(page))?.reps).toBe(8);
-  await page.getByLabel('Set complete').check();
+  await page.getByLabel(`${exerciseName} set 1 complete`).check();
   await expect
     .poll(async () => (await activeSetSnapshot(page))?.completed)
     .toBe(true);
@@ -148,19 +171,23 @@ test('installs its shell and synchronizes one offline workout after reload', asy
 
   await page.goto('/offline-reload-check');
   await expect(
-    page.getByRole('heading', { name: 'Open workout' }),
+    page.getByRole('heading', { name: /Offline week .* · Monday/ }),
   ).toBeVisible();
-  await expect(page.getByLabel('Weight', { exact: true })).toHaveValue('42.5');
-  await expect(page.getByLabel('Repetitions')).toHaveValue('8');
-  await expect(page.getByLabel('Set complete')).toBeChecked();
+  await expect(page.getByLabel(`${exerciseName} weight set 1`)).toHaveValue(
+    '42.5',
+  );
+  await expect(
+    page.getByLabel(`${exerciseName} repetitions set 1`),
+  ).toHaveValue('8');
+  await expect(page.getByLabel(`${exerciseName} set 1 complete`)).toBeChecked();
 
   await page.getByRole('button', { name: 'Finish' }).click();
   await page.getByRole('button', { name: 'History' }).click();
-  await expect(page.getByText('1 completed sets')).toBeVisible();
+  await expect(page.getByText('1 completed efforts')).toBeVisible();
 
   await page.reload();
   await page.getByRole('button', { name: 'History' }).click();
-  await expect(page.getByText('1 completed sets')).toBeVisible();
+  await expect(page.getByText('1 completed efforts')).toBeVisible();
 
   let acknowledgementDropped = false;
   await page.route('**/api/sync', async (route) => {

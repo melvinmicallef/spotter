@@ -74,7 +74,7 @@ Catalogue records can be managed end to end while online, invalid requests have
 stable errors, migrations work on a new database, and automated tests prove
 foreign-key and deletion behavior.
 
-## Milestone 2: Weekly workout templates (implementation being revised)
+## Milestone 2: Weekly workout templates (implemented)
 
 ### Deliverables
 
@@ -92,7 +92,7 @@ A user can build and maintain a reusable seven-day workout template online,
 and a template response contains everything needed to create an independent
 snapshot for any populated day.
 
-## Milestone 3: Online workout vertical slice (implementation being revised)
+## Milestone 3: Online workout vertical slice (implemented)
 
 ### Deliverables
 

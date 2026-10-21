@@ -12,13 +12,16 @@ test('manages roles, reviewed imports, GIFs, notes, and detailed history', async
   const planName = `Detailed plan ${suffix}`;
 
   await page.goto('/');
-  await page.getByRole('button', { name: 'Catalogue' }).click();
+  await expect(page.getByRole('button', { name: 'Catalogue' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Muscles' }).click();
 
   for (const name of [primaryName, secondaryName]) {
     await page.getByLabel('New muscle name').fill(name);
-    await page.getByRole('button', { name: 'Add', exact: true }).click();
+    await page.getByRole('button', { name: 'Add muscle' }).click();
     await expect(page.getByLabel(`${name} name`)).toBeVisible();
   }
+
+  await page.getByRole('button', { name: 'Exercises' }).click();
 
   await page.getByLabel(`${primaryName} role`).first().selectOption('primary');
   await page
@@ -35,6 +38,7 @@ test('manages roles, reviewed imports, GIFs, notes, and detailed history', async
   await expect(page.getByLabel('Imported instructions')).toHaveValue(
     'Pause at the top',
   );
+  await page.getByLabel('Imported exercise type').selectOption('cardio');
   await expect(
     page.getByRole('link', { name: /Review detected GIF/ }),
   ).toHaveAttribute('href', 'https://cdn.import.test/row.gif');
@@ -60,6 +64,7 @@ test('manages roles, reviewed imports, GIFs, notes, and detailed history', async
     await request.get('/api/exercises')
   ).json()) as Array<{
     name: string;
+    exerciseType: string;
     instructions: string | null;
     muscles: Array<{ name: string; role: string }>;
     source: { url: string; mediaUrl: string } | null;
@@ -68,6 +73,7 @@ test('manages roles, reviewed imports, GIFs, notes, and detailed history', async
     (exercise) => exercise.name === 'Imported row',
   );
   expect(imported).toMatchObject({
+    exerciseType: 'cardio',
     muscles: [
       { name: primaryName, role: 'primary' },
       { name: secondaryName, role: 'secondary' },
@@ -112,34 +118,63 @@ test('manages roles, reviewed imports, GIFs, notes, and detailed history', async
 
   await context.setOffline(true);
   await page.reload();
-  await page.getByRole('button', { name: 'Catalogue' }).click();
+  await page.getByRole('button', { name: 'Exercises' }).click();
   await expect(gif).toBeVisible();
   await context.setOffline(false);
   await expect(page.getByRole('status')).toContainText('Online');
 
   await page.getByRole('button', { name: 'Templates' }).click();
-  await page.getByLabel('New template name').fill(planName);
-  await page.getByRole('button', { name: 'Create', exact: true }).click();
+  await page.getByLabel('New weekly template name').fill(planName);
+  await page.getByRole('button', { name: 'Create weekly template' }).click();
   const template = page.locator('.template-card').filter({
     has: page.getByLabel(`${planName} name`),
   });
   await template
-    .getByLabel('Add exercise to template')
-    .selectOption({ label: gifExerciseName });
+    .getByLabel('Add exercise to Monday')
+    .selectOption({ label: `${gifExerciseName} (strength)` });
   await template
-    .getByLabel(`${gifExerciseName} template notes`)
+    .getByLabel('Add exercise to Monday')
+    .selectOption({ label: 'Imported row (cardio)' });
+  await template
+    .getByLabel('Add exercise to Tuesday')
+    .selectOption({ label: 'Imported row (cardio)' });
+  await template
+    .getByLabel(`${gifExerciseName} template notes on Monday`)
     .fill('Template exercise note');
-  await template.getByRole('button', { name: 'Save template' }).click();
+  await template
+    .getByLabel(`${gifExerciseName} target sets on Monday`)
+    .fill('1');
+  await template
+    .getByLabel(`${gifExerciseName} target reps on Monday`)
+    .fill('10');
+  await template.getByLabel('Imported row target minutes on Monday').fill('30');
+  await template.getByLabel('Imported row target distance on Monday').fill('5');
+  await template.getByRole('button', { name: 'Save weekly template' }).click();
 
   await page.getByRole('button', { name: 'Workout' }).click();
   const plan = page.locator('article.card').filter({ hasText: planName });
-  await plan.getByRole('button', { name: 'Start' }).click();
+  await expect(
+    plan.getByRole('button', { name: 'Start Monday (2)' }),
+  ).toBeVisible();
+  await expect(
+    plan.getByRole('button', { name: 'Start Tuesday (1)' }),
+  ).toBeVisible();
+  await plan.getByRole('button', { name: 'Start Monday (2)' }).click();
   await page.getByLabel('Session notes').fill('Session note');
-  await page.getByLabel('Exercise notes').fill('Workout exercise note');
-  await page.getByLabel('Weight', { exact: true }).fill('52.5');
-  await page.getByLabel('Repetitions').fill('10');
-  await page.getByLabel('Set 1 notes').fill('Set note');
-  await page.getByLabel('Set complete').check();
+  await page
+    .getByPlaceholder(`Notes for ${gifExerciseName}`)
+    .fill('Workout exercise note');
+  await page.getByLabel(`${gifExerciseName} weight set 1`).fill('52.5');
+  await page.getByLabel(`${gifExerciseName} repetitions set 1`).fill('10');
+  await page.getByLabel(`${gifExerciseName} set 1 notes`).fill('Set note');
+  await page.getByLabel(`${gifExerciseName} set 1 complete`).check();
+  await expect(
+    page.getByLabel('Imported row duration minutes effort 1'),
+  ).toBeVisible();
+  await expect(page.getByLabel('Imported row weight set 1')).toHaveCount(0);
+  await page.getByLabel('Imported row duration minutes effort 1').fill('31');
+  await page.getByLabel('Imported row distance effort 1').fill('5.2');
+  await page.getByLabel('Imported row effort 1 complete').check();
   await page.getByRole('button', { name: 'Finish' }).click();
 
   await page.getByRole('button', { name: 'History' }).click();
@@ -147,6 +182,7 @@ test('manages roles, reviewed imports, GIFs, notes, and detailed history', async
   await history.locator('summary').click();
   await expect(history).toContainText(gifExerciseName);
   await expect(history).toContainText('52.5 kg × 10 reps');
+  await expect(history).toContainText('31 min · 5.2 km');
   await expect(history).toContainText('Session note');
   await expect(history).toContainText('Workout exercise note');
   await expect(history).toContainText('Set note');
