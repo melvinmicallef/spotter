@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import type {
   Exercise,
   ExerciseInput,
+  ExerciseMedia,
   Muscle,
   MuscleInput,
   ReferenceData,
@@ -17,6 +18,14 @@ import type { SpotterDatabase } from './database.js';
 import { AppError, isSqliteConstraint } from './errors.js';
 
 type Row = Record<string, unknown>;
+
+export interface MediaInput {
+  id: string;
+  kind: 'gif';
+  mimeType: 'image/gif';
+  byteSize: number;
+  originalName: string;
+}
 
 export class SpotterStore {
   constructor(private readonly database: SpotterDatabase) {}
@@ -94,7 +103,13 @@ export class SpotterStore {
 
   listExercises(): Exercise[] {
     return this.database
-      .prepare('SELECT * FROM exercises ORDER BY name COLLATE NOCASE')
+      .prepare(
+        `SELECT exercises.*, exercise_media.byte_size AS media_byte_size,
+          exercise_media.original_name AS media_original_name,
+          exercise_media.created_at AS media_created_at
+         FROM exercises LEFT JOIN exercise_media ON exercise_media.id = exercises.media_id
+         ORDER BY exercises.name COLLATE NOCASE`,
+      )
       .all()
       .map((row) => this.mapExercise(row as Row));
   }
@@ -106,9 +121,23 @@ export class SpotterStore {
       this.database.transaction(() => {
         this.database
           .prepare(
-            'INSERT INTO exercises (id, name, instructions, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
+            `INSERT INTO exercises
+             (id, name, instructions, media_id, source_url, source_title,
+              source_media_url, source_imported_at, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           )
-          .run(id, input.name, input.instructions, now, now);
+          .run(
+            id,
+            input.name,
+            input.instructions,
+            input.mediaId,
+            input.source?.url ?? null,
+            input.source?.title ?? null,
+            input.source?.mediaUrl ?? null,
+            input.source ? now : null,
+            now,
+            now,
+          );
         this.replaceExerciseMuscles(id, input.muscles);
         this.incrementReferenceRevision();
       })();
@@ -126,9 +155,21 @@ export class SpotterStore {
       this.database.transaction(() => {
         const result = this.database
           .prepare(
-            'UPDATE exercises SET name = ?, instructions = ?, updated_at = ? WHERE id = ?',
+            `UPDATE exercises SET name = ?, instructions = ?, media_id = ?,
+             source_url = ?, source_title = ?, source_media_url = ?,
+             source_imported_at = ?, updated_at = ? WHERE id = ?`,
           )
-          .run(input.name, input.instructions, new Date().toISOString(), id);
+          .run(
+            input.name,
+            input.instructions,
+            input.mediaId,
+            input.source?.url ?? null,
+            input.source?.title ?? null,
+            input.source?.mediaUrl ?? null,
+            input.source ? new Date().toISOString() : null,
+            new Date().toISOString(),
+            id,
+          );
         if (result.changes === 0)
           throw new AppError(404, 'NOT_FOUND', 'Exercise not found');
         this.replaceExerciseMuscles(id, input.muscles);
@@ -144,7 +185,12 @@ export class SpotterStore {
     return this.getExercise(id);
   }
 
-  deleteExercise(id: string): void {
+  deleteExercise(id: string): string | null {
+    const mediaId = (
+      this.database
+        .prepare('SELECT media_id FROM exercises WHERE id = ?')
+        .get(id) as { media_id: string | null } | undefined
+    )?.media_id;
     try {
       this.database.transaction(() => {
         const result = this.database
@@ -165,6 +211,43 @@ export class SpotterStore {
       }
       throw error;
     }
+    return mediaId ?? null;
+  }
+
+  createMedia(input: MediaInput): ExerciseMedia {
+    const createdAt = new Date().toISOString();
+    this.database
+      .prepare(
+        `INSERT INTO exercise_media
+         (id, kind, mime_type, byte_size, original_name, created_at)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        input.id,
+        input.kind,
+        input.mimeType,
+        input.byteSize,
+        input.originalName,
+        createdAt,
+      );
+    return this.getMedia(input.id);
+  }
+
+  getMedia(id: string): ExerciseMedia {
+    const row = this.database
+      .prepare('SELECT * FROM exercise_media WHERE id = ?')
+      .get(id) as Row | undefined;
+    if (!row) throw new AppError(404, 'NOT_FOUND', 'Exercise media not found');
+    return mapMedia(row);
+  }
+
+  deleteMedia(id: string): ExerciseMedia {
+    const media = this.getMedia(id);
+    this.database.transaction(() => {
+      this.database.prepare('DELETE FROM exercise_media WHERE id = ?').run(id);
+      this.incrementReferenceRevision();
+    })();
+    return media;
   }
 
   listTemplates(): WorkoutTemplate[] {
@@ -320,7 +403,13 @@ export class SpotterStore {
 
   private getExercise(id: string): Exercise {
     const row = this.database
-      .prepare('SELECT * FROM exercises WHERE id = ?')
+      .prepare(
+        `SELECT exercises.*, exercise_media.byte_size AS media_byte_size,
+          exercise_media.original_name AS media_original_name,
+          exercise_media.created_at AS media_created_at
+         FROM exercises LEFT JOIN exercise_media ON exercise_media.id = exercises.media_id
+         WHERE exercises.id = ?`,
+      )
       .get(id) as Row | undefined;
     if (!row) throw new AppError(404, 'NOT_FOUND', 'Exercise not found');
     return this.mapExercise(row);
@@ -353,6 +442,25 @@ export class SpotterStore {
       name: String(row.name),
       instructions: nullableString(row.instructions),
       muscles,
+      media: row.media_id
+        ? {
+            id: String(row.media_id),
+            kind: 'gif',
+            url: `/api/media/${String(row.media_id)}`,
+            mimeType: 'image/gif',
+            byteSize: Number(row.media_byte_size),
+            originalName: String(row.media_original_name),
+            createdAt: String(row.media_created_at),
+          }
+        : null,
+      source: row.source_url
+        ? {
+            url: String(row.source_url),
+            title: nullableString(row.source_title),
+            mediaUrl: nullableString(row.source_media_url),
+            importedAt: String(row.source_imported_at),
+          }
+        : null,
       createdAt: String(row.created_at),
       updatedAt: String(row.updated_at),
     };
@@ -473,7 +581,7 @@ export class SpotterStore {
     const existing = this.database
       .prepare('SELECT updated_at FROM workout_sessions WHERE id = ?')
       .get(workout.id) as { updated_at: string } | undefined;
-    if (existing && existing.updated_at > workout.updatedAt) return;
+    if (existing && existing.updated_at >= workout.updatedAt) return;
 
     const templateExists = workout.templateId
       ? this.database
@@ -577,6 +685,18 @@ function mapMuscle(row: Row): Muscle {
     name: String(row.name),
     createdAt: String(row.created_at),
     updatedAt: String(row.updated_at),
+  };
+}
+
+function mapMedia(row: Row): ExerciseMedia {
+  return {
+    id: String(row.id),
+    kind: 'gif',
+    url: `/api/media/${String(row.id)}`,
+    mimeType: 'image/gif',
+    byteSize: Number(row.byte_size),
+    originalName: String(row.original_name),
+    createdAt: String(row.created_at),
   };
 }
 

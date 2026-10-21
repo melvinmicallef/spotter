@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type {
   Exercise,
@@ -24,7 +24,9 @@ import {
   moveExercise,
   removeExercise,
   removeSet,
+  updateExerciseNotes,
   updateSet,
+  updateWorkoutNotes,
 } from './workout.js';
 
 type View = 'workout' | 'history' | 'catalogue' | 'templates';
@@ -40,9 +42,12 @@ export function App() {
   const [templates, setTemplates] = useState<WorkoutTemplate[]>([]);
   const [pending, setPending] = useState(0);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [syncErrorDetails, setSyncErrorDetails] = useState<unknown>();
   const [retryAfterMs, setRetryAfterMs] = useState<number | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const activeWorkoutRef = useRef<Workout | undefined>(undefined);
+  const saveQueueRef = useRef(Promise.resolve());
 
   const loadLocal = useCallback(async () => {
     const [active, workouts, references, outbox] = await Promise.all([
@@ -52,6 +57,7 @@ export function App() {
       localRepository.outbox(Number.MAX_SAFE_INTEGER),
     ]);
     setActiveWorkout(active);
+    activeWorkoutRef.current = active;
     setLocalWorkouts(workouts);
     setMuscles(references.muscles);
     setExercises(references.exercises);
@@ -63,7 +69,12 @@ export function App() {
     if (!navigator.onLine) return;
     const result = await drainOutbox();
     setPending(result.pending);
-    setSyncError(result.error);
+    setSyncError(
+      result.failures[0]
+        ? `${result.failures[0].code}: ${result.failures[0].message}`
+        : result.error,
+    );
+    setSyncErrorDetails(result.failures[0]?.details);
     setRetryAfterMs(result.retryAfterMs);
     try {
       const [references, workouts] = await Promise.all([
@@ -74,12 +85,16 @@ export function App() {
       setExercises(references.exercises);
       setTemplates(references.templates);
       setServerWorkouts(workouts);
+      setOnline(true);
     } catch (error) {
+      setOnline(false);
+      setRetryAfterMs((current) => current ?? 5_000);
       setSyncError(
         error instanceof Error
           ? error.message
           : 'Unable to refresh server data',
       );
+      setSyncErrorDetails(undefined);
     }
   }, []);
 
@@ -103,21 +118,45 @@ export function App() {
   }, [loadLocal, syncNow]);
 
   useEffect(() => {
-    if (!online || retryAfterMs == null || pending === 0) return;
+    if (!navigator.onLine || retryAfterMs == null) return;
     const timeout = window.setTimeout(() => void syncNow(), retryAfterMs);
     return () => window.clearTimeout(timeout);
-  }, [online, pending, retryAfterMs, syncNow]);
+  }, [pending, retryAfterMs, syncNow]);
 
-  async function saveWorkout(workout: Workout) {
-    await localRepository.saveWorkout(workout);
-    setActiveWorkout(workout.status === 'in_progress' ? workout : undefined);
-    await loadLocal();
-    if (navigator.onLine) void syncNow();
+  function persistWorkout(workout: Workout) {
+    saveQueueRef.current = saveQueueRef.current
+      .then(async () => {
+        await localRepository.saveWorkout(workout);
+        setLocalWorkouts(await localRepository.workouts());
+        setPending(
+          (await localRepository.outbox(Number.MAX_SAFE_INTEGER)).length,
+        );
+        if (navigator.onLine) void syncNow();
+      })
+      .catch((error: unknown) => {
+        setMessage(
+          error instanceof Error
+            ? `This change could not be saved: ${error.message}`
+            : 'This change could not be saved',
+        );
+      });
   }
 
-  async function start(template?: WorkoutTemplate) {
-    if (activeWorkout) return;
-    await saveWorkout(createWorkout(template));
+  function mutateWorkout(update: (workout: Workout) => Workout) {
+    const current = activeWorkoutRef.current;
+    if (!current) return;
+    const next = update(current);
+    activeWorkoutRef.current = next.status === 'in_progress' ? next : undefined;
+    setActiveWorkout(activeWorkoutRef.current);
+    persistWorkout(next);
+  }
+
+  function start(template?: WorkoutTemplate) {
+    if (activeWorkoutRef.current) return;
+    const workout = createWorkout(template);
+    activeWorkoutRef.current = workout;
+    setActiveWorkout(workout);
+    persistWorkout(workout);
   }
 
   const refreshOnlineReferences = useCallback(async () => {
@@ -163,6 +202,7 @@ export function App() {
           online={online}
           pending={pending}
           syncError={syncError}
+          syncErrorDetails={syncErrorDetails}
           onRetry={() => void syncNow()}
         />
       </header>
@@ -173,6 +213,7 @@ export function App() {
           <button
             className="icon-button"
             type="button"
+            aria-label="Dismiss message"
             onClick={() => setMessage(null)}
           >
             ×
@@ -186,8 +227,8 @@ export function App() {
             workout={activeWorkout}
             exercises={exercises}
             templates={templates}
-            onStart={(template) => void start(template)}
-            onChange={(workout) => void saveWorkout(workout)}
+            onStart={start}
+            onChange={mutateWorkout}
             actions={{
               addExercise,
               removeExercise,
@@ -195,6 +236,8 @@ export function App() {
               addSet,
               removeSet,
               updateSet,
+              updateWorkoutNotes,
+              updateExerciseNotes,
               finish: finishWorkout,
             }}
           />

@@ -8,6 +8,7 @@ const config: AppConfig = {
   NODE_ENV: 'test',
   PORT: 3000,
   DATABASE_PATH: ':memory:',
+  MEDIA_PATH: './data/test-media',
   APP_VERSION: '0.1.0',
   GIT_COMMIT: 'test',
 };

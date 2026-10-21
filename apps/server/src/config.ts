@@ -6,6 +6,7 @@ const configSchema = z.object({
     .default('development'),
   PORT: z.coerce.number().int().positive().max(65_535).default(3000),
   DATABASE_PATH: z.string().min(1).default('./data/spotter.sqlite'),
+  MEDIA_PATH: z.string().min(1).default('./data/media'),
   WEB_DIST_PATH: z.string().min(1).optional(),
   APP_VERSION: z.string().min(1).default('0.1.0'),
   GIT_COMMIT: z.string().min(1).default('development'),

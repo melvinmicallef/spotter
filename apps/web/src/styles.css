@@ -250,6 +250,35 @@ small {
   background: rgba(13, 29, 23, 0.9);
   box-shadow: 0 18px 60px rgba(0, 0, 0, 0.15);
 }
+.import-card {
+  margin-bottom: 14px;
+  border-color: #3e715c;
+}
+.import-preview {
+  display: grid;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid #29473c;
+}
+.form-card a {
+  color: #79e0b3;
+}
+.exercise-gif {
+  width: min(100%, 360px);
+  max-height: 280px;
+  object-fit: contain;
+  border-radius: 12px;
+  background: #07100d;
+}
+.check-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #abc0b6;
+}
+.check-label input {
+  width: auto;
+}
 .card,
 .history-card {
   display: flex;
@@ -298,11 +327,66 @@ small {
 .check-grid input {
   width: auto;
 }
+.muscle-role-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+}
+.muscle-role-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  color: #abc0b6;
+  font-size: 0.84rem;
+}
 .template-entry > span {
   flex: 1;
 }
 .template-entry > input {
   width: 78px;
+}
+.template-entry {
+  flex-wrap: wrap;
+}
+.template-entry-notes {
+  width: 100%;
+  min-height: 54px;
+}
+.history-details {
+  display: block;
+}
+.history-details summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  cursor: pointer;
+  list-style-position: outside;
+}
+.history-body {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #29473c;
+}
+.history-exercise + .history-exercise {
+  margin-top: 18px;
+}
+.history-exercise h3 {
+  margin-bottom: 5px;
+}
+.history-exercise ol {
+  display: grid;
+  gap: 7px;
+  padding-left: 24px;
+}
+.history-exercise li {
+  padding: 8px 10px;
+  border-radius: 9px;
+  background: #091712;
+}
+.history-exercise li > span + span {
+  margin-left: 12px;
+  color: #8ea79b;
 }
 .workout-card > header {
   display: flex;
@@ -341,6 +425,51 @@ small {
   grid-template-columns: 38px minmax(130px, 1fr) minmax(65px, 0.5fr) 50px 30px;
   align-items: center;
   gap: 8px;
+}
+.set-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.set-notes {
+  padding-left: 45px;
+}
+.set-notes input {
+  padding-block: 8px;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.sync-error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #ffb2a5;
+}
+.sync-error-details {
+  position: relative;
+}
+.sync-error-details pre {
+  position: absolute;
+  z-index: 30;
+  right: 0;
+  width: min(460px, 80vw);
+  max-height: 260px;
+  overflow: auto;
+  padding: 10px;
+  border: 1px solid #654c27;
+  border-radius: 8px;
+  color: #ffd89d;
+  background: #261d10;
+  white-space: pre-wrap;
 }
 .set-head {
   padding: 0 7px;

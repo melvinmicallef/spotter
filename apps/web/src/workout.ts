@@ -47,6 +47,24 @@ export function addExercise(workout: Workout, exercise: Exercise): Workout {
   return touch({ ...workout, exercises: [...workout.exercises, entry] });
 }
 
+export function updateWorkoutNotes(
+  workout: Workout,
+  notes: string | null,
+): Workout {
+  return touch({ ...workout, notes });
+}
+
+export function updateExerciseNotes(
+  workout: Workout,
+  workoutExerciseId: string,
+  notes: string | null,
+): Workout {
+  return updateExercise(workout, workoutExerciseId, (exercise) => ({
+    ...exercise,
+    notes,
+  }));
+}
+
 export function removeExercise(workout: Workout, exerciseId: string): Workout {
   return touch({
     ...workout,
@@ -140,5 +158,10 @@ function updateExercise(
 }
 
 function touch(workout: Workout): Workout {
-  return { ...workout, updatedAt: new Date().toISOString() };
+  const now = Date.now();
+  const previous = Date.parse(workout.updatedAt);
+  return {
+    ...workout,
+    updatedAt: new Date(Math.max(now, previous + 1)).toISOString(),
+  };
 }

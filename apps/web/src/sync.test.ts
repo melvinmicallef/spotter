@@ -34,6 +34,7 @@ describe('outbox synchronization', () => {
     expect(await drainOutbox()).toEqual({
       pending: 0,
       error: null,
+      failures: [],
       retryAfterMs: null,
     });
     expect(await localRepository.outbox()).toHaveLength(0);
@@ -65,9 +66,17 @@ describe('outbox synchronization', () => {
     expect(await drainOutbox()).toEqual({
       pending: 1,
       error: 'Workout is invalid',
+      failures: [
+        {
+          classification: 'rejected',
+          code: 'INVALID_WORKOUT',
+          message: 'Workout is invalid',
+          details: undefined,
+        },
+      ],
       retryAfterMs: null,
     });
-    expect((await localRepository.outbox())[0]?.lastError).toBe(
+    expect((await localRepository.outbox())[0]?.failure?.message).toBe(
       'Workout is invalid',
     );
   });
@@ -82,9 +91,39 @@ describe('outbox synchronization', () => {
     expect(await drainOutbox()).toEqual({
       pending: 1,
       error: 'Network unavailable',
+      failures: [
+        {
+          classification: 'transient',
+          code: 'NETWORK_ERROR',
+          message: 'Network unavailable',
+          details: undefined,
+        },
+      ],
       retryAfterMs: 1_000,
     });
     expect((await localRepository.outbox())[0]?.attempts).toBe(1);
+  });
+
+  it('does not retry client validation failures as network errors', async () => {
+    await localRepository.saveWorkout(exampleWorkout());
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            error: { code: 'VALIDATION_ERROR', message: 'Invalid batch' },
+          }),
+          { status: 400, headers: { 'Content-Type': 'application/json' } },
+        ),
+      ),
+    );
+
+    const result = await drainOutbox();
+    expect(result.retryAfterMs).toBeNull();
+    expect(result.failures[0]?.classification).toBe('rejected');
+    expect((await localRepository.outbox())[0]?.failure?.code).toBe(
+      'VALIDATION_ERROR',
+    );
   });
 });
 

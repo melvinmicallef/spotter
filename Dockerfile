@@ -28,6 +28,7 @@ ARG GIT_COMMIT
 ENV NODE_ENV=production \
     PORT=3000 \
     DATABASE_PATH=/data/spotter.sqlite \
+    MEDIA_PATH=/data/media \
     APP_VERSION=${APP_VERSION} \
     GIT_COMMIT=${GIT_COMMIT}
 WORKDIR /app

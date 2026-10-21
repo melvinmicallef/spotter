@@ -1,18 +1,37 @@
-import { Router } from 'express';
+import { randomUUID } from 'node:crypto';
+
+import { Router, raw } from 'express';
 import { z } from 'zod';
 
 import {
   exerciseInputSchema,
+  exerciseMediaSchema,
   muscleInputSchema,
-  syncBatchSchema,
+  syncOperationSchema,
   uuidSchema,
+  websiteImportPreviewInputSchema,
+  websiteImportPreviewSchema,
   workoutTemplateInputSchema,
 } from '@spotter/shared';
 
 import { AppError } from './errors.js';
+import { MAX_GIF_BYTES } from './media.js';
+import type { MediaStorage } from './media.js';
 import type { SpotterStore } from './store.js';
+import {
+  previewWebsiteImport,
+  type WebsiteImportDependencies,
+} from './website-import.js';
 
-export function createApiRouter(store: SpotterStore): Router {
+interface ApiRouterOptions {
+  mediaStorage?: MediaStorage;
+  websiteImportDependencies?: WebsiteImportDependencies;
+}
+
+export function createApiRouter(
+  store: SpotterStore,
+  options: ApiRouterOptions = {},
+): Router {
   const router = Router();
 
   router.get('/muscles', (_request, response) =>
@@ -53,8 +72,86 @@ export function createApiRouter(store: SpotterStore): Router {
     );
   });
   router.delete('/exercises/:id', (request, response) => {
-    store.deleteExercise(uuidSchema.parse(request.params.id));
+    const mediaId = store.deleteExercise(uuidSchema.parse(request.params.id));
+    if (mediaId && options.mediaStorage) {
+      store.deleteMedia(mediaId);
+      options.mediaStorage.remove(mediaId);
+    }
     response.status(204).end();
+  });
+
+  router.post(
+    '/media/gif',
+    raw({ type: 'image/gif', limit: MAX_GIF_BYTES }),
+    (request, response) => {
+      if (!options.mediaStorage)
+        throw new AppError(
+          503,
+          'MEDIA_UNAVAILABLE',
+          'Media storage is unavailable',
+        );
+      if (!Buffer.isBuffer(request.body))
+        throw new AppError(
+          415,
+          'INVALID_MEDIA_TYPE',
+          'Upload a GIF using the image/gif content type',
+        );
+      const id = randomUUID();
+      options.mediaStorage.store(id, request.body);
+      try {
+        const media = store.createMedia({
+          id,
+          kind: 'gif',
+          mimeType: 'image/gif',
+          byteSize: request.body.byteLength,
+          originalName: options.mediaStorage.safeOriginalName(
+            request.header('x-file-name'),
+          ),
+        });
+        response.status(201).json(exerciseMediaSchema.parse(media));
+      } catch (error) {
+        options.mediaStorage.remove(id);
+        throw error;
+      }
+    },
+  );
+  router.get('/media/:id', (request, response) => {
+    if (!options.mediaStorage)
+      throw new AppError(
+        503,
+        'MEDIA_UNAVAILABLE',
+        'Media storage is unavailable',
+      );
+    const id = uuidSchema.parse(request.params.id);
+    const media = store.getMedia(id);
+    response
+      .set({
+        'Content-Type': media.mimeType,
+        'Content-Length': String(media.byteSize),
+        'Cache-Control': 'public, max-age=31536000, immutable',
+      })
+      .send(options.mediaStorage.read(id));
+  });
+  router.delete('/media/:id', (request, response) => {
+    if (!options.mediaStorage)
+      throw new AppError(
+        503,
+        'MEDIA_UNAVAILABLE',
+        'Media storage is unavailable',
+      );
+    const id = uuidSchema.parse(request.params.id);
+    store.deleteMedia(id);
+    options.mediaStorage.remove(id);
+    response.status(204).end();
+  });
+
+  router.post('/imports/website/preview', async (request, response) => {
+    const input = websiteImportPreviewInputSchema.parse(request.body);
+    const preview = await previewWebsiteImport(
+      input.url,
+      options.websiteImportDependencies,
+    );
+    response.json(websiteImportPreviewSchema.parse(preview));
   });
 
   router.get('/templates', (_request, response) =>
@@ -102,8 +199,34 @@ export function createApiRouter(store: SpotterStore): Router {
     response.json(store.getWorkout(uuidSchema.parse(request.params.id)));
   });
   router.post('/sync', (request, response) => {
-    const batch = syncBatchSchema.parse(request.body);
-    const results = batch.operations.map((operation) => {
+    const batch = z
+      .object({ operations: z.array(z.unknown()).min(1).max(50) })
+      .parse(request.body);
+    const results = batch.operations.map((candidate) => {
+      const identity = z
+        .object({ operationId: uuidSchema })
+        .safeParse(candidate);
+      if (!identity.success) {
+        throw new AppError(
+          400,
+          'INVALID_SYNC_OPERATION',
+          'Every synchronization operation requires a valid operation ID',
+          identity.error.flatten(),
+        );
+      }
+      const parsed = syncOperationSchema.safeParse(candidate);
+      if (!parsed.success) {
+        return {
+          operationId: identity.data.operationId,
+          status: 'rejected' as const,
+          error: {
+            code: 'INVALID_SYNC_OPERATION',
+            message: 'The workout change is invalid and needs attention',
+            details: parsed.error.flatten(),
+          },
+        };
+      }
+      const operation = parsed.data;
       try {
         return store.applySyncOperation(operation);
       } catch (error) {

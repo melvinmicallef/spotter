@@ -49,11 +49,46 @@ export const exerciseMuscleSchema = z.object({
   role: muscleRoleSchema,
 });
 
+export const httpUrlSchema = z
+  .string()
+  .url()
+  .max(2_048)
+  .refine((value) => ['http:', 'https:'].includes(new URL(value).protocol), {
+    message: 'Only HTTP and HTTPS URLs are supported',
+  });
+
+export const exerciseMediaSchema = z.object({
+  id: uuidSchema,
+  kind: z.literal('gif'),
+  url: z.string().startsWith('/api/media/'),
+  mimeType: z.literal('image/gif'),
+  byteSize: z
+    .number()
+    .int()
+    .positive()
+    .max(5 * 1024 * 1024),
+  originalName: z.string().trim().min(1).max(255),
+  createdAt: isoDateTimeSchema,
+});
+
+export const exerciseSourceSchema = z.object({
+  url: httpUrlSchema,
+  title: z.string().trim().max(300).nullable(),
+  mediaUrl: httpUrlSchema.nullable(),
+  importedAt: isoDateTimeSchema,
+});
+
+export const exerciseSourceInputSchema = exerciseSourceSchema.omit({
+  importedAt: true,
+});
+
 export const exerciseSchema = z.object({
   id: uuidSchema,
   name: nameSchema,
   instructions: nullableNoteSchema,
   muscles: z.array(exerciseMuscleSchema),
+  media: exerciseMediaSchema.nullable(),
+  source: exerciseSourceSchema.nullable(),
   createdAt: isoDateTimeSchema,
   updatedAt: isoDateTimeSchema,
 });
@@ -62,6 +97,8 @@ export const exerciseInputSchema = z.object({
   id: uuidSchema.optional(),
   name: nameSchema,
   instructions: nullableNoteSchema,
+  mediaId: uuidSchema.nullable().default(null),
+  source: exerciseSourceInputSchema.nullable().default(null),
   muscles: z
     .array(z.object({ muscleId: uuidSchema, role: muscleRoleSchema }))
     .max(30)
@@ -71,6 +108,14 @@ export const exerciseInputSchema = z.object({
         new Set(links.map((link) => link.muscleId)).size === links.length,
       'A muscle can only be linked once',
     ),
+});
+
+export const websiteImportPreviewInputSchema = z.object({ url: httpUrlSchema });
+export const websiteImportPreviewSchema = z.object({
+  sourceUrl: httpUrlSchema,
+  title: z.string().trim().min(1).max(300),
+  description: z.string().trim().max(2_000).nullable(),
+  gifUrl: httpUrlSchema.nullable(),
 });
 
 export const templateExerciseSchema = z.object({
@@ -191,6 +236,9 @@ export type Muscle = z.infer<typeof muscleSchema>;
 export type MuscleInput = z.infer<typeof muscleInputSchema>;
 export type Exercise = z.infer<typeof exerciseSchema>;
 export type ExerciseInput = z.infer<typeof exerciseInputSchema>;
+export type ExerciseMedia = z.infer<typeof exerciseMediaSchema>;
+export type ExerciseSource = z.infer<typeof exerciseSourceSchema>;
+export type WebsiteImportPreview = z.infer<typeof websiteImportPreviewSchema>;
 export type WorkoutTemplate = z.infer<typeof workoutTemplateSchema>;
 export type WorkoutTemplateInput = z.infer<typeof workoutTemplateInputSchema>;
 export type Workout = z.infer<typeof workoutSchema>;

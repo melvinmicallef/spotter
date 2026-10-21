@@ -8,6 +8,7 @@ import {
   createWorkout,
   finishWorkout,
   updateSet,
+  updateWorkoutNotes,
 } from './workout.js';
 
 const now = new Date().toISOString();
@@ -16,6 +17,8 @@ const exercise: Exercise = {
   name: 'Deadlift',
   instructions: null,
   muscles: [],
+  media: null,
+  source: null,
   createdAt: now,
   updatedAt: now,
 };
@@ -44,6 +47,20 @@ describe('local workout commands', () => {
     expect(workout.templateId).toBe(template.id);
     expect(workout.exercises[0]?.exerciseName).toBe('Deadlift');
     expect(workout.exercises[0]?.sets).toHaveLength(3);
+  });
+
+  it('keeps rapid mutations monotonic so later edits cannot be stale', () => {
+    const initial = createWorkout();
+    const first = updateWorkoutNotes(initial, 'first');
+    const second = updateWorkoutNotes(first, 'second');
+
+    expect(Date.parse(first.updatedAt)).toBeGreaterThan(
+      Date.parse(initial.updatedAt),
+    );
+    expect(Date.parse(second.updatedAt)).toBeGreaterThan(
+      Date.parse(first.updatedAt),
+    );
+    expect(second.notes).toBe('second');
   });
 
   it('adds and updates sets before completing the workout', () => {

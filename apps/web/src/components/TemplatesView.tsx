@@ -130,7 +130,7 @@ function TemplateCard({
                 {exercise?.name ?? 'Unavailable exercise'}
               </span>
               <input
-                aria-label="Target sets"
+                aria-label={`${exercise?.name ?? 'Exercise'} target sets`}
                 type="number"
                 min="1"
                 placeholder="Sets"
@@ -152,7 +152,7 @@ function TemplateCard({
                 }
               />
               <input
-                aria-label="Target reps"
+                aria-label={`${exercise?.name ?? 'Exercise'} target reps`}
                 type="number"
                 min="1"
                 placeholder="Reps"
@@ -177,6 +177,7 @@ function TemplateCard({
                 <button
                   className="icon-button"
                   type="button"
+                  aria-label={`Move ${exercise?.name ?? 'exercise'} up`}
                   onClick={() => move(index, -1)}
                 >
                   ↑
@@ -184,6 +185,7 @@ function TemplateCard({
                 <button
                   className="icon-button"
                   type="button"
+                  aria-label={`Move ${exercise?.name ?? 'exercise'} down`}
                   onClick={() => move(index, 1)}
                 >
                   ↓
@@ -191,6 +193,7 @@ function TemplateCard({
                 <button
                   className="icon-button danger-text"
                   type="button"
+                  aria-label={`Remove ${exercise?.name ?? 'exercise'}`}
                   onClick={() =>
                     setDraft({
                       ...draft,
@@ -203,6 +206,22 @@ function TemplateCard({
                   ×
                 </button>
               </div>
+              <textarea
+                className="template-entry-notes"
+                aria-label={`${exercise?.name ?? 'Exercise'} template notes`}
+                placeholder="Exercise notes"
+                value={entry.notes ?? ''}
+                onChange={(event) =>
+                  setDraft({
+                    ...draft,
+                    exercises: draft.exercises.map((item, itemIndex) =>
+                      itemIndex === index
+                        ? { ...item, notes: event.target.value || null }
+                        : item,
+                    ),
+                  })
+                }
+              />
             </div>
           );
         })}

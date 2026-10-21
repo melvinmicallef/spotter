@@ -28,6 +28,16 @@ export default defineConfig({
       workbox: {
         navigateFallback: '/index.html',
         globPatterns: ['**/*.{js,css,html,svg}'],
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) => url.pathname.startsWith('/api/media/'),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'spotter-exercise-media-v1',
+              expiration: { maxEntries: 200, maxAgeSeconds: 31_536_000 },
+            },
+          },
+        ],
       },
     }),
   ],

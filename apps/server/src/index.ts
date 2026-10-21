@@ -1,12 +1,18 @@
 import { createApp } from './app.js';
 import { loadConfig } from './config.js';
 import { openDatabase } from './database.js';
+import { MediaStorage } from './media.js';
 import { SpotterStore } from './store.js';
 
 const config = loadConfig();
 const database = openDatabase(config.DATABASE_PATH);
 const store = new SpotterStore(database);
-const app = createApp(config, { isDatabaseReady: () => database.open, store });
+const mediaStorage = new MediaStorage(config.MEDIA_PATH);
+const app = createApp(config, {
+  isDatabaseReady: () => database.open,
+  store,
+  mediaStorage,
+});
 const server = app.listen(config.PORT, () => {
   console.log(
     JSON.stringify({

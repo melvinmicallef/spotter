@@ -10,7 +10,7 @@ interface WorkoutViewProps {
   exercises: Exercise[];
   templates: WorkoutTemplate[];
   onStart: (template?: WorkoutTemplate) => void;
-  onChange: (workout: Workout) => void;
+  onChange: (update: (workout: Workout) => Workout) => void;
   actions: {
     addExercise: (workout: Workout, exercise: Exercise) => Workout;
     removeExercise: (workout: Workout, id: string) => Workout;
@@ -26,6 +26,12 @@ interface WorkoutViewProps {
       exerciseId: string,
       setId: string,
       patch: Partial<WorkoutSet>,
+    ) => Workout;
+    updateWorkoutNotes: (workout: Workout, notes: string | null) => Workout;
+    updateExerciseNotes: (
+      workout: Workout,
+      exerciseId: string,
+      notes: string | null,
     ) => Workout;
     finish: (workout: Workout) => Workout;
   };
@@ -82,11 +88,23 @@ export function WorkoutView({
         <button
           className="danger"
           type="button"
-          onClick={() => onChange(actions.finish(workout))}
+          onClick={() => onChange(actions.finish)}
         >
           Finish
         </button>
       </div>
+
+      <label className="field">
+        Session notes
+        <textarea
+          value={workout.notes ?? ''}
+          placeholder="How did this session feel?"
+          onChange={(event) => {
+            const notes = event.target.value || null;
+            onChange((current) => actions.updateWorkoutNotes(current, notes));
+          }}
+        />
+      </label>
 
       <label className="field compact">
         Add exercise
@@ -96,7 +114,8 @@ export function WorkoutView({
             const exercise = exercises.find(
               (item) => item.id === event.target.value,
             );
-            if (exercise) onChange(actions.addExercise(workout, exercise));
+            if (exercise)
+              onChange((current) => actions.addExercise(current, exercise));
           }}
         >
           <option value="">Choose from catalogue…</option>
@@ -122,7 +141,9 @@ export function WorkoutView({
                   type="button"
                   aria-label="Move up"
                   onClick={() =>
-                    onChange(actions.moveExercise(workout, exerciseIndex, -1))
+                    onChange((current) =>
+                      actions.moveExercise(current, exerciseIndex, -1),
+                    )
                   }
                 >
                   ↑
@@ -132,7 +153,9 @@ export function WorkoutView({
                   type="button"
                   aria-label="Move down"
                   onClick={() =>
-                    onChange(actions.moveExercise(workout, exerciseIndex, 1))
+                    onChange((current) =>
+                      actions.moveExercise(current, exerciseIndex, 1),
+                    )
                   }
                 >
                   ↓
@@ -142,13 +165,28 @@ export function WorkoutView({
                   type="button"
                   aria-label="Remove exercise"
                   onClick={() =>
-                    onChange(actions.removeExercise(workout, entry.id))
+                    onChange((current) =>
+                      actions.removeExercise(current, entry.id),
+                    )
                   }
                 >
                   ×
                 </button>
               </div>
             </header>
+            <label className="field compact">
+              Exercise notes
+              <textarea
+                value={entry.notes ?? ''}
+                placeholder={`Notes for ${entry.exerciseName}`}
+                onChange={(event) => {
+                  const notes = event.target.value || null;
+                  onChange((current) =>
+                    actions.updateExerciseNotes(current, entry.id, notes),
+                  );
+                }}
+              />
+            </label>
             <div className="set-head">
               <span>Set</span>
               <span>kg / lb</span>
@@ -157,19 +195,53 @@ export function WorkoutView({
               <span />
             </div>
             {entry.sets.map((set, setIndex) => (
-              <div className="set-row" key={set.id}>
-                <strong>{setIndex + 1}</strong>
-                <div className="number-unit">
+              <div className="set-group" key={set.id}>
+                <div className="set-row">
+                  <strong>{setIndex + 1}</strong>
+                  <div className="number-unit">
+                    <input
+                      aria-label="Weight"
+                      inputMode="decimal"
+                      type="number"
+                      min="0"
+                      value={set.weight ?? ''}
+                      onChange={(event) =>
+                        onChange((current) =>
+                          actions.updateSet(current, entry.id, set.id, {
+                            weight:
+                              event.target.value === ''
+                                ? null
+                                : Number(event.target.value),
+                          }),
+                        )
+                      }
+                    />
+                    <select
+                      aria-label="Weight unit"
+                      value={set.weightUnit}
+                      onChange={(event) =>
+                        onChange((current) =>
+                          actions.updateSet(current, entry.id, set.id, {
+                            weightUnit: event.target
+                              .value as WorkoutSet['weightUnit'],
+                          }),
+                        )
+                      }
+                    >
+                      <option value="kg">kg</option>
+                      <option value="lb">lb</option>
+                    </select>
+                  </div>
                   <input
-                    aria-label="Weight"
-                    inputMode="decimal"
+                    aria-label="Repetitions"
+                    inputMode="numeric"
                     type="number"
                     min="0"
-                    value={set.weight ?? ''}
+                    value={set.reps ?? ''}
                     onChange={(event) =>
-                      onChange(
-                        actions.updateSet(workout, entry.id, set.id, {
-                          weight:
+                      onChange((current) =>
+                        actions.updateSet(current, entry.id, set.id, {
+                          reps:
                             event.target.value === ''
                               ? null
                               : Number(event.target.value),
@@ -177,67 +249,53 @@ export function WorkoutView({
                       )
                     }
                   />
-                  <select
-                    aria-label="Weight unit"
-                    value={set.weightUnit}
+                  <input
+                    aria-label="Set complete"
+                    type="checkbox"
+                    checked={set.completed}
                     onChange={(event) =>
-                      onChange(
-                        actions.updateSet(workout, entry.id, set.id, {
-                          weightUnit: event.target
-                            .value as WorkoutSet['weightUnit'],
+                      onChange((current) =>
+                        actions.updateSet(current, entry.id, set.id, {
+                          completed: event.target.checked,
                         }),
                       )
                     }
+                  />
+                  <button
+                    className="icon-button danger-text"
+                    type="button"
+                    aria-label="Remove set"
+                    onClick={() =>
+                      onChange((current) =>
+                        actions.removeSet(current, entry.id, set.id),
+                      )
+                    }
                   >
-                    <option value="kg">kg</option>
-                    <option value="lb">lb</option>
-                  </select>
+                    ×
+                  </button>
                 </div>
-                <input
-                  aria-label="Repetitions"
-                  inputMode="numeric"
-                  type="number"
-                  min="0"
-                  value={set.reps ?? ''}
-                  onChange={(event) =>
-                    onChange(
-                      actions.updateSet(workout, entry.id, set.id, {
-                        reps:
-                          event.target.value === ''
-                            ? null
-                            : Number(event.target.value),
-                      }),
-                    )
-                  }
-                />
-                <input
-                  aria-label="Set complete"
-                  type="checkbox"
-                  checked={set.completed}
-                  onChange={(event) =>
-                    onChange(
-                      actions.updateSet(workout, entry.id, set.id, {
-                        completed: event.target.checked,
-                      }),
-                    )
-                  }
-                />
-                <button
-                  className="icon-button danger-text"
-                  type="button"
-                  aria-label="Remove set"
-                  onClick={() =>
-                    onChange(actions.removeSet(workout, entry.id, set.id))
-                  }
-                >
-                  ×
-                </button>
+                <label className="set-notes">
+                  <span className="sr-only">Set {setIndex + 1} notes</span>
+                  <input
+                    aria-label={`Set ${setIndex + 1} notes`}
+                    placeholder="Set notes"
+                    value={set.notes ?? ''}
+                    onChange={(event) => {
+                      const notes = event.target.value || null;
+                      onChange((current) =>
+                        actions.updateSet(current, entry.id, set.id, { notes }),
+                      );
+                    }}
+                  />
+                </label>
               </div>
             ))}
             <button
               className="secondary full"
               type="button"
-              onClick={() => onChange(actions.addSet(workout, entry.id))}
+              onClick={() =>
+                onChange((current) => actions.addSet(current, entry.id))
+              }
             >
               + Add set
             </button>

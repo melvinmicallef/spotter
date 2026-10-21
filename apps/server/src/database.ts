@@ -3,7 +3,7 @@ import { dirname } from 'node:path';
 
 import Database from 'better-sqlite3';
 
-const migrations = [
+export const migrations = [
   {
     version: 1,
     name: 'initial_domain',
@@ -95,6 +95,29 @@ const migrations = [
       CREATE INDEX workout_sessions_status_idx ON workout_sessions(status, started_at DESC);
       CREATE INDEX workout_exercises_workout_idx ON workout_exercises(workout_id, position);
       CREATE INDEX workout_sets_exercise_idx ON workout_sets(workout_exercise_id, position);
+    `,
+  },
+  {
+    version: 2,
+    name: 'exercise_media_and_sources',
+    sql: `
+      CREATE TABLE exercise_media (
+        id TEXT PRIMARY KEY,
+        kind TEXT NOT NULL CHECK (kind = 'gif'),
+        mime_type TEXT NOT NULL CHECK (mime_type = 'image/gif'),
+        byte_size INTEGER NOT NULL CHECK (byte_size > 0 AND byte_size <= 5242880),
+        original_name TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+
+      ALTER TABLE exercises ADD COLUMN media_id TEXT
+        REFERENCES exercise_media(id) ON DELETE SET NULL;
+      ALTER TABLE exercises ADD COLUMN source_url TEXT;
+      ALTER TABLE exercises ADD COLUMN source_title TEXT;
+      ALTER TABLE exercises ADD COLUMN source_media_url TEXT;
+      ALTER TABLE exercises ADD COLUMN source_imported_at TEXT;
+      CREATE UNIQUE INDEX exercises_media_id_idx ON exercises(media_id)
+        WHERE media_id IS NOT NULL;
     `,
   },
 ] as const;

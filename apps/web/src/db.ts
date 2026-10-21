@@ -10,8 +10,16 @@ import type {
 } from '@spotter/shared';
 
 export interface OutboxRecord extends SyncOperation {
+  sequence: number;
   attempts: number;
-  lastError: string | null;
+  failure: OutboxFailure | null;
+}
+
+export interface OutboxFailure {
+  classification: 'rejected' | 'transient';
+  code: string;
+  message: string;
+  details?: unknown;
 }
 
 interface MetadataRecord {
@@ -28,7 +36,7 @@ interface SpotterDatabaseSchema extends DBSchema {
   outbox: {
     key: string;
     value: OutboxRecord;
-    indexes: { 'by-created-at': string };
+    indexes: { 'by-sequence': number };
   };
   muscles: { key: string; value: Muscle };
   exercises: { key: string; value: Exercise };
@@ -39,16 +47,38 @@ interface SpotterDatabaseSchema extends DBSchema {
 let databasePromise: Promise<IDBPDatabase<SpotterDatabaseSchema>> | undefined;
 
 function database() {
-  databasePromise ??= openDB<SpotterDatabaseSchema>('spotter', 1, {
-    upgrade(db) {
-      const workouts = db.createObjectStore('workouts', { keyPath: 'id' });
-      workouts.createIndex('by-status', 'status');
-      const outbox = db.createObjectStore('outbox', { keyPath: 'operationId' });
-      outbox.createIndex('by-created-at', 'createdAt');
-      db.createObjectStore('muscles', { keyPath: 'id' });
-      db.createObjectStore('exercises', { keyPath: 'id' });
-      db.createObjectStore('templates', { keyPath: 'id' });
-      db.createObjectStore('metadata', { keyPath: 'key' });
+  databasePromise ??= openDB<SpotterDatabaseSchema>('spotter', 2, {
+    async upgrade(db, oldVersion, _newVersion, transaction) {
+      if (oldVersion < 1) {
+        const workouts = db.createObjectStore('workouts', { keyPath: 'id' });
+        workouts.createIndex('by-status', 'status');
+        db.createObjectStore('outbox', { keyPath: 'operationId' });
+        db.createObjectStore('muscles', { keyPath: 'id' });
+        db.createObjectStore('exercises', { keyPath: 'id' });
+        db.createObjectStore('templates', { keyPath: 'id' });
+        db.createObjectStore('metadata', { keyPath: 'key' });
+      }
+      if (oldVersion < 2) {
+        const outbox = transaction.objectStore('outbox');
+        outbox.createIndex('by-sequence', 'sequence', { unique: true });
+        const existing = (await outbox.getAll()).sort(
+          (left, right) =>
+            left.createdAt.localeCompare(right.createdAt) ||
+            left.operationId.localeCompare(right.operationId),
+        );
+        let nextSequence = 1;
+        for (const record of existing) {
+          await outbox.put({
+            ...record,
+            sequence: nextSequence++,
+            failure: null,
+          });
+        }
+        await transaction.objectStore('metadata').put({
+          key: 'nextOutboxSequence',
+          value: nextSequence,
+        });
+      }
     },
   });
   return databasePromise;
@@ -57,18 +87,27 @@ function database() {
 export const localRepository = {
   async saveWorkout(workout: Workout): Promise<OutboxRecord> {
     const db = await database();
-    const transaction = db.transaction(['workouts', 'outbox'], 'readwrite');
+    const transaction = db.transaction(
+      ['workouts', 'outbox', 'metadata'],
+      'readwrite',
+    );
+    const metadata = transaction.objectStore('metadata');
+    const counter = await metadata.get('nextOutboxSequence');
+    const sequence =
+      typeof counter?.value === 'number' ? counter.value : Date.now();
     const operation: OutboxRecord = {
       operationId: crypto.randomUUID(),
       kind: 'upsert_workout',
       createdAt: new Date().toISOString(),
       workout,
+      sequence,
       attempts: 0,
-      lastError: null,
+      failure: null,
     };
     await Promise.all([
       transaction.objectStore('workouts').put(workout),
       transaction.objectStore('outbox').put(operation),
+      metadata.put({ key: 'nextOutboxSequence', value: sequence + 1 }),
       transaction.done,
     ]);
     return operation;
@@ -89,7 +128,7 @@ export const localRepository = {
   async outbox(limit = 50): Promise<OutboxRecord[]> {
     const records = await (
       await database()
-    ).getAllFromIndex('outbox', 'by-created-at');
+    ).getAllFromIndex('outbox', 'by-sequence');
     return records.slice(0, limit);
   },
 
@@ -97,14 +136,14 @@ export const localRepository = {
     await (await database()).delete('outbox', operationId);
   },
 
-  async fail(operationId: string, message: string): Promise<void> {
+  async fail(operationId: string, failure: OutboxFailure): Promise<void> {
     const db = await database();
     const record = await db.get('outbox', operationId);
     if (!record) return;
     await db.put('outbox', {
       ...record,
       attempts: record.attempts + 1,
-      lastError: message,
+      failure,
     });
   },
 

@@ -1,4 +1,7 @@
 import { randomUUID } from 'node:crypto';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -8,12 +11,14 @@ import type { Workout } from '@spotter/shared';
 import { createApp } from './app.js';
 import type { AppConfig } from './config.js';
 import { openDatabase } from './database.js';
+import { MediaStorage } from './media.js';
 import { SpotterStore } from './store.js';
 
 const config: AppConfig = {
   NODE_ENV: 'test',
   PORT: 3000,
   DATABASE_PATH: ':memory:',
+  MEDIA_PATH: './data/test-media',
   APP_VERSION: '0.1.0',
   GIT_COMMIT: 'test',
 };
@@ -21,14 +26,23 @@ const config: AppConfig = {
 describe('catalogue, templates, and synchronization API', () => {
   let store: SpotterStore;
   let app: ReturnType<typeof createApp>;
+  let mediaPath: string;
 
   beforeEach(() => {
     const database = openDatabase(':memory:');
     store = new SpotterStore(database);
-    app = createApp(config, { isDatabaseReady: () => database.open, store });
+    mediaPath = mkdtempSync(join(tmpdir(), 'spotter-media-test-'));
+    app = createApp(config, {
+      isDatabaseReady: () => database.open,
+      store,
+      mediaStorage: new MediaStorage(mediaPath),
+    });
   });
 
-  afterEach(() => store.close());
+  afterEach(() => {
+    store.close();
+    rmSync(mediaPath, { recursive: true, force: true });
+  });
 
   it('manages catalogue records and protects dependencies', async () => {
     const muscleId = randomUUID();
@@ -153,5 +167,71 @@ describe('catalogue, templates, and synchronization API', () => {
       .send({ name: '' })
       .expect(400);
     expect(response.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('rejects an invalid workout per operation without retrying the batch', async () => {
+    const now = new Date().toISOString();
+    const operationId = randomUUID();
+    const response = await request(app)
+      .post('/api/sync')
+      .send({
+        operations: [
+          {
+            operationId,
+            kind: 'upsert_workout',
+            createdAt: now,
+            workout: { id: randomUUID(), name: '' },
+          },
+        ],
+      })
+      .expect(200);
+
+    expect(response.body.results).toEqual([
+      expect.objectContaining({
+        operationId,
+        status: 'rejected',
+        error: expect.objectContaining({ code: 'INVALID_SYNC_OPERATION' }),
+      }),
+    ]);
+  });
+
+  it('stores validated GIF media under a stable exercise URL and deletes it with the exercise', async () => {
+    const gif = Buffer.from(
+      'R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==',
+      'base64',
+    );
+    const upload = await request(app)
+      .post('/api/media/gif')
+      .set('Content-Type', 'image/gif')
+      .set('X-File-Name', 'demo.gif')
+      .send(gif)
+      .expect(201);
+    expect(upload.body.byteSize).toBe(gif.byteLength);
+
+    const exerciseId = randomUUID();
+    const exercise = await request(app)
+      .post('/api/exercises')
+      .send({
+        id: exerciseId,
+        name: 'Imported curl',
+        instructions: 'Keep the elbow still',
+        muscles: [],
+        mediaId: upload.body.id,
+        source: {
+          url: 'https://example.com/curl',
+          title: 'Curl guide',
+          mediaUrl: 'https://example.com/curl.gif',
+        },
+      })
+      .expect(201);
+    expect(exercise.body.media.url).toBe(`/api/media/${upload.body.id}`);
+    expect(exercise.body.source.url).toBe('https://example.com/curl');
+
+    await request(app)
+      .get(`/api/media/${upload.body.id}`)
+      .expect('Content-Type', /image\/gif/)
+      .expect(200);
+    await request(app).delete(`/api/exercises/${exerciseId}`).expect(204);
+    await request(app).get(`/api/media/${upload.body.id}`).expect(404);
   });
 });

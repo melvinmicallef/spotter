@@ -9,10 +9,14 @@ import { createApiRouter } from './api.js';
 import type { AppConfig } from './config.js';
 import { AppError } from './errors.js';
 import type { SpotterStore } from './store.js';
+import type { MediaStorage } from './media.js';
+import type { WebsiteImportDependencies } from './website-import.js';
 
 export interface AppDependencies {
   isDatabaseReady: () => boolean;
   store?: SpotterStore;
+  mediaStorage?: MediaStorage;
+  websiteImportDependencies?: WebsiteImportDependencies;
 }
 
 const moduleDirectory = dirname(fileURLToPath(import.meta.url));
@@ -45,7 +49,14 @@ export function createApp(config: AppConfig, dependencies: AppDependencies) {
     });
   });
 
-  if (dependencies.store) app.use('/api', createApiRouter(dependencies.store));
+  if (dependencies.store)
+    app.use(
+      '/api',
+      createApiRouter(dependencies.store, {
+        mediaStorage: dependencies.mediaStorage,
+        websiteImportDependencies: dependencies.websiteImportDependencies,
+      }),
+    );
 
   app.use('/api', (_request, response) => {
     response.status(404).json({
@@ -77,6 +88,20 @@ export function createApp(config: AppConfig, dependencies: AppDependencies) {
             code: error.code,
             message: error.message,
             details: error.details,
+          },
+        });
+        return;
+      }
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'type' in error &&
+        error.type === 'entity.too.large'
+      ) {
+        response.status(413).json({
+          error: {
+            code: 'PAYLOAD_TOO_LARGE',
+            message: 'The request body exceeds the allowed size',
           },
         });
         return;

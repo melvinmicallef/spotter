@@ -1,15 +1,18 @@
 import {
   apiErrorSchema,
   exerciseSchema,
+  exerciseMediaSchema,
   muscleSchema,
   referenceDataSchema,
   syncResponseSchema,
   workoutSchema,
   workoutTemplateSchema,
+  websiteImportPreviewSchema,
 } from '@spotter/shared';
 import type {
   Exercise,
   ExerciseInput,
+  ExerciseMedia,
   Muscle,
   MuscleInput,
   ReferenceData,
@@ -18,12 +21,15 @@ import type {
   Workout,
   WorkoutTemplate,
   WorkoutTemplateInput,
+  WebsiteImportPreview,
 } from '@spotter/shared';
 
 export class ApiClientError extends Error {
   constructor(
     public readonly code: string,
     message: string,
+    public readonly status: number,
+    public readonly details?: unknown,
   ) {
     super(message);
   }
@@ -32,7 +38,12 @@ export class ApiClientError extends Error {
 async function request(path: string, init?: RequestInit): Promise<unknown> {
   const response = await fetch(`/api${path}`, {
     ...init,
-    headers: { 'Content-Type': 'application/json', ...init?.headers },
+    headers: {
+      ...(typeof init?.body === 'string'
+        ? { 'Content-Type': 'application/json' }
+        : {}),
+      ...init?.headers,
+    },
   });
   if (!response.ok) {
     const body = apiErrorSchema.safeParse(
@@ -43,6 +54,8 @@ async function request(path: string, init?: RequestInit): Promise<unknown> {
       body.success
         ? body.data.error.message
         : `Request failed (${response.status})`,
+      response.status,
+      body.success ? body.data.error.details : undefined,
     );
   }
   return response.status === 204 ? undefined : response.json();
@@ -99,6 +112,29 @@ export const api = {
   },
   async deleteExercise(id: string): Promise<void> {
     await request(`/exercises/${id}`, { method: 'DELETE' });
+  },
+  async uploadGif(file: File): Promise<ExerciseMedia> {
+    return exerciseMediaSchema.parse(
+      await request('/media/gif', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'image/gif',
+          'X-File-Name': file.name,
+        },
+        body: file,
+      }),
+    );
+  },
+  async deleteMedia(id: string): Promise<void> {
+    await request(`/media/${id}`, { method: 'DELETE' });
+  },
+  async previewWebsiteImport(url: string): Promise<WebsiteImportPreview> {
+    return websiteImportPreviewSchema.parse(
+      await request('/imports/website/preview', {
+        method: 'POST',
+        body: JSON.stringify({ url }),
+      }),
+    );
   },
   async createTemplate(input: WorkoutTemplateInput): Promise<WorkoutTemplate> {
     return workoutTemplateSchema.parse(
