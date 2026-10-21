@@ -42,21 +42,6 @@ const app = createApp(config, {
   isDatabaseReady: () => database.open,
   store,
   mediaStorage: new MediaStorage(mediaPath),
-  websiteImportDependencies: {
-    resolve: async () => ['93.184.216.34'],
-    fetch: async (url) => {
-      if (new URL(url).hostname !== 'import.test')
-        return new Response('Not found', { status: 404 });
-      return new Response(
-        `<!doctype html><html><head>
-          <meta property="og:title" content="Imported row">
-          <meta property="og:description" content="Pause at the top">
-          <meta property="og:image" content="https://cdn.import.test/row.gif">
-        </head></html>`,
-        { headers: { 'Content-Type': 'text/html' } },
-      );
-    },
-  },
 });
 const server = app.listen(config.PORT);
 

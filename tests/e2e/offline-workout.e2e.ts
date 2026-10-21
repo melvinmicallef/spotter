@@ -73,12 +73,51 @@ async function cachedExerciseNames(page: Page) {
   });
 }
 
+async function persistedWeekSchedule(page: Page) {
+  return page.evaluate<string | undefined>(async () => {
+    const request = indexedDB.open('spotter');
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const records = database
+      .transaction('metadata', 'readonly')
+      .objectStore('metadata')
+      .getAll();
+    const result = await new Promise<Array<{ key: string; value: unknown }>>(
+      (resolve, reject) => {
+        records.onsuccess = () => resolve(records.result);
+        records.onerror = () => reject(records.error);
+      },
+    );
+    database.close();
+    const schedule = result.find((record) =>
+      record.key.startsWith('weekSchedule:'),
+    );
+    return typeof schedule?.value === 'string' ? schedule.value : undefined;
+  });
+}
+
 test('installs its shell and synchronizes one offline workout after reload', async ({
   context,
   page,
   request,
 }) => {
   const suffix = crypto.randomUUID();
+  const jsDay = new Date().getDay();
+  const today = jsDay === 0 ? 7 : jsDay;
+  const otherDay = today === 7 ? 1 : today + 1;
+  const weekdayNames = [
+    '',
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday',
+  ];
+  const otherDayName = weekdayNames[otherDay]!;
   const muscleResponse = await request.post('/api/muscles', {
     data: { name: `E2E muscle ${suffix}` },
   });
@@ -96,14 +135,35 @@ test('installs its shell and synchronizes one offline workout after reload', asy
   });
   expect(exerciseResponse.ok()).toBe(true);
   const exercise = (await exerciseResponse.json()) as { id: string };
+  const placeholderResponse = await request.post('/api/exercises', {
+    data: {
+      name: `Today's placeholder ${suffix}`,
+      exerciseType: 'strength',
+      instructions: null,
+      muscles: [],
+    },
+  });
+  expect(placeholderResponse.ok()).toBe(true);
+  const placeholder = (await placeholderResponse.json()) as { id: string };
   const templateResponse = await request.post('/api/templates', {
     data: {
       name: `Offline week ${suffix}`,
+      isActive: true,
       notes: null,
       exercises: [
         {
+          exerciseId: placeholder.id,
+          dayOfWeek: today,
+          notes: null,
+          targetSets: 1,
+          targetReps: 5,
+          targetDurationSeconds: null,
+          targetDistance: null,
+          targetDistanceUnit: 'km',
+        },
+        {
           exerciseId: exercise.id,
-          dayOfWeek: 1,
+          dayOfWeek: otherDay,
           notes: null,
           targetSets: 1,
           targetReps: 8,
@@ -143,15 +203,32 @@ test('installs its shell and synchronizes one offline workout after reload', asy
     .toBe(true);
   await expect.poll(() => cachedExerciseNames(page)).toContain(exerciseName);
 
+  await page.getByRole('button', { name: `${otherDayName} (1)` }).click();
+  await expect(
+    page.getByText(`Using ${otherDayName}'s workout today`),
+  ).toBeVisible();
+  await expect.poll(() => persistedWeekSchedule(page)).toContain(`${otherDay}`);
+  await page.reload();
+  await expect(
+    page.getByText(`Using ${otherDayName}'s workout today`),
+  ).toBeVisible();
+
   await context.setOffline(true);
   await expect(page.getByRole('status')).toContainText('Offline');
 
   await expect(
     page.getByRole('button', { name: 'Start an open workout' }),
   ).toHaveCount(0);
-  await page.getByRole('button', { name: 'Start Monday (1)' }).click();
   await expect(
-    page.getByRole('heading', { name: /Offline week .* · Monday/ }),
+    page.getByRole('button', {
+      name: /^Start (Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)/,
+    }),
+  ).toHaveCount(0);
+  await page.getByRole('button', { name: "Start today's workout" }).click();
+  await expect(
+    page.getByRole('heading', {
+      name: new RegExp(`Offline week .* · ${otherDayName}`),
+    }),
   ).toBeVisible();
   await expect(
     page.getByRole('article').getByText(exerciseName, { exact: true }),
@@ -171,7 +248,9 @@ test('installs its shell and synchronizes one offline workout after reload', asy
 
   await page.goto('/offline-reload-check');
   await expect(
-    page.getByRole('heading', { name: /Offline week .* · Monday/ }),
+    page.getByRole('heading', {
+      name: new RegExp(`Offline week .* · ${otherDayName}`),
+    }),
   ).toBeVisible();
   await expect(page.getByLabel(`${exerciseName} weight set 1`)).toHaveValue(
     '42.5',
