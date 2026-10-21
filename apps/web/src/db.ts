@@ -49,7 +49,7 @@ interface SpotterDatabaseSchema extends DBSchema {
 let databasePromise: Promise<IDBPDatabase<SpotterDatabaseSchema>> | undefined;
 
 function database() {
-  databasePromise ??= openDB<SpotterDatabaseSchema>('spotter', 4, {
+  databasePromise ??= openDB<SpotterDatabaseSchema>('spotter', 5, {
     async upgrade(db, oldVersion, _newVersion, transaction) {
       if (oldVersion < 1) {
         const workouts = db.createObjectStore('workouts', { keyPath: 'id' });
@@ -122,6 +122,12 @@ function database() {
             ...template,
             isActive: hasActive ? Boolean(template.isActive) : index === 0,
           });
+        }
+      }
+      if (oldVersion < 5) {
+        const exerciseStore = transaction.objectStore('exercises');
+        for (const exercise of await exerciseStore.getAll()) {
+          await exerciseStore.put(normalizeExercise(exercise));
         }
       }
     },
@@ -269,10 +275,18 @@ export const localRepository = {
 };
 
 function normalizeExercise(exercise: Exercise): Exercise {
-  return {
+  const legacyInstructions = (
+    exercise as Exercise & { instructions?: string | null }
+  ).instructions;
+  const normalized = {
     ...exercise,
     exerciseType: exercise.exerciseType ?? 'strength',
+    preparation: exercise.preparation ?? null,
+    execution: exercise.execution ?? legacyInstructions ?? null,
   };
+  delete (normalized as typeof normalized & { instructions?: unknown })
+    .instructions;
+  return normalized;
 }
 
 function normalizeTemplate(

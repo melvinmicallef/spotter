@@ -38,7 +38,8 @@ describe('service contracts', () => {
       exerciseSchema.parse({
         id,
         name: 'Curl',
-        instructions: null,
+        preparation: 'Set the bench angle',
+        execution: 'Lower with control',
         muscles: [],
         media: {
           id,
@@ -62,7 +63,8 @@ describe('service contracts', () => {
     expect(
       exerciseInputSchema.parse({
         name: 'Curl',
-        instructions: null,
+        preparation: null,
+        execution: null,
         muscles: [],
       }),
     ).toMatchObject({ mediaId: null, source: null });

@@ -17,7 +17,7 @@ describe('database migrations', () => {
           .prepare('SELECT COUNT(*) AS count FROM schema_migrations')
           .get() as { count: number }
       ).count,
-    ).toBe(4);
+    ).toBe(5);
     expect(
       database
         .prepare(
@@ -68,7 +68,7 @@ describe('database migrations', () => {
           .prepare('SELECT MAX(version) AS version FROM schema_migrations')
           .get() as { version: number }
       ).version,
-    ).toBe(4);
+    ).toBe(5);
     upgraded.close();
     rmSync(directory, { recursive: true, force: true });
   });
@@ -112,7 +112,14 @@ describe('database migrations', () => {
          (id, name, instructions, media_id, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, ?)`,
       )
-      .run(exerciseId, 'Legacy press', null, mediaId, timestamp, timestamp);
+      .run(
+        exerciseId,
+        'Legacy press',
+        'Legacy setup and movement',
+        mediaId,
+        timestamp,
+        timestamp,
+      );
     legacy
       .prepare(
         `INSERT INTO workout_templates (id, name, notes, created_at, updated_at)
@@ -170,9 +177,16 @@ describe('database migrations', () => {
     const upgraded = openDatabase(path);
     expect(
       upgraded
-        .prepare('SELECT exercise_type FROM exercises WHERE id = ?')
+        .prepare(
+          `SELECT exercise_type, preparation, execution
+           FROM exercises WHERE id = ?`,
+        )
         .get(exerciseId),
-    ).toEqual({ exercise_type: 'strength' });
+    ).toEqual({
+      exercise_type: 'strength',
+      preparation: null,
+      execution: 'Legacy setup and movement',
+    });
     expect(
       upgraded
         .prepare(

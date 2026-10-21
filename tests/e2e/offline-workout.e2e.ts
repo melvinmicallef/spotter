@@ -129,7 +129,8 @@ test('installs its shell and synchronizes one offline workout after reload', asy
     data: {
       name: exerciseName,
       exerciseType: 'strength',
-      instructions: 'Cached by the browser test',
+      preparation: 'Brace before lifting',
+      execution: 'Cached by the browser test',
       muscles: [{ muscleId: muscle.id, role: 'primary' }],
     },
   });
@@ -139,7 +140,8 @@ test('installs its shell and synchronizes one offline workout after reload', asy
     data: {
       name: `Today's placeholder ${suffix}`,
       exerciseType: 'strength',
-      instructions: null,
+      preparation: null,
+      execution: null,
       muscles: [],
     },
   });

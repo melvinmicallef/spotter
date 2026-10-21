@@ -260,9 +260,14 @@ function ExerciseDetails({
               </button>
             </div>
           </div>
-          <p className="exercise-instructions">
-            {exercise.instructions || 'No instructions added.'}
-          </p>
+          <div className="exercise-instruction-section">
+            <h3>Preparation</h3>
+            <p>{exercise.preparation || 'No preparation added.'}</p>
+          </div>
+          <div className="exercise-instruction-section">
+            <h3>Execution</h3>
+            <p>{exercise.execution || 'No execution instructions added.'}</p>
+          </div>
           <MuscleGroup label="Primary muscles" muscles={primary} />
           <MuscleGroup label="Secondary muscles" muscles={secondary} />
         </div>
@@ -298,9 +303,8 @@ function ExerciseEditorPage({
   const [exerciseType, setExerciseType] = useState<
     ExerciseInput['exerciseType']
   >(exercise?.exerciseType ?? 'strength');
-  const [instructions, setInstructions] = useState(
-    exercise?.instructions ?? '',
-  );
+  const [preparation, setPreparation] = useState(exercise?.preparation ?? '');
+  const [execution, setExecution] = useState(exercise?.execution ?? '');
   const [selectedMuscles, setSelectedMuscles] = useState<MuscleRoles>(
     Object.fromEntries(
       exercise?.muscles.map((muscle) => [muscle.id, muscle.role]) ?? [],
@@ -331,7 +335,8 @@ function ExerciseEditorPage({
               {
                 name: name.trim(),
                 exerciseType,
-                instructions: instructions.trim() || null,
+                preparation: preparation.trim() || null,
+                execution: execution.trim() || null,
                 muscles: exerciseMuscleLinks(selectedMuscles),
               },
               imageFile,
@@ -362,11 +367,19 @@ function ExerciseEditorPage({
             </select>
           </label>
           <label className="field">
-            Instructions
+            Preparation
             <textarea
-              placeholder="Technique cues, setup, or reminders (optional)"
-              value={instructions}
-              onChange={(event) => setInstructions(event.target.value)}
+              placeholder="Setup, equipment, stance, or starting position (optional)"
+              value={preparation}
+              onChange={(event) => setPreparation(event.target.value)}
+            />
+          </label>
+          <label className="field">
+            Execution
+            <textarea
+              placeholder="Movement steps and technique cues (optional)"
+              value={execution}
+              onChange={(event) => setExecution(event.target.value)}
             />
           </label>
           <div className="field">
@@ -495,7 +508,8 @@ function TrashIcon() {
 interface ExerciseDraft {
   name: string;
   exerciseType: ExerciseInput['exerciseType'];
-  instructions: string | null;
+  preparation: string | null;
+  execution: string | null;
   muscles: ExerciseInput['muscles'];
 }
 

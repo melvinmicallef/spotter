@@ -435,7 +435,17 @@ small {
   height: 21px;
   fill: currentColor;
 }
-.exercise-instructions {
+.exercise-instruction-section {
+  margin-top: 20px;
+}
+.exercise-instruction-section h3 {
+  margin-bottom: 6px;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.exercise-instruction-section p {
+  margin-bottom: 0;
   color: var(--text-secondary);
   line-height: 1.65;
   white-space: pre-wrap;

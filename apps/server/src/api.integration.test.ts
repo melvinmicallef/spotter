@@ -53,15 +53,20 @@ describe('catalogue, templates, and synchronization API', () => {
       .post('/api/muscles')
       .send({ id: muscleId, name: 'Chest' })
       .expect(201);
-    await request(app)
+    const exercise = await request(app)
       .post('/api/exercises')
       .send({
         id: exerciseId,
         name: 'Bench press',
-        instructions: 'Control the descent',
+        preparation: 'Set the bench and plant both feet',
+        execution: 'Control the descent',
         muscles: [{ muscleId, role: 'primary' }],
       })
       .expect(201);
+    expect(exercise.body).toMatchObject({
+      preparation: 'Set the bench and plant both feet',
+      execution: 'Control the descent',
+    });
 
     const dependency = await request(app)
       .delete(`/api/muscles/${muscleId}`)
@@ -100,7 +105,8 @@ describe('catalogue, templates, and synchronization API', () => {
       .send({
         id: exerciseId,
         name: 'Air squat',
-        instructions: null,
+        preparation: null,
+        execution: null,
         muscles: [],
       })
       .expect(201);
@@ -178,7 +184,8 @@ describe('catalogue, templates, and synchronization API', () => {
         id: strengthId,
         name: 'Front squat',
         exerciseType: 'strength',
-        instructions: null,
+        preparation: null,
+        execution: null,
         muscles: [],
       })
       .expect(201);
@@ -188,7 +195,8 @@ describe('catalogue, templates, and synchronization API', () => {
         id: cardioId,
         name: 'Outdoor run',
         exerciseType: 'cardio',
-        instructions: null,
+        preparation: null,
+        execution: null,
         muscles: [],
       })
       .expect(201);
@@ -268,7 +276,8 @@ describe('catalogue, templates, and synchronization API', () => {
       .send({
         name: 'Front squat',
         exerciseType: 'cardio',
-        instructions: null,
+        preparation: null,
+        execution: null,
         muscles: [],
       })
       .expect(409);
@@ -471,7 +480,8 @@ describe('catalogue, templates, and synchronization API', () => {
         .send({
           id: exerciseId,
           name: `Exercise ${mimeType}`,
-          instructions: 'Keep moving',
+          preparation: 'Choose a clear route',
+          execution: 'Keep moving',
           muscles: [],
           mediaId: upload.body.id,
         })

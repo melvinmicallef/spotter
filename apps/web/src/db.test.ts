@@ -176,7 +176,7 @@ describe('local workout repository', () => {
     await legacy.put('exercises', {
       id: exerciseId,
       name: 'Legacy lift',
-      instructions: null,
+      instructions: 'Legacy setup and movement',
       muscles: [],
       media: null,
       source: null,
@@ -246,7 +246,11 @@ describe('local workout repository', () => {
     legacy.close();
 
     const references = await localRepository.references();
-    expect(references.exercises[0]?.exerciseType).toBe('strength');
+    expect(references.exercises[0]).toMatchObject({
+      exerciseType: 'strength',
+      preparation: null,
+      execution: 'Legacy setup and movement',
+    });
     expect(references.templates[0]?.exercises[0]).toMatchObject({
       exerciseType: 'strength',
       dayOfWeek: 1,

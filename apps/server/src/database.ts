@@ -202,6 +202,16 @@ export const migrations = [
         WHERE image_id IS NOT NULL;
     `,
   },
+  {
+    version: 5,
+    name: 'split_exercise_instructions',
+    sql: `
+      ALTER TABLE exercises ADD COLUMN preparation TEXT;
+      ALTER TABLE exercises ADD COLUMN execution TEXT;
+      UPDATE exercises SET execution = instructions
+      WHERE instructions IS NOT NULL;
+    `,
+  },
 ] as const;
 
 export type SpotterDatabase = Database.Database;

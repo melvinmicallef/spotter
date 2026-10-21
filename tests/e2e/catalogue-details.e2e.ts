@@ -51,7 +51,10 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
   await page.getByRole('button', { name: 'Exercises' }).click();
   await page.getByRole('button', { name: 'Add exercise' }).click();
   await page.getByLabel('Exercise name').fill(strengthName);
-  await page.getByLabel('Instructions').fill('Control the descent');
+  await page
+    .getByLabel('Preparation')
+    .fill('Set the bench and plant both feet');
+  await page.getByLabel('Execution').fill('Control the descent');
   await page.getByLabel(`${primaryName} role`).selectOption('primary');
   await page.getByLabel(`${secondaryName} role`).selectOption('secondary');
   await page.getByLabel('Exercise image').setInputFiles({
@@ -83,9 +86,15 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
   await expect(
     page.getByRole('button', { name: `Delete ${strengthName}` }),
   ).toBeVisible();
+  await expect(
+    page.getByText('Set the bench and plant both feet'),
+  ).toBeVisible();
+  await expect(page.getByText('Control the descent')).toBeVisible();
   await page.getByRole('button', { name: `Edit ${strengthName}` }).click();
-  await page.getByLabel('Instructions').fill('Pause at the bottom');
+  await page.getByLabel('Preparation').fill('Retract the shoulder blades');
+  await page.getByLabel('Execution').fill('Pause at the bottom');
   await page.getByRole('button', { name: 'Save changes' }).click();
+  await expect(page.getByText('Retract the shoulder blades')).toBeVisible();
   await expect(page.getByText('Pause at the bottom')).toBeVisible();
   await page.getByRole('button', { name: '← Exercises' }).click();
 

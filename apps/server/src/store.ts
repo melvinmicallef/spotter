@@ -123,15 +123,16 @@ export class SpotterStore {
         this.database
           .prepare(
             `INSERT INTO exercises
-             (id, name, exercise_type, instructions, image_id, source_url, source_title,
+             (id, name, exercise_type, preparation, execution, image_id, source_url, source_title,
               source_media_url, source_imported_at, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           )
           .run(
             id,
             input.name,
             input.exerciseType,
-            input.instructions,
+            input.preparation,
+            input.execution,
             input.mediaId,
             input.source?.url ?? null,
             input.source?.title ?? null,
@@ -158,14 +159,15 @@ export class SpotterStore {
         this.assertExerciseTypeChangeIsCompatible(id, input.exerciseType);
         const result = this.database
           .prepare(
-            `UPDATE exercises SET name = ?, exercise_type = ?, instructions = ?, image_id = ?,
+            `UPDATE exercises SET name = ?, exercise_type = ?, preparation = ?, execution = ?, image_id = ?,
              source_url = ?, source_title = ?, source_media_url = ?,
              source_imported_at = ?, updated_at = ? WHERE id = ?`,
           )
           .run(
             input.name,
             input.exerciseType,
-            input.instructions,
+            input.preparation,
+            input.execution,
             input.mediaId,
             input.source?.url ?? null,
             input.source?.title ?? null,
@@ -490,7 +492,8 @@ export class SpotterStore {
       id: String(row.id),
       name: String(row.name),
       exerciseType: row.exercise_type as Exercise['exerciseType'],
-      instructions: nullableString(row.instructions),
+      preparation: nullableString(row.preparation),
+      execution: nullableString(row.execution),
       muscles,
       media: row.image_id
         ? {
