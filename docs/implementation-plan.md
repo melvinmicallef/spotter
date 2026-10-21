@@ -193,7 +193,7 @@ network connection, and upgrades without losing an active workout or outbox.
 One image starts with an empty volume, migrates the database, serves the API and
 PWA, reports healthy, preserves data across replacement, and shuts down cleanly.
 
-## Milestone 8: Release automation and `0.1.0` (automation implemented; release pending)
+## Milestone 8: Release automation and `0.1.0` (automation implemented; release candidate pending)
 
 ### Deliverables
 
@@ -215,6 +215,11 @@ and publishes the expected versioned image to
 `ghcr.io/melvinmicallef/spotter`, while a normal commit and pull request only
 run validation.
 
+The automation, strict tag validation, normalized application versioning,
+release checklist, and changelog process are implemented. The milestone is not
+complete: `v0.1.0` must not be created until the full acceptance criteria and
+required test matrix pass, and no published image has yet been verified.
+
 ## Required test matrix
 
 | Area             | Minimum coverage                                                            |
@@ -229,6 +234,13 @@ run validation.
 | PWA              | Offline shell, route reload, update with active workout                     |
 | Container        | Startup, health, migrations, persistent volume, graceful stop               |
 | Workflows        | Normal commit does not publish; tag/manual run produces intended tags       |
+
+The browser-level PWA path is automated in
+`tests/e2e/offline-workout.e2e.ts`. It exercises installation metadata,
+service-worker shell caching, IndexedDB recovery after an offline navigation,
+offline workout completion, an ambiguous synchronization acknowledgement, and
+exactly-once server persistence. It runs separately from the fast Vitest suite
+with `npm run test:e2e`; CI installs Chromium before invoking it.
 
 ## Documentation required before `v0.1.0`
 

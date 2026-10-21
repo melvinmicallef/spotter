@@ -63,6 +63,8 @@ Read the documents in this order:
    deliverables, tests, and completion gates.
 5. [Operations guide](docs/operations.md) — container use, runtime settings,
    persistence, backup, restore, and upgrades.
+6. [Release guide](docs/releasing.md) — release gates, image-tag policy,
+   checklist, and release-note process.
 
 `AGENTS.md` contains concise repository-level instructions for AI coding agents.
 
@@ -102,6 +104,22 @@ Express server on `http://localhost:3000`. Validate the complete workspace with
 `npm run check`; build it with `npm run build`; and serve the compiled client
 and API together with `npm start`.
 
+The browser-level PWA test runs against a production build and an isolated,
+temporary SQLite database:
+
+```bash
+npx playwright install chromium
+npm run test:e2e
+```
+
+It seeds reference data online, caches the application shell, records and
+finishes a workout offline, reloads while offline, reconnects after a simulated
+lost synchronization acknowledgement, and verifies that the server contains
+exactly one workout and set. If the Playwright browser download is unavailable,
+set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` to a compatible local Chromium or
+Chrome executable. The validation workflow installs Chromium before running
+this test.
+
 The implementation order is:
 
 1. establish the TypeScript workspace and shared validation schemas;
@@ -133,9 +151,11 @@ Open the repository at its root and ask the new chat to read `AGENTS.md` and the
 documentation listed above before changing files. A complete starter prompt is
 available in [the project handoff](docs/project-context.md#starter-prompt-for-a-new-ai-chat).
 
-The next task should inspect the remaining release gates in the implementation
-plan, especially browser-level offline testing, accessibility, and release
-candidate verification.
+The release automation is implemented, but no release has been approved or
+published. The remaining release gates include the complete acceptance and test
+matrix, browser-level offline testing, accessibility and mobile QA, and release
+candidate verification. See the [release guide](docs/releasing.md) before
+creating `v0.1.0`.
 
 ## Release policy
 
@@ -146,9 +166,14 @@ The first application version will be `0.1.0`. Spotter will remain on `0.x`
 versions while its product behavior, data model, and API are still under active
 development. Version `1.0.0` will mark the first stable public contract.
 
-Container publishing will be triggered by:
+Container publishing is triggered by:
 
-- pushing a tag matching `v*`, beginning with `v0.1.0`; or
+- pushing a strict Semantic Version tag beginning with `v`, such as `v0.1.0`;
+  malformed `v*` tags fail validation before publication; or
 - starting the release workflow manually through GitHub Actions.
 
 Images will be published to `ghcr.io/melvinmicallef/spotter`.
+Stable tags publish exact, minor, and `latest` image tags. Prereleases publish
+only the exact prerelease version, and manual runs publish only an explicit tag
+or a unique `sha-<commit>` fallback. No Spotter release has been published from
+this repository state.

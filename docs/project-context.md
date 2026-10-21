@@ -106,15 +106,17 @@ contracts, React client, and Express server, then creates a minimal runtime that
 runs as a non-root user. Express serves the compiled client and API from the
 same process. Runtime state is written only beneath `/data`.
 
-Routine validation should include formatting, linting, type-checking, automated
-tests, a production application build, and optionally a non-publishing Docker
-build. Container publication is separate and runs only for `v*` tag pushes or
-manual dispatch.
+Routine validation includes formatting, linting, type-checking, automated
+tests, a production application build, and a non-publishing Docker build for
+every branch push and pull request. Container publication is separate and runs
+only for strict Semantic Version tags beginning with `v`, or manual dispatch.
 
-The first release is `v0.1.0`. A normal semantic version tag publishes
-versioned image tags. `latest` may move for a normal `0.x` release, but must not
-move for a prerelease such as `v0.2.0-beta.1`. A manually dispatched build must
-use an explicit tag or a collision-safe `sha-<commit>` tag.
+The first release is `v0.1.0`. A normal semantic version tag publishes exact,
+minor, and `latest` image tags. A prerelease such as `v0.2.0-beta.1` publishes
+only its exact tag. A manually dispatched build uses an explicit tag or a
+collision-safe `sha-<commit>` tag and never moves release aliases. Tag and
+manual builds expose a normalized, traceable version through `/api/version`.
+The checklist and release-note process are in `docs/releasing.md`.
 
 ## Explicitly not finalized
 

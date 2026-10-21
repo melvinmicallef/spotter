@@ -13,13 +13,26 @@ on:
 
 permissions:
   contents: read
-  packages: write
 
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - id: release
+        name: Validate and normalize release metadata
+        env:
+          RELEASE_EVENT_NAME: ${{ github.event_name }}
+          RELEASE_REF_NAME: ${{ github.ref_name }}
+          RELEASE_SHA: ${{ github.sha }}
+          RELEASE_MANUAL_IMAGE_TAG: ${{ inputs.image_tag }}
+        run: node scripts/release-metadata.mjs
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
         with:
@@ -30,11 +43,12 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ghcr.io/melvinmicallef/spotter
+          flavor: latest=false
           tags: |
             type=semver,pattern={{version}},enable=${{ github.event_name == 'push' }}
-            type=semver,pattern={{major}}.{{minor}},enable=${{ github.event_name == 'push' }}
-            type=raw,value=latest,enable=${{ github.event_name == 'push' && !contains(github.ref_name, '-') }}
-            type=raw,value=${{ inputs.image_tag || format('sha-{0}', github.sha) }},enable=${{ github.event_name == 'workflow_dispatch' }}
+            type=semver,pattern={{major}}.{{minor}},enable=${{ github.event_name == 'push' && steps.release.outputs.is_prerelease == 'false' }}
+            type=raw,value=latest,enable=${{ github.event_name == 'push' && steps.release.outputs.is_prerelease == 'false' }}
+            type=raw,value=${{ steps.release.outputs.image_tag }},enable=${{ github.event_name == 'workflow_dispatch' }}
       - uses: docker/build-push-action@v6
         with:
           context: .
@@ -42,5 +56,5 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            APP_VERSION=${{ github.ref_name }}
+            APP_VERSION=${{ steps.release.outputs.app_version }}
             GIT_COMMIT=${{ github.sha }}

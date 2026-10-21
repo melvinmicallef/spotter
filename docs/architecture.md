@@ -205,16 +205,16 @@ is under active development, releases use `0.MINOR.PATCH`: a minor release may
 introduce breaking product, data, or API changes, while a patch release contains
 compatible fixes. Version `1.0.0` will declare the first stable public contract.
 
-Validation runs for pull requests and ordinary pushes and performs:
+Validation runs for pull requests and every branch push and performs:
 
 - dependency installation from the lockfile;
 - formatting and lint checks;
 - TypeScript type-checking;
 - unit and integration tests;
 - a production application build; and
-- optionally, a non-publishing Docker build.
+- a non-publishing Docker build.
 
-Image publication runs on:
+Image publication is triggered by:
 
 ```yaml
 on:
@@ -228,11 +228,13 @@ It uses GitHub's short-lived workflow token, grants only `contents: read` and
 `packages: write`, builds with Docker Buildx, and publishes to
 `ghcr.io/melvinmicallef/spotter`.
 
-The first release tag is `v0.1.0`. Its image metadata should produce `0.1.0`
-and `0.1`; later semantic version tags follow the same scheme. `latest` may move
-for a normal `0.x` release, but not for prerelease tags such as
-`v0.2.0-beta.1`. A manual run should use a supplied tag or a unique
-`sha-<commit>` tag so it cannot silently overwrite a release.
+The broad `v*` trigger is guarded by a tested strict SemVer validator before
+registry login or publication. The first release tag is `v0.1.0`; it produces
+`0.1.0`, `0.1`, and `latest`, and exposes `0.1.0` (without `v`) through
+`/api/version`. A prerelease such as `v0.2.0-beta.1` publishes only its exact
+tag. A manual run uses a supplied tag or a unique `sha-<commit>` tag, never
+moves release aliases, and receives a traceable application version such as
+`0.1.0+sha.0123456789ab`.
 
 ## Testing strategy
 
@@ -246,6 +248,13 @@ The highest-value automated scenarios are:
 - a browser test that starts online, records and completes work offline,
   reloads, reconnects, and verifies one server-side workout; and
 - a container smoke test using a temporary mounted data directory.
+
+The Playwright browser suite runs the compiled PWA and Express API together on
+an isolated temporary SQLite database. It verifies manifest metadata and
+service-worker control, loads reference data online, reloads the cached shell
+and active workout offline, finishes offline, then simulates a server-applied
+sync request whose acknowledgement is lost. Reconnection must drain the
+replayed outbox without duplicating the workout, exercise entry, or set.
 
 ## Observability and recovery
 
