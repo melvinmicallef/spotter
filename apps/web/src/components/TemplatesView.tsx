@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import type {
   DayOfWeek,
@@ -93,6 +93,7 @@ function TemplateCard({
   const [draft, setDraft] = useState<WorkoutTemplateInput>(() =>
     toInput(template),
   );
+  const [pickerDay, setPickerDay] = useState<DayOfWeek>();
 
   function updateEntry(
     index: number,
@@ -311,40 +312,45 @@ function TemplateCard({
                   );
                 })}
               </div>
-              <select
-                value=""
+              <button
+                className="secondary full"
+                type="button"
                 aria-label={`Add exercise to ${day.label}`}
-                onChange={(event) => {
-                  if (!event.target.value) return;
-                  setDraft({
-                    ...draft,
-                    exercises: [
-                      ...draft.exercises,
-                      {
-                        exerciseId: event.target.value,
-                        dayOfWeek: day.value,
-                        notes: null,
-                        targetSets: null,
-                        targetReps: null,
-                        targetDurationSeconds: null,
-                        targetDistance: null,
-                        targetDistanceUnit: 'km',
-                      },
-                    ],
-                  });
-                }}
+                onClick={() => setPickerDay(day.value)}
               >
-                <option value="">Add exercise…</option>
-                {exercises.map((exercise) => (
-                  <option key={exercise.id} value={exercise.id}>
-                    {exercise.name} ({exercise.exerciseType})
-                  </option>
-                ))}
-              </select>
+                + Add exercise
+              </button>
             </section>
           );
         })}
       </div>
+
+      {pickerDay && (
+        <ExercisePicker
+          day={pickerDay}
+          exercises={exercises}
+          entries={draft.exercises}
+          onAdd={(exercise) =>
+            setDraft((current) => ({
+              ...current,
+              exercises: [
+                ...current.exercises,
+                {
+                  exerciseId: exercise.id,
+                  dayOfWeek: pickerDay,
+                  notes: null,
+                  targetSets: null,
+                  targetReps: null,
+                  targetDurationSeconds: null,
+                  targetDistance: null,
+                  targetDistanceUnit: 'km',
+                },
+              ],
+            }))
+          }
+          onClose={() => setPickerDay(undefined)}
+        />
+      )}
 
       <div className="inline-actions">
         <button
@@ -369,6 +375,161 @@ function TemplateCard({
         </button>
       </div>
     </article>
+  );
+}
+
+function ExercisePicker({
+  day,
+  exercises,
+  entries,
+  onAdd,
+  onClose,
+}: {
+  day: DayOfWeek;
+  exercises: Exercise[];
+  entries: WorkoutTemplateInput['exercises'];
+  onAdd: (exercise: Exercise) => void;
+  onClose: () => void;
+}) {
+  const [nameFilter, setNameFilter] = useState('');
+  const [muscleFilter, setMuscleFilter] = useState('');
+  const dayName = WEEKDAYS.find((entry) => entry.value === day)!.label;
+  const muscles = useMemo(() => {
+    const unique = new Map<string, string>();
+    for (const exercise of exercises) {
+      for (const muscle of exercise.muscles) unique.set(muscle.id, muscle.name);
+    }
+    return [...unique.entries()].sort((left, right) =>
+      left[1].localeCompare(right[1]),
+    );
+  }, [exercises]);
+  const visibleExercises = exercises.filter(
+    (exercise) =>
+      exercise.name
+        .toLocaleLowerCase()
+        .includes(nameFilter.toLocaleLowerCase()) &&
+      (!muscleFilter ||
+        exercise.muscles.some((muscle) => muscle.id === muscleFilter)),
+  );
+
+  useEffect(() => {
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') onClose();
+    }
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [onClose]);
+
+  return (
+    <div
+      className="modal-backdrop"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <section
+        className="exercise-picker"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="exercise-picker-title"
+      >
+        <header>
+          <div>
+            <span className="eyebrow">ADD TO {dayName.toUpperCase()}</span>
+            <h2 id="exercise-picker-title">Choose exercises</h2>
+          </div>
+          <button
+            className="icon-button"
+            type="button"
+            aria-label="Close exercise picker"
+            onClick={onClose}
+          >
+            ×
+          </button>
+        </header>
+        <div className="exercise-picker-filters">
+          <label className="field">
+            Filter by name
+            <input
+              autoFocus
+              type="search"
+              value={nameFilter}
+              onChange={(event) => setNameFilter(event.target.value)}
+              placeholder="Search exercises"
+            />
+          </label>
+          <label className="field">
+            Filter by muscle
+            <select
+              value={muscleFilter}
+              onChange={(event) => setMuscleFilter(event.target.value)}
+            >
+              <option value="">All muscles</option>
+              {muscles.map(([id, name]) => (
+                <option key={id} value={id}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <p className="picker-result-count">
+          {visibleExercises.length} exercise
+          {visibleExercises.length === 1 ? '' : 's'}
+        </p>
+        <div className="exercise-picker-grid">
+          {visibleExercises.map((exercise) => {
+            const timesAdded = entries.filter(
+              (entry) =>
+                entry.dayOfWeek === day && entry.exerciseId === exercise.id,
+            ).length;
+            return (
+              <article className="exercise-picker-card" key={exercise.id}>
+                {exercise.media ? (
+                  <img
+                    src={exercise.media.url}
+                    alt={`${exercise.name} demonstration`}
+                  />
+                ) : (
+                  <div
+                    className="exercise-picker-placeholder"
+                    aria-hidden="true"
+                  >
+                    No GIF
+                  </div>
+                )}
+                <div className="exercise-picker-details">
+                  <div>
+                    <strong>{exercise.name}</strong>
+                    <small className="type-badge">
+                      {exercise.exerciseType}
+                    </small>
+                  </div>
+                  <small>
+                    {exercise.muscles.length > 0
+                      ? exercise.muscles
+                          .map((muscle) => muscle.name)
+                          .join(' · ')
+                      : 'No muscles assigned'}
+                  </small>
+                  <button type="button" onClick={() => onAdd(exercise)}>
+                    {timesAdded > 0
+                      ? `Add again (${timesAdded} added)`
+                      : `Add to ${dayName}`}
+                  </button>
+                </div>
+              </article>
+            );
+          })}
+          {visibleExercises.length === 0 && (
+            <p className="empty-state">No exercises match these filters.</p>
+          )}
+        </div>
+        <button className="secondary full" type="button" onClick={onClose}>
+          Done
+        </button>
+      </section>
+    </div>
   );
 }
 
