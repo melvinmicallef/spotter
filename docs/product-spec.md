@@ -76,6 +76,13 @@ must show only the fields that apply to the exercise type.
 
 ## Functional requirements
 
+### Appearance
+
+The user can switch between light and dark appearance modes. The selected mode
+is stored locally on the device and is applied before the PWA renders on later
+visits. A device with no saved selection initially follows its operating-system
+color-scheme preference.
+
 ### Catalogue management
 
 While online, a user can:

@@ -55,6 +55,13 @@ be treated as the source of truth for workout data; that belongs in IndexedDB.
 Separating these concerns makes service-worker upgrades safer and keeps workout
 records queryable by application code.
 
+The light/dark appearance choice is a device-only preference stored in
+`localStorage`, separate from workout and synchronization state. A small inline
+bootstrap in the HTML applies the saved theme (or the operating-system
+preference when unset) before React and the stylesheet render, avoiding an
+incorrect-theme flash. Theme changes also update the browser theme-color
+metadata.
+
 The catalogue has separate muscle and exercise views. Muscles are focused
 reference records; exercises own their strength/cardio type, muscle roles,
 instructions, media, and source attribution. Keeping the editors separate

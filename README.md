@@ -15,6 +15,7 @@ The first planned development release is `0.1.0`.
 - Strength and cardio exercises use different planning and recording fields.
 - Workouts start from a day in a weekly template; ad-hoc open workouts are not
   part of the product.
+- A light/dark appearance switch is retained on the current device.
 - Offline writes must synchronize without creating duplicate workouts or sets.
 - Deployment should be simple: one container and one persistent data volume.
 - Release images are published deliberately from `v*` tags or a manual
