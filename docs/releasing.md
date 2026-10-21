@@ -9,6 +9,8 @@ and the implementation-plan test matrix have passed.
 
 - Release tags use `vMAJOR.MINOR.PATCH`, with an optional SemVer prerelease or
   build suffix. Examples: `v0.1.0` and `v0.2.0-beta.1`.
+- The tag version must match the root package version, ignoring only optional
+  SemVer build metadata.
 - A stable `v0.1.0` tag publishes `0.1.0`, `0.1`, and `latest`.
 - A prerelease such as `v0.2.0-beta.1` publishes only
   `0.2.0-beta.1`; it does not move `0.2` or `latest`.

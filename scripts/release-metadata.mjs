@@ -40,6 +40,12 @@ export function resolveReleaseMetadata({
     }
 
     const parsed = parseSemver(refName.slice(1));
+    const parsedPackageVersion = parseSemver(packageVersion);
+    if (parsed.precedenceVersion !== parsedPackageVersion.precedenceVersion) {
+      throw new Error(
+        `Release ${parsed.precedenceVersion} does not match package version ${parsedPackageVersion.precedenceVersion}.`,
+      );
+    }
     return {
       appVersion: parsed.version,
       imageTag: '',

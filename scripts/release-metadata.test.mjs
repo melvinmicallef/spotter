@@ -27,7 +27,7 @@ test('normalizes a pushed release tag for the application', () => {
       eventName: 'push',
       refName: 'v0.2.0-beta.1',
       sha,
-      packageVersion: '0.1.0',
+      packageVersion: '0.2.0-beta.1',
     }),
     {
       appVersion: '0.2.0-beta.1',
@@ -48,6 +48,19 @@ test('rejects a pushed tag that only resembles a release tag', () => {
         packageVersion: '0.1.0',
       }),
     /Invalid semantic version/,
+  );
+});
+
+test('rejects a release tag that does not match the package version', () => {
+  assert.throws(
+    () =>
+      resolveReleaseMetadata({
+        eventName: 'push',
+        refName: 'v0.2.0',
+        sha,
+        packageVersion: '0.1.0',
+      }),
+    /does not match package version/,
   );
 });
 
