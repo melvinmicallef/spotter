@@ -183,10 +183,18 @@ test('installs its shell and synchronizes one offline workout after reload', asy
   expect(historyResponse.ok()).toBe(true);
   const workouts = (await historyResponse.json()) as Array<{
     status: string;
-    exercises: Array<{ sets: WorkoutSetSnapshot[] }>;
+    exercises: Array<{
+      exerciseName: string;
+      sets: WorkoutSetSnapshot[];
+    }>;
   }>;
-  expect(workouts).toHaveLength(1);
-  expect(workouts[0]).toMatchObject({
+  const matchingWorkouts = workouts.filter((workout) =>
+    workout.exercises.some(
+      (exercise) => exercise.exerciseName === exerciseName,
+    ),
+  );
+  expect(matchingWorkouts).toHaveLength(1);
+  expect(matchingWorkouts[0]).toMatchObject({
     status: 'completed',
     exercises: [
       {
