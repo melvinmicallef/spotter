@@ -1,4 +1,5 @@
 import type {
+  DayOfWeek,
   Exercise,
   Workout,
   WorkoutExercise,
@@ -6,30 +7,46 @@ import type {
   WorkoutTemplate,
 } from '@spotter/shared';
 
-export function createWorkout(template?: WorkoutTemplate): Workout {
+import { weekdayName } from './weekdays.js';
+
+export function createWorkout(
+  template: WorkoutTemplate,
+  dayOfWeek: DayOfWeek,
+): Workout {
   const now = new Date().toISOString();
+  const entries = template.exercises.filter(
+    (entry) => entry.dayOfWeek === dayOfWeek,
+  );
   return {
     id: crypto.randomUUID(),
-    templateId: template?.id ?? null,
-    name: template?.name ?? 'Open workout',
+    templateId: template.id,
+    templateDay: dayOfWeek,
+    name: `${template.name} · ${weekdayName(dayOfWeek)}`.slice(0, 100),
     status: 'in_progress',
     startedAt: now,
     completedAt: null,
-    notes: template?.notes ?? null,
+    notes: template.notes,
     updatedAt: now,
-    exercises:
-      template?.exercises.map((entry, position) => ({
-        id: crypto.randomUUID(),
-        exerciseId: entry.exerciseId,
-        exerciseName: entry.exerciseName,
-        position,
-        notes: entry.notes,
-        targetSets: entry.targetSets,
-        targetReps: entry.targetReps,
-        sets: Array.from({ length: entry.targetSets ?? 1 }, (_, setPosition) =>
-          createSet(setPosition),
-        ),
-      })) ?? [],
+    exercises: entries.map((entry, position) => ({
+      id: crypto.randomUUID(),
+      exerciseId: entry.exerciseId,
+      exerciseName: entry.exerciseName,
+      exerciseType: entry.exerciseType,
+      position,
+      notes: entry.notes,
+      targetSets: entry.targetSets,
+      targetReps: entry.targetReps,
+      targetDurationSeconds: entry.targetDurationSeconds,
+      targetDistance: entry.targetDistance,
+      targetDistanceUnit: entry.targetDistanceUnit,
+      sets: Array.from(
+        {
+          length:
+            entry.exerciseType === 'strength' ? (entry.targetSets ?? 1) : 1,
+        },
+        (_, setPosition) => createSet(setPosition),
+      ),
+    })),
   };
 }
 
@@ -38,10 +55,14 @@ export function addExercise(workout: Workout, exercise: Exercise): Workout {
     id: crypto.randomUUID(),
     exerciseId: exercise.id,
     exerciseName: exercise.name,
+    exerciseType: exercise.exerciseType,
     position: workout.exercises.length,
     notes: null,
     targetSets: null,
     targetReps: null,
+    targetDurationSeconds: null,
+    targetDistance: null,
+    targetDistanceUnit: 'km',
     sets: [createSet(0)],
   };
   return touch({ ...workout, exercises: [...workout.exercises, entry] });
@@ -139,6 +160,9 @@ function createSet(position: number): WorkoutSet {
     reps: null,
     weight: null,
     weightUnit: 'kg',
+    durationSeconds: null,
+    distance: null,
+    distanceUnit: 'km',
     notes: null,
     completed: false,
   };

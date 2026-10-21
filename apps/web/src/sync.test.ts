@@ -132,6 +132,7 @@ function exampleWorkout(): Workout {
   return {
     id: crypto.randomUUID(),
     templateId: null,
+    templateDay: null,
     name: 'Workout',
     status: 'completed',
     startedAt: now,

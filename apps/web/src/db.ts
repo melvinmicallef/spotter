@@ -47,7 +47,7 @@ interface SpotterDatabaseSchema extends DBSchema {
 let databasePromise: Promise<IDBPDatabase<SpotterDatabaseSchema>> | undefined;
 
 function database() {
-  databasePromise ??= openDB<SpotterDatabaseSchema>('spotter', 2, {
+  databasePromise ??= openDB<SpotterDatabaseSchema>('spotter', 3, {
     async upgrade(db, oldVersion, _newVersion, transaction) {
       if (oldVersion < 1) {
         const workouts = db.createObjectStore('workouts', { keyPath: 'id' });
@@ -78,6 +78,34 @@ function database() {
           key: 'nextOutboxSequence',
           value: nextSequence,
         });
+      }
+      if (oldVersion < 3) {
+        const exerciseStore = transaction.objectStore('exercises');
+        const cachedExercises = await exerciseStore.getAll();
+        const exerciseTypes = new Map<string, Exercise['exerciseType']>();
+        for (const exercise of cachedExercises) {
+          const normalized = normalizeExercise(exercise);
+          exerciseTypes.set(normalized.id, normalized.exerciseType);
+          await exerciseStore.put(normalized);
+        }
+
+        const templateStore = transaction.objectStore('templates');
+        for (const template of await templateStore.getAll()) {
+          await templateStore.put(normalizeTemplate(template, exerciseTypes));
+        }
+
+        const workoutStore = transaction.objectStore('workouts');
+        for (const workout of await workoutStore.getAll()) {
+          await workoutStore.put(normalizeWorkout(workout));
+        }
+
+        const outboxStore = transaction.objectStore('outbox');
+        for (const operation of await outboxStore.getAll()) {
+          await outboxStore.put({
+            ...operation,
+            workout: normalizeWorkout(operation.workout),
+          });
+        }
       }
     },
   });
@@ -198,3 +226,48 @@ export const localRepository = {
     databasePromise = undefined;
   },
 };
+
+function normalizeExercise(exercise: Exercise): Exercise {
+  return {
+    ...exercise,
+    exerciseType: exercise.exerciseType ?? 'strength',
+  };
+}
+
+function normalizeTemplate(
+  template: WorkoutTemplate,
+  exerciseTypes: Map<string, Exercise['exerciseType']>,
+): WorkoutTemplate {
+  return {
+    ...template,
+    exercises: template.exercises.map((entry) => ({
+      ...entry,
+      exerciseType:
+        entry.exerciseType ?? exerciseTypes.get(entry.exerciseId) ?? 'strength',
+      dayOfWeek: entry.dayOfWeek ?? 1,
+      targetDurationSeconds: entry.targetDurationSeconds ?? null,
+      targetDistance: entry.targetDistance ?? null,
+      targetDistanceUnit: entry.targetDistanceUnit ?? 'km',
+    })),
+  };
+}
+
+function normalizeWorkout(workout: Workout): Workout {
+  return {
+    ...workout,
+    templateDay: workout.templateDay ?? null,
+    exercises: workout.exercises.map((exercise) => ({
+      ...exercise,
+      exerciseType: exercise.exerciseType ?? 'strength',
+      targetDurationSeconds: exercise.targetDurationSeconds ?? null,
+      targetDistance: exercise.targetDistance ?? null,
+      targetDistanceUnit: exercise.targetDistanceUnit ?? 'km',
+      sets: exercise.sets.map((set) => ({
+        ...set,
+        durationSeconds: set.durationSeconds ?? null,
+        distance: set.distance ?? null,
+        distanceUnit: set.distanceUnit ?? 'km',
+      })),
+    })),
+  };
+}

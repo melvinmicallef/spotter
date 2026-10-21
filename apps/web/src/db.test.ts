@@ -64,10 +64,14 @@ describe('local workout repository', () => {
         id: crypto.randomUUID(),
         exerciseId: null,
         exerciseName: 'Snapshot exercise',
+        exerciseType: 'strength',
         position: 0,
         notes: 'Exercise note',
         targetSets: null,
         targetReps: null,
+        targetDurationSeconds: null,
+        targetDistance: null,
+        targetDistanceUnit: 'km',
         sets: [
           {
             id: crypto.randomUUID(),
@@ -75,6 +79,9 @@ describe('local workout repository', () => {
             reps: 8,
             weight: 40,
             weightUnit: 'kg',
+            durationSeconds: null,
+            distance: null,
+            distanceUnit: 'km',
             notes: 'Set note',
             completed: true,
           },
@@ -127,6 +134,118 @@ describe('local workout repository', () => {
       failure: null,
     });
   });
+
+  it('upgrades cached version-two data to the typed weekly model', async () => {
+    const now = new Date().toISOString();
+    const exerciseId = crypto.randomUUID();
+    const templateId = crypto.randomUUID();
+    const workoutId = crypto.randomUUID();
+    const legacy = await openDB('spotter', 2, {
+      upgrade(database) {
+        const workouts = database.createObjectStore('workouts', {
+          keyPath: 'id',
+        });
+        workouts.createIndex('by-status', 'status');
+        const outbox = database.createObjectStore('outbox', {
+          keyPath: 'operationId',
+        });
+        outbox.createIndex('by-sequence', 'sequence', { unique: true });
+        database.createObjectStore('muscles', { keyPath: 'id' });
+        database.createObjectStore('exercises', { keyPath: 'id' });
+        database.createObjectStore('templates', { keyPath: 'id' });
+        database.createObjectStore('metadata', { keyPath: 'key' });
+      },
+    });
+    await legacy.put('exercises', {
+      id: exerciseId,
+      name: 'Legacy lift',
+      instructions: null,
+      muscles: [],
+      media: null,
+      source: null,
+      createdAt: now,
+      updatedAt: now,
+    });
+    await legacy.put('templates', {
+      id: templateId,
+      name: 'Legacy plan',
+      notes: null,
+      exercises: [
+        {
+          id: crypto.randomUUID(),
+          exerciseId,
+          exerciseName: 'Legacy lift',
+          position: 0,
+          notes: null,
+          targetSets: 2,
+          targetReps: 8,
+        },
+      ],
+      createdAt: now,
+      updatedAt: now,
+    });
+    const legacyWorkout = {
+      id: workoutId,
+      templateId,
+      name: 'Legacy workout',
+      status: 'in_progress',
+      startedAt: now,
+      completedAt: null,
+      notes: null,
+      updatedAt: now,
+      exercises: [
+        {
+          id: crypto.randomUUID(),
+          exerciseId,
+          exerciseName: 'Legacy lift',
+          position: 0,
+          notes: null,
+          targetSets: 1,
+          targetReps: 5,
+          sets: [
+            {
+              id: crypto.randomUUID(),
+              position: 0,
+              reps: 5,
+              weight: 80,
+              weightUnit: 'kg',
+              notes: null,
+              completed: false,
+            },
+          ],
+        },
+      ],
+    };
+    await legacy.put('workouts', legacyWorkout);
+    await legacy.put('outbox', {
+      operationId: crypto.randomUUID(),
+      kind: 'upsert_workout',
+      createdAt: now,
+      workout: legacyWorkout,
+      sequence: 1,
+      attempts: 0,
+      failure: null,
+    });
+    legacy.close();
+
+    const references = await localRepository.references();
+    expect(references.exercises[0]?.exerciseType).toBe('strength');
+    expect(references.templates[0]?.exercises[0]).toMatchObject({
+      exerciseType: 'strength',
+      dayOfWeek: 1,
+      targetDurationSeconds: null,
+      targetDistance: null,
+      targetDistanceUnit: 'km',
+    });
+    expect((await localRepository.activeWorkout())?.exercises[0]).toMatchObject(
+      {
+        exerciseType: 'strength',
+        targetDurationSeconds: null,
+        targetDistance: null,
+      },
+    );
+    expect((await localRepository.outbox())[0]?.workout.templateDay).toBeNull();
+  });
 });
 
 function exampleWorkout(): Workout {
@@ -134,6 +253,7 @@ function exampleWorkout(): Workout {
   return {
     id: crypto.randomUUID(),
     templateId: null,
+    templateDay: null,
     name: 'Offline workout',
     status: 'in_progress',
     startedAt: now,

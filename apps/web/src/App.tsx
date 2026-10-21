@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type {
+  DayOfWeek,
   Exercise,
   Muscle,
   Workout,
@@ -8,8 +9,9 @@ import type {
 } from '@spotter/shared';
 
 import { api } from './api.js';
-import { CatalogueView } from './components/CatalogueView.js';
+import { ExercisesView } from './components/CatalogueView.js';
 import { HistoryView } from './components/HistoryView.js';
+import { MusclesView } from './components/MusclesView.js';
 import { PwaUpdate } from './components/PwaUpdate.js';
 import { StatusBar } from './components/StatusBar.js';
 import { TemplatesView } from './components/TemplatesView.js';
@@ -29,7 +31,7 @@ import {
   updateWorkoutNotes,
 } from './workout.js';
 
-type View = 'workout' | 'history' | 'catalogue' | 'templates';
+type View = 'workout' | 'history' | 'muscles' | 'exercises' | 'templates';
 
 export function App() {
   const [view, setView] = useState<View>('workout');
@@ -151,9 +153,9 @@ export function App() {
     persistWorkout(next);
   }
 
-  function start(template?: WorkoutTemplate) {
+  function start(template: WorkoutTemplate, dayOfWeek: DayOfWeek) {
     if (activeWorkoutRef.current) return;
-    const workout = createWorkout(template);
+    const workout = createWorkout(template, dayOfWeek);
     activeWorkoutRef.current = workout;
     setActiveWorkout(workout);
     persistWorkout(workout);
@@ -243,8 +245,16 @@ export function App() {
           />
         )}
         {view === 'history' && <HistoryView workouts={history} />}
-        {view === 'catalogue' && (
-          <CatalogueView
+        {view === 'muscles' && (
+          <MusclesView
+            online={online}
+            muscles={muscles}
+            onRefresh={refreshOnlineReferences}
+            onError={setMessage}
+          />
+        )}
+        {view === 'exercises' && (
+          <ExercisesView
             online={online}
             muscles={muscles}
             exercises={exercises}
@@ -277,10 +287,16 @@ export function App() {
           onClick={() => setView('history')}
         />
         <NavButton
-          active={view === 'catalogue'}
-          label="Catalogue"
+          active={view === 'muscles'}
+          label="Muscles"
           icon="◇"
-          onClick={() => setView('catalogue')}
+          onClick={() => setView('muscles')}
+        />
+        <NavButton
+          active={view === 'exercises'}
+          label="Exercises"
+          icon="◆"
+          onClick={() => setView('exercises')}
         />
         <NavButton
           active={view === 'templates'}

@@ -9,7 +9,7 @@ import type {
 
 import { api } from '../api.js';
 
-interface CatalogueViewProps {
+interface ExercisesViewProps {
   online: boolean;
   muscles: Muscle[];
   exercises: Exercise[];
@@ -17,14 +17,17 @@ interface CatalogueViewProps {
   onError: (message: string) => void;
 }
 
-export function CatalogueView(props: CatalogueViewProps) {
-  const [muscleName, setMuscleName] = useState('');
+export function ExercisesView(props: ExercisesViewProps) {
   const [exerciseName, setExerciseName] = useState('');
+  const [exerciseType, setExerciseType] =
+    useState<ExerciseInput['exerciseType']>('strength');
   const [instructions, setInstructions] = useState('');
   const [selectedMuscles, setSelectedMuscles] = useState<MuscleRoles>({});
   const [gifFile, setGifFile] = useState<File>();
   const [importUrl, setImportUrl] = useState('');
   const [importPreview, setImportPreview] = useState<WebsiteImportPreview>();
+  const [importExerciseType, setImportExerciseType] =
+    useState<ExerciseInput['exerciseType']>('strength');
 
   async function run(action: () => Promise<unknown>) {
     try {
@@ -42,51 +45,17 @@ export function CatalogueView(props: CatalogueViewProps) {
       <div className="section-heading">
         <div>
           <span className="eyebrow">ONLINE LIBRARY</span>
-          <h2>Catalogue</h2>
+          <h2>Exercises</h2>
         </div>
       </div>
       {!props.online && (
         <p className="notice">
-          Catalogue changes need a connection. Cached exercises remain available
+          Exercise changes need a connection. Cached exercises remain available
           in workouts.
         </p>
       )}
-      <div className="split-grid">
+      <div>
         <div>
-          <h3>Muscles</h3>
-          <fieldset disabled={!props.online}>
-            <form
-              className="inline-form"
-              onSubmit={(event) => {
-                event.preventDefault();
-                if (!muscleName.trim()) return;
-                void run(async () => {
-                  await api.createMuscle({ name: muscleName });
-                  setMuscleName('');
-                });
-              }}
-            >
-              <input
-                aria-label="New muscle name"
-                placeholder="e.g. Hamstrings"
-                value={muscleName}
-                onChange={(event) => setMuscleName(event.target.value)}
-              />
-              <button type="submit">Add</button>
-            </form>
-            <div className="stack tight">
-              {props.muscles.map((muscle) => (
-                <MuscleRow
-                  key={`${muscle.id}-${muscle.updatedAt}`}
-                  muscle={muscle}
-                  run={run}
-                />
-              ))}
-            </div>
-          </fieldset>
-        </div>
-        <div>
-          <h3>Exercises</h3>
           <fieldset disabled={!props.online}>
             <form
               className="form-card import-card"
@@ -137,6 +106,20 @@ export function CatalogueView(props: CatalogueViewProps) {
                       }
                     />
                   </label>
+                  <label className="field">
+                    Imported exercise type
+                    <select
+                      value={importExerciseType}
+                      onChange={(event) =>
+                        setImportExerciseType(
+                          event.target.value as ExerciseInput['exerciseType'],
+                        )
+                      }
+                    >
+                      <option value="strength">Strength</option>
+                      <option value="cardio">Cardio</option>
+                    </select>
+                  </label>
                   {importPreview.gifUrl && (
                     <a
                       href={importPreview.gifUrl}
@@ -152,6 +135,7 @@ export function CatalogueView(props: CatalogueViewProps) {
                       void run(async () => {
                         await api.createExercise({
                           name: importPreview.title,
+                          exerciseType: importExerciseType,
                           instructions: importPreview.description,
                           muscles: exerciseMuscleLinks(selectedMuscles),
                           mediaId: null,
@@ -184,6 +168,7 @@ export function CatalogueView(props: CatalogueViewProps) {
                   try {
                     await api.createExercise({
                       name: exerciseName,
+                      exerciseType,
                       instructions: instructions.trim() || null,
                       muscles: exerciseMuscleLinks(selectedMuscles),
                       mediaId: media?.id ?? null,
@@ -194,6 +179,7 @@ export function CatalogueView(props: CatalogueViewProps) {
                     throw error;
                   }
                   setExerciseName('');
+                  setExerciseType('strength');
                   setInstructions('');
                   setSelectedMuscles({});
                   setGifFile(undefined);
@@ -206,6 +192,20 @@ export function CatalogueView(props: CatalogueViewProps) {
                 value={exerciseName}
                 onChange={(event) => setExerciseName(event.target.value)}
               />
+              <label className="field">
+                Exercise type
+                <select
+                  value={exerciseType}
+                  onChange={(event) =>
+                    setExerciseType(
+                      event.target.value as ExerciseInput['exerciseType'],
+                    )
+                  }
+                >
+                  <option value="strength">Strength</option>
+                  <option value="cardio">Cardio</option>
+                </select>
+              </label>
               <textarea
                 aria-label="Exercise instructions"
                 placeholder="Instructions (optional)"
@@ -244,40 +244,6 @@ export function CatalogueView(props: CatalogueViewProps) {
   );
 }
 
-function MuscleRow({
-  muscle,
-  run,
-}: {
-  muscle: Muscle;
-  run: (action: () => Promise<unknown>) => Promise<void>;
-}) {
-  const [name, setName] = useState(muscle.name);
-  return (
-    <div className="list-row">
-      <input
-        aria-label={`${muscle.name} name`}
-        value={name}
-        onChange={(event) => setName(event.target.value)}
-      />
-      <button
-        className="secondary"
-        type="button"
-        onClick={() => void run(() => api.updateMuscle(muscle.id, { name }))}
-      >
-        Save
-      </button>
-      <button
-        className="icon-button danger-text"
-        type="button"
-        aria-label={`Delete ${muscle.name}`}
-        onClick={() => void run(() => api.deleteMuscle(muscle.id))}
-      >
-        ×
-      </button>
-    </div>
-  );
-}
-
 function ExerciseCard({
   exercise,
   muscles,
@@ -288,6 +254,7 @@ function ExerciseCard({
   run: (action: () => Promise<unknown>) => Promise<void>;
 }) {
   const [name, setName] = useState(exercise.name);
+  const [exerciseType, setExerciseType] = useState(exercise.exerciseType);
   const [instructions, setInstructions] = useState(exercise.instructions ?? '');
   const [selected, setSelected] = useState<MuscleRoles>(
     Object.fromEntries(
@@ -310,6 +277,19 @@ function ExerciseCard({
         value={name}
         onChange={(event) => setName(event.target.value)}
       />
+      <label className="field">
+        Exercise type
+        <select
+          aria-label={`${exercise.name} type`}
+          value={exerciseType}
+          onChange={(event) =>
+            setExerciseType(event.target.value as Exercise['exerciseType'])
+          }
+        >
+          <option value="strength">Strength</option>
+          <option value="cardio">Cardio</option>
+        </select>
+      </label>
       <textarea
         aria-label={`${exercise.name} instructions`}
         value={instructions}
@@ -354,6 +334,7 @@ function ExerciseCard({
               try {
                 await api.updateExercise(exercise.id, {
                   name,
+                  exerciseType,
                   instructions: instructions.trim() || null,
                   muscles: exerciseMuscleLinks(selected),
                   mediaId:

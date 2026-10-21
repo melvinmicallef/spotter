@@ -1,5 +1,7 @@
 import type { Workout } from '@spotter/shared';
 
+import { weekdayName } from '../weekdays.js';
+
 export function HistoryView({ workouts }: { workouts: Workout[] }) {
   return (
     <section className="page-section">
@@ -21,6 +23,9 @@ export function HistoryView({ workouts }: { workouts: Workout[] }) {
               <div>
                 <strong>{workout.name}</strong>
                 <small>{new Date(workout.startedAt).toLocaleString()}</small>
+                {workout.templateDay && (
+                  <small>{weekdayName(workout.templateDay)}</small>
+                )}
               </div>
               <div className="history-stats">
                 <span>{workout.exercises.length} exercises</span>
@@ -31,7 +36,7 @@ export function HistoryView({ workouts }: { workouts: Workout[] }) {
                       exercise.sets.filter((set) => set.completed).length,
                     0,
                   )}{' '}
-                  completed sets
+                  completed efforts
                 </span>
               </div>
             </summary>
@@ -39,16 +44,20 @@ export function HistoryView({ workouts }: { workouts: Workout[] }) {
               {workout.notes && <p>{workout.notes}</p>}
               {workout.exercises.map((exercise) => (
                 <section key={exercise.id} className="history-exercise">
-                  <h3>{exercise.exerciseName}</h3>
+                  <h3>
+                    {exercise.exerciseName}{' '}
+                    <small className="type-badge">
+                      {exercise.exerciseType}
+                    </small>
+                  </h3>
                   {exercise.notes && <p>{exercise.notes}</p>}
                   <ol>
                     {exercise.sets.map((set) => (
                       <li key={set.id}>
                         <span>
-                          {set.weight == null
-                            ? 'Bodyweight'
-                            : `${set.weight} ${set.weightUnit}`}
-                          {set.reps == null ? '' : ` × ${set.reps} reps`}
+                          {exercise.exerciseType === 'cardio'
+                            ? formatCardioEffort(set)
+                            : formatStrengthSet(set)}
                         </span>
                         <span>
                           {set.completed ? 'Completed' : 'Not completed'}
@@ -65,4 +74,29 @@ export function HistoryView({ workouts }: { workouts: Workout[] }) {
       </div>
     </section>
   );
+}
+
+function formatStrengthSet(set: Workout['exercises'][number]['sets'][number]) {
+  const load =
+    set.weight == null ? 'Bodyweight' : `${set.weight} ${set.weightUnit}`;
+  return `${load}${set.reps == null ? '' : ` × ${set.reps} reps`}`;
+}
+
+function formatCardioEffort(set: Workout['exercises'][number]['sets'][number]) {
+  const measurements = [
+    set.durationSeconds == null
+      ? null
+      : `${formatDuration(set.durationSeconds)}`,
+    set.distance == null ? null : `${set.distance} ${set.distanceUnit}`,
+  ].filter(Boolean);
+  return measurements.length > 0 ? measurements.join(' · ') : 'No result';
+}
+
+function formatDuration(seconds: number) {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remainingSeconds = seconds % 60;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  if (remainingSeconds > 0) return `${minutes}m ${remainingSeconds}s`;
+  return `${minutes} min`;
 }

@@ -1,12 +1,14 @@
 import { useState } from 'react';
 
 import type {
+  DayOfWeek,
   Exercise,
   WorkoutTemplate,
   WorkoutTemplateInput,
 } from '@spotter/shared';
 
 import { api } from '../api.js';
+import { WEEKDAYS } from '../weekdays.js';
 
 interface TemplatesViewProps {
   online: boolean;
@@ -34,7 +36,7 @@ export function TemplatesView(props: TemplatesViewProps) {
     <section className="page-section">
       <div className="section-heading">
         <div>
-          <span className="eyebrow">PLANS</span>
+          <span className="eyebrow">WEEKLY PLANS</span>
           <h2>Templates</h2>
         </div>
       </div>
@@ -57,12 +59,12 @@ export function TemplatesView(props: TemplatesViewProps) {
           }}
         >
           <input
-            aria-label="New template name"
-            placeholder="New template name"
+            aria-label="New weekly template name"
+            placeholder="New weekly template name"
             value={name}
             onChange={(event) => setName(event.target.value)}
           />
-          <button type="submit">Create</button>
+          <button type="submit">Create weekly template</button>
         </form>
         <div className="stack">
           {props.templates.map((template) => (
@@ -92,11 +94,31 @@ function TemplateCard({
     toInput(template),
   );
 
-  function move(index: number, direction: -1 | 1) {
-    const destination = index + direction;
-    if (destination < 0 || destination >= draft.exercises.length) return;
+  function updateEntry(
+    index: number,
+    patch: Partial<WorkoutTemplateInput['exercises'][number]>,
+  ) {
+    setDraft({
+      ...draft,
+      exercises: draft.exercises.map((entry, entryIndex) =>
+        entryIndex === index ? { ...entry, ...patch } : entry,
+      ),
+    });
+  }
+
+  function move(day: DayOfWeek, dayIndex: number, direction: -1 | 1) {
+    const dayEntries = draft.exercises
+      .map((entry, index) => ({ entry, index }))
+      .filter(({ entry }) => entry.dayOfWeek === day);
+    const destination = dayIndex + direction;
+    if (destination < 0 || destination >= dayEntries.length) return;
+    const sourceIndex = dayEntries[dayIndex]!.index;
+    const destinationIndex = dayEntries[destination]!.index;
     const next = [...draft.exercises];
-    [next[index], next[destination]] = [next[destination]!, next[index]!];
+    [next[sourceIndex], next[destinationIndex]] = [
+      next[destinationIndex]!,
+      next[sourceIndex]!,
+    ];
     setDraft({ ...draft, exercises: next });
   }
 
@@ -109,155 +131,227 @@ function TemplateCard({
       />
       <textarea
         aria-label={`${template.name} notes`}
-        placeholder="Template notes"
+        placeholder="Weekly template notes"
         value={draft.notes ?? ''}
         onChange={(event) =>
           setDraft({ ...draft, notes: event.target.value || null })
         }
       />
-      <div className="stack tight">
-        {draft.exercises.map((entry, index) => {
-          const exercise = exercises.find(
-            (item) => item.id === entry.exerciseId,
-          );
+
+      <div className="week-grid">
+        {WEEKDAYS.map((day) => {
+          const entries = draft.exercises
+            .map((entry, index) => ({ entry, index }))
+            .filter(({ entry }) => entry.dayOfWeek === day.value);
           return (
-            <div
-              className="list-row template-entry"
-              key={entry.id ?? `${entry.exerciseId}-${index}`}
-            >
-              <span>
-                <strong>{index + 1}.</strong>{' '}
-                {exercise?.name ?? 'Unavailable exercise'}
-              </span>
-              <input
-                aria-label={`${exercise?.name ?? 'Exercise'} target sets`}
-                type="number"
-                min="1"
-                placeholder="Sets"
-                value={entry.targetSets ?? ''}
-                onChange={(event) =>
-                  setDraft({
-                    ...draft,
-                    exercises: draft.exercises.map((item, itemIndex) =>
-                      itemIndex === index
-                        ? {
-                            ...item,
-                            targetSets: event.target.value
-                              ? Number(event.target.value)
-                              : null,
-                          }
-                        : item,
-                    ),
-                  })
-                }
-              />
-              <input
-                aria-label={`${exercise?.name ?? 'Exercise'} target reps`}
-                type="number"
-                min="1"
-                placeholder="Reps"
-                value={entry.targetReps ?? ''}
-                onChange={(event) =>
-                  setDraft({
-                    ...draft,
-                    exercises: draft.exercises.map((item, itemIndex) =>
-                      itemIndex === index
-                        ? {
-                            ...item,
-                            targetReps: event.target.value
-                              ? Number(event.target.value)
-                              : null,
-                          }
-                        : item,
-                    ),
-                  })
-                }
-              />
-              <div className="inline-actions">
-                <button
-                  className="icon-button"
-                  type="button"
-                  aria-label={`Move ${exercise?.name ?? 'exercise'} up`}
-                  onClick={() => move(index, -1)}
-                >
-                  ↑
-                </button>
-                <button
-                  className="icon-button"
-                  type="button"
-                  aria-label={`Move ${exercise?.name ?? 'exercise'} down`}
-                  onClick={() => move(index, 1)}
-                >
-                  ↓
-                </button>
-                <button
-                  className="icon-button danger-text"
-                  type="button"
-                  aria-label={`Remove ${exercise?.name ?? 'exercise'}`}
-                  onClick={() =>
-                    setDraft({
-                      ...draft,
-                      exercises: draft.exercises.filter(
-                        (_, itemIndex) => itemIndex !== index,
-                      ),
-                    })
-                  }
-                >
-                  ×
-                </button>
+            <section className="template-day" key={day.value}>
+              <header>
+                <h3>{day.label}</h3>
+                <small>
+                  {entries.length} exercise{entries.length === 1 ? '' : 's'}
+                </small>
+              </header>
+              <div className="stack tight">
+                {entries.map(({ entry, index }, dayIndex) => {
+                  const exercise = exercises.find(
+                    (item) => item.id === entry.exerciseId,
+                  );
+                  return (
+                    <div
+                      className="template-entry"
+                      key={entry.id ?? `${entry.exerciseId}-${index}`}
+                    >
+                      <div className="template-entry-heading">
+                        <span>
+                          <strong>{dayIndex + 1}.</strong>{' '}
+                          {exercise?.name ?? 'Unavailable exercise'}
+                          <small className="type-badge">
+                            {exercise?.exerciseType ?? 'strength'}
+                          </small>
+                        </span>
+                        <div className="inline-actions">
+                          <button
+                            className="icon-button"
+                            type="button"
+                            aria-label={`Move ${exercise?.name ?? 'exercise'} up on ${day.label}`}
+                            onClick={() => move(day.value, dayIndex, -1)}
+                          >
+                            ↑
+                          </button>
+                          <button
+                            className="icon-button"
+                            type="button"
+                            aria-label={`Move ${exercise?.name ?? 'exercise'} down on ${day.label}`}
+                            onClick={() => move(day.value, dayIndex, 1)}
+                          >
+                            ↓
+                          </button>
+                          <button
+                            className="icon-button danger-text"
+                            type="button"
+                            aria-label={`Remove ${exercise?.name ?? 'exercise'} from ${day.label}`}
+                            onClick={() =>
+                              setDraft({
+                                ...draft,
+                                exercises: draft.exercises.filter(
+                                  (_, entryIndex) => entryIndex !== index,
+                                ),
+                              })
+                            }
+                          >
+                            ×
+                          </button>
+                        </div>
+                      </div>
+                      {exercise?.exerciseType === 'cardio' ? (
+                        <div className="target-fields">
+                          <label>
+                            Target minutes
+                            <input
+                              aria-label={`${exercise.name} target minutes on ${day.label}`}
+                              type="number"
+                              min="1"
+                              value={
+                                entry.targetDurationSeconds == null
+                                  ? ''
+                                  : entry.targetDurationSeconds / 60
+                              }
+                              onChange={(event) =>
+                                updateEntry(index, {
+                                  targetDurationSeconds: event.target.value
+                                    ? Math.round(
+                                        Number(event.target.value) * 60,
+                                      )
+                                    : null,
+                                })
+                              }
+                            />
+                          </label>
+                          <label>
+                            Target distance
+                            <input
+                              aria-label={`${exercise.name} target distance on ${day.label}`}
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={entry.targetDistance ?? ''}
+                              onChange={(event) =>
+                                updateEntry(index, {
+                                  targetDistance: event.target.value
+                                    ? Number(event.target.value)
+                                    : null,
+                                })
+                              }
+                            />
+                          </label>
+                          <label>
+                            Unit
+                            <select
+                              aria-label={`${exercise.name} distance unit on ${day.label}`}
+                              value={entry.targetDistanceUnit}
+                              onChange={(event) =>
+                                updateEntry(index, {
+                                  targetDistanceUnit: event.target.value as
+                                    'km' | 'mi',
+                                })
+                              }
+                            >
+                              <option value="km">km</option>
+                              <option value="mi">mi</option>
+                            </select>
+                          </label>
+                        </div>
+                      ) : (
+                        <div className="target-fields">
+                          <label>
+                            Target sets
+                            <input
+                              aria-label={`${exercise?.name ?? 'Exercise'} target sets on ${day.label}`}
+                              type="number"
+                              min="1"
+                              value={entry.targetSets ?? ''}
+                              onChange={(event) =>
+                                updateEntry(index, {
+                                  targetSets: event.target.value
+                                    ? Number(event.target.value)
+                                    : null,
+                                })
+                              }
+                            />
+                          </label>
+                          <label>
+                            Target reps
+                            <input
+                              aria-label={`${exercise?.name ?? 'Exercise'} target reps on ${day.label}`}
+                              type="number"
+                              min="1"
+                              value={entry.targetReps ?? ''}
+                              onChange={(event) =>
+                                updateEntry(index, {
+                                  targetReps: event.target.value
+                                    ? Number(event.target.value)
+                                    : null,
+                                })
+                              }
+                            />
+                          </label>
+                        </div>
+                      )}
+                      <textarea
+                        aria-label={`${exercise?.name ?? 'Exercise'} template notes on ${day.label}`}
+                        placeholder="Exercise notes"
+                        value={entry.notes ?? ''}
+                        onChange={(event) =>
+                          updateEntry(index, {
+                            notes: event.target.value || null,
+                          })
+                        }
+                      />
+                    </div>
+                  );
+                })}
               </div>
-              <textarea
-                className="template-entry-notes"
-                aria-label={`${exercise?.name ?? 'Exercise'} template notes`}
-                placeholder="Exercise notes"
-                value={entry.notes ?? ''}
-                onChange={(event) =>
+              <select
+                value=""
+                aria-label={`Add exercise to ${day.label}`}
+                onChange={(event) => {
+                  if (!event.target.value) return;
                   setDraft({
                     ...draft,
-                    exercises: draft.exercises.map((item, itemIndex) =>
-                      itemIndex === index
-                        ? { ...item, notes: event.target.value || null }
-                        : item,
-                    ),
-                  })
-                }
-              />
-            </div>
+                    exercises: [
+                      ...draft.exercises,
+                      {
+                        exerciseId: event.target.value,
+                        dayOfWeek: day.value,
+                        notes: null,
+                        targetSets: null,
+                        targetReps: null,
+                        targetDurationSeconds: null,
+                        targetDistance: null,
+                        targetDistanceUnit: 'km',
+                      },
+                    ],
+                  });
+                }}
+              >
+                <option value="">Add exercise…</option>
+                {exercises.map((exercise) => (
+                  <option key={exercise.id} value={exercise.id}>
+                    {exercise.name} ({exercise.exerciseType})
+                  </option>
+                ))}
+              </select>
+            </section>
           );
         })}
       </div>
-      <select
-        value=""
-        aria-label="Add exercise to template"
-        onChange={(event) => {
-          if (!event.target.value) return;
-          setDraft({
-            ...draft,
-            exercises: [
-              ...draft.exercises,
-              {
-                exerciseId: event.target.value,
-                notes: null,
-                targetSets: null,
-                targetReps: null,
-              },
-            ],
-          });
-        }}
-      >
-        <option value="">Add exercise…</option>
-        {exercises.map((exercise) => (
-          <option key={exercise.id} value={exercise.id}>
-            {exercise.name}
-          </option>
-        ))}
-      </select>
+
       <div className="inline-actions">
         <button
           type="button"
           onClick={() => void run(() => api.updateTemplate(template.id, draft))}
         >
-          Save template
+          Save weekly template
         </button>
         <button
           className="secondary"
@@ -285,9 +379,13 @@ function toInput(template: WorkoutTemplate): WorkoutTemplateInput {
     exercises: template.exercises.map((entry) => ({
       id: entry.id,
       exerciseId: entry.exerciseId,
+      dayOfWeek: entry.dayOfWeek,
       notes: entry.notes,
       targetSets: entry.targetSets,
       targetReps: entry.targetReps,
+      targetDurationSeconds: entry.targetDurationSeconds,
+      targetDistance: entry.targetDistance,
+      targetDistanceUnit: entry.targetDistanceUnit,
     })),
   };
 }

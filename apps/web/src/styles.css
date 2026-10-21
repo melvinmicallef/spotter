@@ -339,18 +339,76 @@ small {
   color: #abc0b6;
   font-size: 0.84rem;
 }
-.template-entry > span {
-  flex: 1;
-}
-.template-entry > input {
-  width: 78px;
-}
 .template-entry {
-  flex-wrap: wrap;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #0b1814;
 }
-.template-entry-notes {
+.template-entry-heading,
+.template-day > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.template-day > header h3,
+.template-day > header small {
+  margin: 0;
+}
+.week-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+}
+.template-day {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 10px;
+  padding: 13px;
+  border: 1px solid #29473c;
+  border-radius: 14px;
+  background: #091712;
+}
+.target-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(105px, 1fr));
+  gap: 8px;
+}
+.target-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  color: #8ea79b;
+  font-size: 0.78rem;
+}
+.type-badge {
+  display: inline-block;
+  margin: 0 0 0 8px;
+  padding: 3px 7px;
+  border-radius: 99px;
+  color: #a8efcd;
+  background: #17382c;
+  font-size: 0.66rem;
+  text-transform: uppercase;
+}
+.target-summary {
+  margin: -2px 0 2px;
+  color: #8ea79b;
+  font-size: 0.84rem;
+}
+.workout-template-card {
+  align-items: flex-start;
+  flex-direction: column;
+}
+.day-start-actions {
+  display: flex;
   width: 100%;
-  min-height: 54px;
+  flex-wrap: wrap;
+  gap: 7px;
 }
 .history-details {
   display: block;
@@ -531,7 +589,7 @@ small {
 }
 .bottom-nav button {
   display: flex;
-  min-width: 86px;
+  min-width: 76px;
   flex-direction: column;
   align-items: center;
   gap: 3px;
@@ -573,13 +631,6 @@ small {
   .page-section {
     padding-top: 28px;
   }
-  .template-entry {
-    align-items: flex-start;
-    flex-wrap: wrap;
-  }
-  .template-entry > span {
-    flex-basis: 100%;
-  }
 }
 @media (max-width: 540px) {
   .brand > span:last-child {
@@ -591,6 +642,8 @@ small {
   .bottom-nav button {
     min-width: 0;
     flex: 1;
+    padding-inline: 5px;
+    font-size: 0.62rem;
   }
   .set-head {
     display: none;
