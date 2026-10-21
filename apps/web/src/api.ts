@@ -7,7 +7,6 @@ import {
   syncResponseSchema,
   workoutSchema,
   workoutTemplateSchema,
-  websiteImportPreviewSchema,
 } from '@spotter/shared';
 import type {
   Exercise,
@@ -21,7 +20,6 @@ import type {
   Workout,
   WorkoutTemplate,
   WorkoutTemplateInput,
-  WebsiteImportPreview,
 } from '@spotter/shared';
 
 export class ApiClientError extends Error {
@@ -113,12 +111,12 @@ export const api = {
   async deleteExercise(id: string): Promise<void> {
     await request(`/exercises/${id}`, { method: 'DELETE' });
   },
-  async uploadGif(file: File): Promise<ExerciseMedia> {
+  async uploadImage(file: File): Promise<ExerciseMedia> {
     return exerciseMediaSchema.parse(
-      await request('/media/gif', {
+      await request('/media/image', {
         method: 'POST',
         headers: {
-          'Content-Type': 'image/gif',
+          'Content-Type': file.type,
           'X-File-Name': file.name,
         },
         body: file,
@@ -127,14 +125,6 @@ export const api = {
   },
   async deleteMedia(id: string): Promise<void> {
     await request(`/media/${id}`, { method: 'DELETE' });
-  },
-  async previewWebsiteImport(url: string): Promise<WebsiteImportPreview> {
-    return websiteImportPreviewSchema.parse(
-      await request('/imports/website/preview', {
-        method: 'POST',
-        body: JSON.stringify({ url }),
-      }),
-    );
   },
   async createTemplate(input: WorkoutTemplateInput): Promise<WorkoutTemplate> {
     return workoutTemplateSchema.parse(
