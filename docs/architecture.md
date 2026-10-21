@@ -68,6 +68,10 @@ selected exercise opens a detail page with separate edit and delete actions.
 Exercises own their strength/cardio type, muscle roles, separate preparation
 and execution instructions, and uploaded image. The version-five SQLite and
 IndexedDB migrations retain legacy single-field instructions as execution text.
+The exercise editor assigns muscles incrementally rather than rendering the
+entire catalogue. Duplicate assignments are excluded, multiple secondary
+muscles are supported, and assigned-muscle payloads and UI rows order primary
+roles before secondary roles.
 
 ### IndexedDB stores
 

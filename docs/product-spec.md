@@ -94,7 +94,9 @@ While online, a user can:
 - create, view, edit, and delete exercises;
 - choose whether an exercise is strength or cardio;
 - record preparation and execution instructions separately;
-- associate exercises with muscles as primary or secondary;
+- add target muscles one at a time as primary or secondary, prevent duplicate
+  assignments, allow multiple secondary muscles, and display primary muscles
+  first;
 - attach or replace a GIF, PNG, or JPEG demonstration; and
 - receive a clear validation or dependency error when a destructive change
   would invalidate existing data.
