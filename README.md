@@ -61,6 +61,8 @@ Read the documents in this order:
    synchronization, container, and CI design.
 4. [Implementation plan](docs/implementation-plan.md) — phased build order,
    deliverables, tests, and completion gates.
+5. [Operations guide](docs/operations.md) — container use, runtime settings,
+   persistence, backup, restore, and upgrades.
 
 `AGENTS.md` contains concise repository-level instructions for AI coding agents.
 
@@ -109,9 +111,21 @@ The implementation order is:
 5. package the application as one Docker image; and
 6. add validation and release workflows.
 
-The workspace skeleton and health/version vertical slice are implemented. The
-catalogue, templates, workout domain, and offline synchronization follow in the
-next slices.
+The catalogue, templates, workout lifecycle, IndexedDB persistence, idempotent
+synchronization, PWA shell, and production container are implemented.
+
+## Run the production image
+
+```bash
+docker compose up --build
+```
+
+Then open `http://localhost:3000`. The named volume mounted at `/data` retains
+`spotter.sqlite` and its WAL files when the container is replaced.
+
+The application currently targets a trusted, single-user deployment. Put an
+authentication-aware reverse proxy in front of it before exposing it to an
+untrusted network.
 
 ## Continuing in a new AI chat
 
@@ -119,9 +133,9 @@ Open the repository at its root and ask the new chat to read `AGENTS.md` and the
 documentation listed above before changing files. A complete starter prompt is
 available in [the project handoff](docs/project-context.md#starter-prompt-for-a-new-ai-chat).
 
-The first implementation task should establish the TypeScript workspace and a
-minimal end-to-end health-check slice without prematurely choosing answers to
-the documented open product decisions.
+The next task should inspect the remaining release gates in the implementation
+plan, especially browser-level offline testing, accessibility, and release
+candidate verification.
 
 ## Release policy
 

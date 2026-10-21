@@ -1,0 +1,12 @@
+services:
+  spotter:
+    build: .
+    image: ghcr.io/melvinmicallef/spotter:local
+    ports:
+      - '3000:3000'
+    volumes:
+      - spotter-data:/data
+    restart: unless-stopped
+
+volumes:
+  spotter-data:
