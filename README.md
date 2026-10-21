@@ -144,7 +144,8 @@ The separate muscle and exercise catalogues, weekly templates, workout
 lifecycle, IndexedDB persistence, idempotent synchronization, PWA shell, and
 production container are implemented.
 The exercise catalogue supports a compact list/detail workflow, primary and
-secondary muscle roles, and validated GIF, PNG, or JPEG demonstrations.
+secondary muscle roles, separate preparation and execution instructions, and
+validated GIF, PNG, or JPEG demonstrations.
 Workout, exercise-entry, set, and template-entry notes are editable, and
 history expands to show the preserved exercise and set snapshots.
 

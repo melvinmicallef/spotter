@@ -57,7 +57,8 @@ healthy API response, and load the PWA shell.
   exercises, using separate muscle and exercise pages.
 - Explicit strength/cardio exercise types with type-appropriate fields.
 - A compact exercise list and dedicated detail/editor flow, role-aware primary
-  and secondary muscle associations, and validated GIF/PNG/JPEG images.
+  and secondary muscle associations, separate preparation/execution
+  instructions, and validated GIF/PNG/JPEG images.
 - Dependency-safe deletion behavior that preserves future workout history.
 - API integration tests using an isolated temporary database.
 

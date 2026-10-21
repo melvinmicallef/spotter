@@ -65,8 +65,9 @@ metadata.
 The catalogue has separate muscle and exercise views. Muscles are focused
 reference records. Exercises use a compact image/title/target-muscle list; a
 selected exercise opens a detail page with separate edit and delete actions.
-Exercises own their strength/cardio type, muscle roles, instructions, and
-uploaded image.
+Exercises own their strength/cardio type, muscle roles, separate preparation
+and execution instructions, and uploaded image. The version-five SQLite and
+IndexedDB migrations retain legacy single-field instructions as execution text.
 
 ### IndexedDB stores
 

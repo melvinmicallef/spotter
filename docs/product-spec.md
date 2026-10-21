@@ -48,8 +48,8 @@ exercises, optionally with a relationship such as primary or secondary.
 ### Exercise
 
 A movement that can be placed in a template or workout. Its initial fields are
-a stable ID, name, type, optional instructions or notes, and associated
-muscles. Every exercise is either:
+a stable ID, name, type, optional preparation instructions, optional execution
+instructions, and associated muscles. Every exercise is either:
 
 - **strength**, recorded as sets with repetitions and optional weight; or
 - **cardio**, recorded as efforts with duration and optional distance.
@@ -93,6 +93,7 @@ While online, a user can:
 - create, view, edit, and delete muscles;
 - create, view, edit, and delete exercises;
 - choose whether an exercise is strength or cardio;
+- record preparation and execution instructions separately;
 - associate exercises with muscles as primary or secondary;
 - attach or replace a GIF, PNG, or JPEG demonstration; and
 - receive a clear validation or dependency error when a destructive change
