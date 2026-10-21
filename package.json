@@ -18,7 +18,8 @@
     "format:check": "prettier --check .",
     "lint": "eslint .",
     "typecheck": "npm run build -w @spotter/shared && npm run typecheck --workspaces --if-present",
-    "test": "npm run build -w @spotter/shared && vitest run",
+    "test": "npm run build -w @spotter/shared && vitest run && npm run test:release",
+    "test:release": "node --test scripts/*.test.mjs",
     "check": "npm run format:check && npm run lint && npm run typecheck && npm test && npm run build"
   },
   "devDependencies": {
