@@ -153,9 +153,9 @@ available in [the project handoff](docs/project-context.md#starter-prompt-for-a-
 
 The release automation is implemented, but no release has been approved or
 published. The remaining release gates include the complete acceptance and test
-matrix, browser-level offline testing, accessibility and mobile QA, and release
-candidate verification. See the [release guide](docs/releasing.md) before
-creating `v0.1.0`.
+matrix, accessibility and mobile QA, and release candidate verification. The
+automated browser-level offline test must pass on the release commit. See the
+[release guide](docs/releasing.md) before creating `v0.1.0`.
 
 ## Release policy
 
