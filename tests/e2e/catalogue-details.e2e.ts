@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
 const WEEKDAYS = [
   'Monday',
@@ -167,7 +168,7 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
 });
 
 async function createExercise(
-  page: import('@playwright/test').Page,
+  page: Page,
   name: string,
   type: 'strength' | 'cardio',
 ) {

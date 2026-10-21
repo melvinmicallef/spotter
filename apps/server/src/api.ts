@@ -66,9 +66,9 @@ export function createApiRouter(
   });
   router.delete('/exercises/:id', (request, response) => {
     const media = store.deleteExercise(uuidSchema.parse(request.params.id));
-    if (media && options.mediaStorage) {
+    if (media) {
       store.deleteMedia(media.id);
-      options.mediaStorage.remove(media.id, media.mimeType);
+      options.mediaStorage?.remove(media.id, media.mimeType);
     }
     response.status(204).end();
   });
