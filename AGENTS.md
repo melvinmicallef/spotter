@@ -18,8 +18,9 @@ it whenever an implementation decision changes the documented behavior.
 ## Current repository state
 
 - The default branch is `develop`.
-- The project contains specifications only; application scaffolding has not yet
-  been added.
+- The project contains a working pre-release application with an npm workspace,
+  React PWA, Express API, SQLite persistence, IndexedDB outbox, Docker image,
+  and GitHub Actions workflows.
 - The first planned version is `0.1.0`.
 - The production image will be `ghcr.io/melvinmicallef/spotter`.
 
@@ -48,10 +49,9 @@ baseline.
 
 ## Decision discipline
 
-The following are deliberately unresolved: authentication and tenancy, package
-manager, supported Node.js version, SQLite library and migration tool,
-IndexedDB wrapper, launch units and measurement types, completed-workout offline
-editing, multiple active workouts, and data export/retention.
+The following remain unresolved beyond the recorded `0.1.0` boundaries:
+authentication and multi-user tenancy, additional exercise measurement types,
+completed-workout editing, and data export/retention.
 
 Prefer a reversible boundary over silently deciding an unresolved product
 question. When a choice is required to scaffold the project, record it in the

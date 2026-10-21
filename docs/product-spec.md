@@ -32,10 +32,11 @@ be synchronized.
 - Collaborative editing or real-time multi-device workout updates.
 - Publishing a native iOS or Android application.
 
-Authentication, user accounts, and multi-user tenancy are intentionally left
-as product decisions. The first implementation should keep ownership fields
-and authorization concerns isolated so support can be added without rewriting
-the workout model.
+Version `0.1.0` targets one trusted user per deployment without built-in
+authentication. The server boundary keeps ownership and authorization concerns
+isolated so accounts can be added without rewriting the workout model. An
+untrusted or internet-exposed deployment requires an authenticating reverse
+proxy until that product work is completed.
 
 ## Core concepts
 
@@ -189,8 +190,12 @@ The first usable release is complete when:
 
 ## Open product decisions
 
-- Is the first deployment strictly single-user, or does it require accounts?
-- Should more than one in-progress workout be allowed per device or user?
-- Which units and exercise measurement types are required at launch?
-- Can completed workouts be edited offline, or only the active workout?
 - What retention or export behavior is required for workout history?
+
+## Initial `0.1.0` product decisions
+
+- One in-progress workout is supported per device.
+- Workout sets record repetitions and weight in explicit `kg` or `lb` units.
+- Completed workouts are read-only; only an active workout is edited offline.
+- The initial deployment is a trusted single-user installation without built-in
+  authentication.

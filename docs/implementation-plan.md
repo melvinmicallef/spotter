@@ -44,7 +44,7 @@ A clean checkout can install dependencies from the lockfile, run all checks,
 build the web and server applications, start the production server, return a
 healthy API response, and load the PWA shell.
 
-## Milestone 1: SQLite foundation and reference catalogue
+## Milestone 1: SQLite foundation and reference catalogue (implemented)
 
 ### Deliverables
 
@@ -71,7 +71,7 @@ Catalogue records can be managed end to end while online, invalid requests have
 stable errors, migrations work on a new database, and automated tests prove
 foreign-key and deletion behavior.
 
-## Milestone 2: Workout templates
+## Milestone 2: Workout templates (implemented)
 
 ### Deliverables
 
@@ -88,7 +88,7 @@ A user can build and maintain a reusable ordered workout template online, and a
 template response contains everything needed to create an independent workout
 snapshot.
 
-## Milestone 3: Online workout vertical slice
+## Milestone 3: Online workout vertical slice (implemented)
 
 ### Deliverables
 
@@ -112,7 +112,7 @@ snapshot.
 The complete workout lifecycle functions online with server-backed history and
 snapshot-safe historical display.
 
-## Milestone 4: IndexedDB and offline workout tracking
+## Milestone 4: IndexedDB and offline workout tracking (implemented)
 
 ### Deliverables
 
@@ -133,7 +133,7 @@ After one online load, a browser can go offline, start or resume a workout,
 record and edit sets, finish the workout, refresh or restart the PWA, and retain
 all local state.
 
-## Milestone 5: Idempotent synchronization
+## Milestone 5: Idempotent synchronization (implemented)
 
 ### Deliverables
 
@@ -156,7 +156,7 @@ An end-to-end browser test starts online, works offline, reloads, reconnects,
 retries at least one ambiguous request, and proves that exactly one workout and
 one copy of each set exist on the server.
 
-## Milestone 6: Installable PWA and update safety
+## Milestone 6: Installable PWA and update safety (implemented)
 
 ### Deliverables
 
@@ -173,7 +173,7 @@ one copy of each set exist on the server.
 Spotter passes the selected installability checks, reloads its UI without a
 network connection, and upgrades without losing an active workout or outbox.
 
-## Milestone 7: Single production image
+## Milestone 7: Single production image (implemented)
 
 ### Deliverables
 
@@ -193,7 +193,7 @@ network connection, and upgrades without losing an active workout or outbox.
 One image starts with an empty volume, migrates the database, serves the API and
 PWA, reports healthy, preserves data across replacement, and shuts down cleanly.
 
-## Milestone 8: Release automation and `0.1.0`
+## Milestone 8: Release automation and `0.1.0` (automation implemented; release pending)
 
 ### Deliverables
 

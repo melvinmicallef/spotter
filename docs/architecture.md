@@ -281,6 +281,13 @@ databases use WAL mode. API errors use a stable `{ error: { code, message,
 details? } }` envelope. The first migration establishes catalogue, template,
 workout, outbox-idempotency, metadata, and migration tables.
 
-The IndexedDB wrapper, authentication model, units, active-workout limit, and
-completed-workout editing policy remain open until the slices that require
-them are implemented.
+The client uses `idb` over a versioned IndexedDB schema. A transaction stores
+each local workout snapshot together with its outbox operation. The client
+serializes outbox drains, retries transient failures with bounded exponential
+backoff, and retains rejected operations for user-visible retry. Reference data
+uses the server's monotonically increasing revision cursor.
+
+Version `0.1.0` uses one active workout per device, repetitions plus explicitly
+stored `kg` or `lb` weight, and read-only completed workouts. It targets a
+trusted single-user deployment without built-in authentication; the API layer
+remains the boundary for adding actor and ownership context later.

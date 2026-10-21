@@ -470,6 +470,11 @@ export class SpotterStore {
   }
 
   private upsertWorkout(workout: Workout) {
+    const existing = this.database
+      .prepare('SELECT updated_at FROM workout_sessions WHERE id = ?')
+      .get(workout.id) as { updated_at: string } | undefined;
+    if (existing && existing.updated_at > workout.updatedAt) return;
+
     const templateExists = workout.templateId
       ? this.database
           .prepare('SELECT 1 FROM workout_templates WHERE id = ?')

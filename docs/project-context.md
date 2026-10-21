@@ -14,8 +14,9 @@ questions.
 The repository is public at `https://github.com/melvinmicallef/spotter`.
 
 - Default branch: `develop`
-- Application status: implementation in progress; the npm workspace, shared
-  contracts, React shell, and Express health/version slice are present
+- Application status: working pre-release implementation; catalogue and
+  template management, offline workouts, synchronization, PWA packaging,
+  container delivery, and CI/release automation are present
 - Planned first release: `0.1.0`
 - Planned first release tag: `v0.1.0`
 - Planned image: `ghcr.io/melvinmicallef/spotter`
@@ -119,16 +120,10 @@ use an explicit tag or a collision-safe `sha-<commit>` tag.
 
 Do not infer answers to these questions from the rest of the architecture:
 
-- whether the first deployment is single-user or supports accounts;
-- authentication, authorization, and deployment exposure;
-- whether multiple in-progress workouts are supported;
-- whether completed workouts can be edited offline;
-- launch units and exercise measurement types beyond repetitions, weight, and
-  notes;
 - history export and retention requirements;
-- package manager and supported Node.js version;
-- SQLite driver and migration library; and
-- IndexedDB wrapper or direct browser API usage.
+- account and tenancy behavior after the trusted single-user `0.1.x` line;
+- measurement types beyond repetitions and weighted sets; and
+- completed-workout editing in a future release.
 
 The architecture intentionally leaves boundaries where these decisions can be
 introduced without replacing the workout model or synchronization core.
@@ -147,8 +142,8 @@ introduced without replacing the workout model or synchronization core.
 ## Implemented scaffolding decisions
 
 - npm 10 workspaces manage `apps/web`, `apps/server`, and `packages/shared`.
-- Node.js 20.20 is the minimum supported local runtime. Production may use a
-  newer active LTS after the container is added.
+- Node.js 20.20 is the minimum supported local runtime. The production image
+  uses Node.js 24.
 - Zod defines and validates versioned wire contracts and environment input.
 - TypeScript, ESLint, and Prettier provide static and formatting checks.
 - Vitest is the unit and integration test runner.
@@ -156,14 +151,19 @@ introduced without replacing the workout model or synchronization core.
 - `better-sqlite3` provides synchronous transaction boundaries. Ordered
   migrations run at startup, UUIDs and UTC timestamps use text columns, and
   file-backed databases use WAL mode.
+- `idb` provides the browser repository boundary. Workout and outbox changes
+  share one transaction; synchronization is serialized and idempotent.
+- The `0.1.0` product boundary is one active workout per device, explicit
+  `kg`/`lb` weight, read-only completed workouts, and one trusted user per
+  deployment without built-in authentication.
 
-These are implementation choices, not commitments for authentication, units,
-tenancy, or other open product questions.
+These remain revisable while Spotter is in the `0.x` development line.
 
 ## Recommended next task
 
-Implement the SQLite catalogue and template slices, then the workout domain and
-offline synchronization. Keep each slice tested and independently buildable.
+Exercise the browser-level offline/reload/reconnect path, complete accessibility
+and mobile QA, smoke-test container persistence, and prepare the deliberate
+`v0.1.0` release only after every acceptance criterion passes.
 
 ## Starter prompt for a new AI chat
 
