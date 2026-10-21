@@ -76,12 +76,29 @@ While online, a user can:
 
 - create, view, edit, and delete muscles;
 - create, view, edit, and delete exercises;
-- associate exercises with muscles; and
+- associate exercises with muscles as primary or secondary;
+- attach or replace a GIF demonstration;
+- preview metadata from a public exercise webpage, review it, and explicitly
+  confirm creation with source attribution; and
 - receive a clear validation or dependency error when a destructive change
   would invalidate existing data.
 
 Catalogue mutations are unavailable offline. Previously synchronized catalogue
 records may still be used as read-only workout references.
+
+Uploaded exercise demonstrations are GIF-only, limited to 5 MiB, stored under
+the persistent `/data` path, and removed when their exercise is deleted or the
+media is explicitly replaced. The client warms a dedicated application cache
+after synchronizing reference data so uploaded demonstrations remain available
+with the cached exercise catalogue offline.
+
+Website import is a convenience for defensible metadata, not an unattended
+scraper. It accepts only public HTTP(S) pages, follows at most three validated
+redirects, limits response time and HTML size, and rejects local, private, and
+reserved network addresses. It extracts a title, description, and optional GIF
+URL from JSON-LD, OpenGraph, or page-title metadata. The user reviews editable
+fields before creating the exercise. An external GIF is linked for review and
+source attribution but is never silently copied into Spotter media storage.
 
 ### Template management
 

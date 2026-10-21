@@ -158,6 +158,10 @@ introduced without replacing the workout model or synchronization core.
 - The `0.1.0` product boundary is one active workout per device, explicit
   `kg`/`lb` weight, read-only completed workouts, and one trusted user per
   deployment without built-in authentication.
+- Exercise demonstrations are validated GIF uploads stored below `/data/media`
+  and prefetched into a dedicated offline application cache. Website import is
+  preview-only until explicit confirmation, records attribution, rejects
+  private network destinations, and never silently downloads external media.
 
 These remain revisable while Spotter is in the `0.x` development line.
 

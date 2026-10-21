@@ -118,7 +118,9 @@ lost synchronization acknowledgement, and verifies that the server contains
 exactly one workout and set. If the Playwright browser download is unavailable,
 set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` to a compatible local Chromium or
 Chrome executable. The validation workflow installs Chromium before running
-this test.
+this test. A second regression covers primary/secondary muscle roles through an
+edit, reviewed website import, GIF upload and offline media caching, template
+entry notes, rapid workout note/set edits, and expanded historical details.
 
 The implementation order is:
 
@@ -131,6 +133,10 @@ The implementation order is:
 
 The catalogue, templates, workout lifecycle, IndexedDB persistence, idempotent
 synchronization, PWA shell, and production container are implemented.
+The exercise catalogue supports primary and secondary muscle roles, validated
+GIF demonstrations, and a review-before-create website metadata importer.
+Workout, exercise-entry, set, and template-entry notes are editable, and
+history expands to show the preserved exercise and set snapshots.
 
 ## Run the production image
 

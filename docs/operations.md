@@ -3,8 +3,9 @@
 ## Runtime model
 
 Spotter runs one Node.js process. Express serves the compiled PWA and `/api/*`,
-while SQLite stores canonical data at `/data/spotter.sqlite`. The image runs as
-the non-root `node` user and exposes port `3000`.
+while SQLite stores canonical data at `/data/spotter.sqlite` and uploaded GIFs
+live at `/data/media`. The image runs as the non-root `node` user and exposes
+port `3000`.
 
 The initial application has no built-in authentication. Run it on a trusted
 network or place an authenticating TLS reverse proxy in front of it.
@@ -25,6 +26,7 @@ instead, make it writable by UID/GID `1000` and mount it at `/data`.
 | --------------- | ---------------------- | ---------------------------------------- |
 | `PORT`          | `3000`                 | HTTP listen port inside the container    |
 | `DATABASE_PATH` | `/data/spotter.sqlite` | Canonical SQLite file                    |
+| `MEDIA_PATH`    | `/data/media`          | Uploaded exercise GIF directory          |
 | `APP_VERSION`   | `0.1.0`                | Version exposed by `/api/version`        |
 | `GIT_COMMIT`    | `unknown`              | Build revision exposed by `/api/version` |
 | `WEB_DIST_PATH` | bundled client         | Optional compiled-client override        |

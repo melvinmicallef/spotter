@@ -55,6 +55,8 @@ healthy API response, and load the PWA shell.
 - Shared request and response schemas.
 - Online API and UI for creating, listing, editing, and deleting muscles and
   exercises.
+- Role-aware primary and secondary muscle associations, validated GIF media,
+  and review-before-create website metadata import with SSRF protections.
 - Dependency-safe deletion behavior that preserves future workout history.
 - API integration tests using an isolated temporary database.
 
@@ -222,25 +224,26 @@ required test matrix pass, and no published image has yet been verified.
 
 ## Required test matrix
 
-| Area             | Minimum coverage                                                            |
-| ---------------- | --------------------------------------------------------------------------- |
-| Shared contracts | Valid and invalid wire payloads; backward-compatible parsing where promised |
-| SQLite           | Fresh migration, upgrade migration, foreign keys, uniqueness, transactions  |
-| Catalogue        | CRUD, associations, deletion dependencies, validation                       |
-| Templates        | Ordering, duplication, snapshots, changed/deleted references                |
-| Workout domain   | Lifecycle, ordering, set edits, completion, history snapshots               |
-| IndexedDB        | Repository operations, version upgrades, atomic workout/outbox writes       |
-| Synchronization  | Duplicate replay, retry, partial failures, interrupted acknowledgement      |
-| PWA              | Offline shell, route reload, update with active workout                     |
-| Container        | Startup, health, migrations, persistent volume, graceful stop               |
-| Workflows        | Normal commit does not publish; tag/manual run produces intended tags       |
+| Area             | Minimum coverage                                                               |
+| ---------------- | ------------------------------------------------------------------------------ |
+| Shared contracts | Valid and invalid wire payloads; backward-compatible parsing where promised    |
+| SQLite           | Fresh migration, upgrade migration, foreign keys, uniqueness, transactions     |
+| Catalogue        | CRUD, role-aware associations, media/import, deletion dependencies, validation |
+| Templates        | Ordering, duplication, snapshots, changed/deleted references                   |
+| Workout domain   | Lifecycle, ordering, set edits, completion, history snapshots                  |
+| IndexedDB        | Repository operations, version upgrades, atomic workout/outbox writes          |
+| Synchronization  | Duplicate replay, retry, partial failures, interrupted acknowledgement         |
+| PWA              | Offline shell, route reload, update with active workout                        |
+| Container        | Startup, health, migrations, persistent volume, graceful stop                  |
+| Workflows        | Normal commit does not publish; tag/manual run produces intended tags          |
 
-The browser-level PWA path is automated in
-`tests/e2e/offline-workout.e2e.ts`. It exercises installation metadata,
-service-worker shell caching, IndexedDB recovery after an offline navigation,
-offline workout completion, an ambiguous synchronization acknowledgement, and
-exactly-once server persistence. It runs separately from the fast Vitest suite
-with `npm run test:e2e`; CI installs Chromium before invoking it.
+The browser-level PWA paths are automated in `tests/e2e`. They exercise
+installation metadata, service-worker shell caching, IndexedDB recovery after
+an offline navigation, offline workout completion, an ambiguous synchronization
+acknowledgement, exactly-once server persistence, role-aware catalogue edits,
+reviewed website import, GIF upload and offline caching, note inputs, and
+detailed history. They run separately from the fast Vitest suite with
+`npm run test:e2e`; CI installs Chromium before invoking it.
 
 ## Documentation required before `v0.1.0`
 

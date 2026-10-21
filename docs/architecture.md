@@ -84,6 +84,33 @@ transient failures with backoff and removes an operation only after the server
 has acknowledged it. Authentication and validation failures require user
 attention and are not retried indefinitely.
 
+Outbox records have a durable, monotonically increasing local sequence. React
+workout mutations apply immediately against the latest local snapshot and enter
+a serialized IndexedDB persistence queue. The server ignores snapshots whose
+`updatedAt` is equal to or older than its canonical row, preventing a delayed
+operation from replacing a newer workout.
+
+### Exercise media and website import
+
+Exercise GIFs are uploaded as raw `image/gif` bodies to a bounded endpoint.
+The server validates both the five-MiB size limit and the GIF file signature,
+stores immutable UUID-named files beneath `MEDIA_PATH` (`/data/media` in the
+container), and keeps metadata and exercise ownership in SQLite. A media record
+belongs to at most one exercise. Deleting an exercise or replacing its media
+removes both metadata and the file. The PWA prefetches referenced uploaded
+media into a dedicated Workbox/Cache API cache; IndexedDB remains the source of
+truth for exercise metadata and workout state.
+
+Website import has a preview boundary separate from exercise creation. The
+server permits only credential-free HTTP(S) URLs, resolves and rejects private,
+loopback, link-local, multicast, and reserved addresses before every request,
+uses manual redirects with a maximum of three, aborts after five seconds, and
+stops reading after 512 KiB. Tests inject resolution and fetch implementations
+instead of reaching the internet. Only JSON-LD, OpenGraph, title, description,
+and an optional GIF URL are returned. Confirmation uses the normal validated
+exercise API and records source URL, title, media URL, and import timestamp;
+external media is not downloaded automatically.
+
 ## Server application
 
 The Express application is responsible for:
@@ -160,6 +187,8 @@ deletion to erase workout history.
 The production database path is configured through an environment variable and
 defaults to `/data/spotter.sqlite`. The container documentation must call out
 the required persistent volume and backup responsibility.
+Uploaded media defaults to `/data/media`, so the same mounted volume protects
+both canonical SQLite state and exercise demonstrations.
 
 ## API conventions
 
