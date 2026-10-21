@@ -56,8 +56,8 @@ healthy API response, and load the PWA shell.
 - Online API and UI for creating, listing, editing, and deleting muscles and
   exercises, using separate muscle and exercise pages.
 - Explicit strength/cardio exercise types with type-appropriate fields.
-- Role-aware primary and secondary muscle associations, validated GIF media,
-  and review-before-create website metadata import with SSRF protections.
+- A compact exercise list and dedicated detail/editor flow, role-aware primary
+  and secondary muscle associations, and validated GIF/PNG/JPEG images.
 - Dependency-safe deletion behavior that preserves future workout history.
 - API integration tests using an isolated temporary database.
 
@@ -79,6 +79,7 @@ foreign-key and deletion behavior.
 ### Deliverables
 
 - Weekly template and per-day ordered template-exercise persistence.
+- Exactly one active template when templates exist.
 - Online API and UI to create, rename, duplicate, edit, reorder, and delete
   templates.
 - Multiple exercises on each ISO weekday.
@@ -97,7 +98,8 @@ snapshot for any populated day.
 ### Deliverables
 
 - Workout session, workout exercise, and workout set persistence.
-- Start a workout only from a populated weekly-template day.
+- Start a workout only from today's populated day in the active weekly
+  template, with a device-local current-ISO-week day swap.
 - Resume an in-progress workout.
 - Add, remove, and reorder workout exercises.
 - Add, edit, complete, and remove sets.
@@ -227,24 +229,25 @@ required test matrix pass, and no published image has yet been verified.
 
 ## Required test matrix
 
-| Area             | Minimum coverage                                                               |
-| ---------------- | ------------------------------------------------------------------------------ |
-| Shared contracts | Valid and invalid wire payloads; backward-compatible parsing where promised    |
-| SQLite           | Fresh migration, upgrade migration, foreign keys, uniqueness, transactions     |
-| Catalogue        | CRUD, role-aware associations, media/import, deletion dependencies, validation |
-| Templates        | Ordering, duplication, snapshots, changed/deleted references                   |
-| Workout domain   | Lifecycle, ordering, set edits, completion, history snapshots                  |
-| IndexedDB        | Repository operations, version upgrades, atomic workout/outbox writes          |
-| Synchronization  | Duplicate replay, retry, partial failures, interrupted acknowledgement         |
-| PWA              | Offline shell, route reload, update with active workout                        |
-| Container        | Startup, health, migrations, persistent volume, graceful stop                  |
-| Workflows        | Normal commit does not publish; tag/manual run produces intended tags          |
+| Area             | Minimum coverage                                                                  |
+| ---------------- | --------------------------------------------------------------------------------- |
+| Shared contracts | Valid and invalid wire payloads; backward-compatible parsing where promised       |
+| SQLite           | Fresh migration, upgrade migration, foreign keys, uniqueness, transactions        |
+| Catalogue        | CRUD, list/detail flow, role-aware associations, images, dependencies, validation |
+| Templates        | Ordering, duplication, snapshots, changed/deleted references                      |
+| Workout domain   | Lifecycle, ordering, set edits, completion, history snapshots                     |
+| IndexedDB        | Repository operations, version upgrades, atomic workout/outbox writes             |
+| Synchronization  | Duplicate replay, retry, partial failures, interrupted acknowledgement            |
+| PWA              | Offline shell, route reload, update with active workout                           |
+| Container        | Startup, health, migrations, persistent volume, graceful stop                     |
+| Workflows        | Normal commit does not publish; tag/manual run produces intended tags             |
 
 The browser-level PWA paths are automated in `tests/e2e`. They exercise
 installation metadata, service-worker shell caching, IndexedDB recovery after
 an offline navigation, offline workout completion, an ambiguous synchronization
 acknowledgement, exactly-once server persistence, role-aware catalogue edits,
-reviewed website import, GIF upload and offline caching, note inputs, and
+PNG upload, compact exercise details, fixed full-width header, active-template
+today-only start, persisted current-week day swaps, typed workout inputs, and
 detailed history. They run separately from the fast Vitest suite with
 `npm run test:e2e`; CI installs Chromium before invoking it.
 

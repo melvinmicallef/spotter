@@ -58,9 +58,12 @@ muscles. Every exercise is either:
 
 An ordered, reusable seven-day workout plan. Each day from Monday through
 Sunday can contain multiple ordered exercises with type-appropriate targets and
-notes. A workout is started from one populated template day; an empty or ad-hoc
-"open workout" cannot be started. The workout receives a snapshot that remains
-valid if the weekly template later changes.
+notes. Exactly one template is active when templates exist. A workout is
+started only from today's populated schedule in that active template; an empty
+or ad-hoc "open workout" cannot be started. The user may swap today's assigned
+day with another weekday for the current ISO week on the current device. The
+workout receives a snapshot that remains valid if the weekly template later
+changes.
 
 ### Workout session
 
@@ -91,36 +94,31 @@ While online, a user can:
 - create, view, edit, and delete exercises;
 - choose whether an exercise is strength or cardio;
 - associate exercises with muscles as primary or secondary;
-- attach or replace a GIF demonstration;
-- preview metadata from a public exercise webpage, review it, and explicitly
-  confirm creation with source attribution; and
+- attach or replace a GIF, PNG, or JPEG demonstration; and
 - receive a clear validation or dependency error when a destructive change
   would invalidate existing data.
 
 Catalogue mutations are unavailable offline. Previously synchronized catalogue
 records may still be used as read-only workout references.
 
-Uploaded exercise demonstrations are GIF-only, limited to 5 MiB, stored under
-the persistent `/data` path, and removed when their exercise is deleted or the
-media is explicitly replaced. The client warms a dedicated application cache
-after synchronizing reference data so uploaded demonstrations remain available
-with the cached exercise catalogue offline.
+Exercises are shown in a compact list with their image, title, and target
+muscles. Selecting one opens a read-only details page with explicit edit and
+delete actions; creation and editing happen on dedicated screens.
 
-Website import is a convenience for defensible metadata, not an unattended
-scraper. It accepts only public HTTP(S) pages, follows at most three validated
-redirects, limits response time and HTML size, and rejects local, private, and
-reserved network addresses. It extracts a title, description, and optional GIF
-URL from JSON-LD, OpenGraph, or page-title metadata. The user reviews editable
-fields before creating the exercise. An external GIF is linked for review and
-source attribution but is never silently copied into Spotter media storage.
+Uploaded exercise demonstrations may be GIF, PNG, or JPEG, are limited to 5
+MiB, stored under the persistent `/data` path, and removed when their exercise
+is deleted or the media is explicitly replaced. The client warms a dedicated
+application cache after synchronizing reference data so uploaded demonstrations
+remain available with the cached exercise catalogue offline. Website import is
+not supported.
 
 ### Template management
 
 While online, a user can:
 
-- create, rename, duplicate, edit, and delete a weekly template;
+- create, rename, duplicate, edit, delete, and activate a weekly template;
 - add multiple exercises to any day of the week from a visual picker that shows
-  demonstration GIFs and filters by exercise name or muscle;
+  demonstration images and filters by exercise name or muscle;
 - remove and reorder exercises within each day; and
 - configure exercise-level notes and type-appropriate initial targets.
 
@@ -131,7 +129,9 @@ start a workout if all data required for its workout snapshot is available.
 
 A user can:
 
-- start a workout only from a populated day in a weekly template;
+- start only today's populated workout in the active weekly template;
+- swap today's assigned template day with another weekday for the current ISO
+  week without changing the template;
 - resume the current in-progress workout;
 - add, remove, and reorder workout exercises;
 - add, edit, complete, and remove sets;
@@ -152,7 +152,8 @@ IndexedDB stores:
 - workout changes waiting to be synchronized;
 - the read-only exercise, muscle, and template data required for workout
   tracking; and
-- synchronization metadata such as stable IDs and server revision markers.
+- synchronization metadata such as stable IDs and server revision markers; and
+- the current device's active-template day swaps, keyed by ISO week.
 
 Every offline-created entity uses a client-generated UUID. Synchronization is
 idempotent: retrying an acknowledged operation must not create another session,
@@ -232,8 +233,10 @@ The first usable release is complete when:
 - One in-progress workout is supported per device.
 - Weekly templates use ISO weekdays (`1` = Monday through `7` = Sunday) and
   allow multiple ordered exercises on each day.
-- Ad-hoc open workouts are unavailable; every new workout is a snapshot of one
-  populated weekly-template day.
+- Exactly one weekly template is active when any templates exist. Ad-hoc open
+  workouts are unavailable; every new workout is a snapshot of today's
+  scheduled day in that active template, after applying any current-week
+  device-local swap.
 - Strength efforts record repetitions and optional weight in explicit `kg` or
   `lb` units.
 - Cardio efforts record duration and optional distance in explicit `km` or

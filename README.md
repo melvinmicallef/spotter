@@ -13,8 +13,11 @@ The first planned development release is `0.1.0`.
 - Workout logging must remain usable when the device loses connectivity.
 - Exercises, muscles, and workout templates are managed only while online.
 - Strength and cardio exercises use different planning and recording fields.
-- Workouts start from a day in a weekly template; ad-hoc open workouts are not
-  part of the product.
+- Exactly one weekly template is active when templates exist. Workouts start
+  only from today's scheduled day; ad-hoc open workouts are not part of the
+  product.
+- Today's schedule can be swapped with another day for the current ISO week on
+  the current device without changing the reusable template.
 - A light/dark appearance switch is retained on the current device.
 - Offline writes must synchronize without creating duplicate workouts or sets.
 - Deployment should be simple: one container and one persistent data volume.
@@ -41,7 +44,8 @@ updates do not replace user data.
 The installed application will cache enough read-only exercise and template
 data to log a workout without a network connection. While offline, a user can:
 
-- start or resume a workout from a cached weekly-template day;
+- start today's workout from the cached active weekly template, including a
+  device-local current-week day swap, or resume an in-progress workout;
 - record sets, repetitions, and weight for strength exercises;
 - record duration and distance for cardio exercises;
 - record notes and completion state; and
@@ -123,9 +127,9 @@ lost synchronization acknowledgement, and verifies that the server contains
 exactly one workout and set. If the Playwright browser download is unavailable,
 set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` to a compatible local Chromium or
 Chrome executable. The validation workflow installs Chromium before running
-this test. A second regression covers primary/secondary muscle roles through an
-edit, reviewed website import, GIF upload and offline media caching, template
-entry notes, rapid workout note/set edits, and expanded historical details.
+this test. A second regression covers primary/secondary muscle roles through
+the compact exercise list and detail/edit flow, PNG upload, the visual template
+picker, typed strength/cardio recording, and expanded historical details.
 
 The implementation order is:
 
@@ -139,8 +143,8 @@ The implementation order is:
 The separate muscle and exercise catalogues, weekly templates, workout
 lifecycle, IndexedDB persistence, idempotent synchronization, PWA shell, and
 production container are implemented.
-The exercise catalogue supports primary and secondary muscle roles, validated
-GIF demonstrations, and a review-before-create website metadata importer.
+The exercise catalogue supports a compact list/detail workflow, primary and
+secondary muscle roles, and validated GIF, PNG, or JPEG demonstrations.
 Workout, exercise-entry, set, and template-entry notes are editable, and
 history expands to show the preserved exercise and set snapshots.
 

@@ -63,9 +63,10 @@ incorrect-theme flash. Theme changes also update the browser theme-color
 metadata.
 
 The catalogue has separate muscle and exercise views. Muscles are focused
-reference records; exercises own their strength/cardio type, muscle roles,
-instructions, media, and source attribution. Keeping the editors separate
-avoids one oversized catalogue screen on a phone.
+reference records. Exercises use a compact image/title/target-muscle list; a
+selected exercise opens a detail page with separate edit and delete actions.
+Exercises own their strength/cardio type, muscle roles, instructions, and
+uploaded image.
 
 ### IndexedDB stores
 
@@ -79,7 +80,7 @@ calls throughout the UI. Proposed logical stores are:
 | `exercises` | Read-only cached exercise catalogue           |
 | `muscles`   | Read-only cached muscle catalogue             |
 | `templates` | Read-only cached template snapshots           |
-| `metadata`  | Schema version, sync cursor, and timestamps   |
+| `metadata`  | Sync cursor and device-local ISO-week swaps   |
 
 IndexedDB schema upgrades must be versioned and tested with data from the
 previous supported version.
@@ -113,37 +114,36 @@ and writes only the fields valid for the snapshot type.
 
 Template entries use ISO weekday numbers (`1` Monday through `7` Sunday) plus a
 position that is unique within that day. A weekly template can contain multiple
-entries on every day. Creating a workout requires a template and a populated
-day; the session stores the chosen template day and snapshots only that day's
+entries on every day. SQLite marks exactly one template active when any exist.
+Creating a workout requires today's populated schedule in that active template;
+the session stores the chosen template day and snapshots only that day's
 entries. Legacy open-workout rows remain readable after migration, but the
 client cannot create new ones.
 
+The user may pairwise-swap today's assigned template day with another weekday
+for the current ISO week. This permutation is stored in IndexedDB metadata,
+keyed by active template and ISO week. It survives reloads and offline use but
+does not mutate the reusable server template and naturally expires at the next
+week key.
+
 Each template day opens the same client-side exercise picker over the cached
 exercise reference data. The picker filters locally by case-insensitive name or
-associated muscle and renders uploaded demonstration GIFs from their existing
+associated muscle and renders uploaded demonstration images from their existing
 media URLs; choosing an exercise only updates the template draft until the user
 saves it through the online template API.
 
-### Exercise media and website import
+### Exercise images
 
-Exercise GIFs are uploaded as raw `image/gif` bodies to a bounded endpoint.
-The server validates both the five-MiB size limit and the GIF file signature,
-stores immutable UUID-named files beneath `MEDIA_PATH` (`/data/media` in the
-container), and keeps metadata and exercise ownership in SQLite. A media record
-belongs to at most one exercise. Deleting an exercise or replacing its media
-removes both metadata and the file. The PWA prefetches referenced uploaded
-media into a dedicated Workbox/Cache API cache; IndexedDB remains the source of
-truth for exercise metadata and workout state.
-
-Website import has a preview boundary separate from exercise creation. The
-server permits only credential-free HTTP(S) URLs, resolves and rejects private,
-loopback, link-local, multicast, and reserved addresses before every request,
-uses manual redirects with a maximum of three, aborts after five seconds, and
-stops reading after 512 KiB. Tests inject resolution and fetch implementations
-instead of reaching the internet. Only JSON-LD, OpenGraph, title, description,
-and an optional GIF URL are returned. Confirmation uses the normal validated
-exercise API and records source URL, title, media URL, and import timestamp;
-external media is not downloaded automatically.
+Exercise images are uploaded as raw `image/gif`, `image/png`, or `image/jpeg`
+bodies to a bounded endpoint. The server validates the five-MiB size limit,
+declared MIME type, and matching file signature, stores immutable UUID-named
+files with a format-specific extension beneath `MEDIA_PATH` (`/data/media` in
+the container), and keeps metadata and exercise ownership in SQLite. An image
+record belongs to at most one exercise. Deleting an exercise or replacing its
+image removes both metadata and the file. The PWA prefetches referenced uploaded
+images into a dedicated Workbox/Cache API cache; IndexedDB remains the source of
+truth for exercise metadata and workout state. Website extraction is not
+exposed by the API or client.
 
 ## Server application
 
@@ -169,6 +169,9 @@ GET    /api/exercises
 POST   /api/exercises
 PATCH  /api/exercises/:id
 DELETE /api/exercises/:id
+POST   /api/media/image
+GET    /api/media/:id
+DELETE /api/media/:id
 GET    /api/templates
 POST   /api/templates
 PATCH  /api/templates/:id
@@ -360,8 +363,9 @@ serializes outbox drains, retries transient failures with bounded exponential
 backoff, and retains rejected operations for user-visible retry. Reference data
 uses the server's monotonically increasing revision cursor.
 
-Version `0.1.0` uses one active workout per device, weekly ISO-day templates,
-strength repetitions plus explicit `kg`/`lb` weight, cardio duration plus
-explicit `km`/`mi` distance, and read-only completed workouts. It targets a
-trusted single-user deployment without built-in authentication; the API layer
-remains the boundary for adding actor and ownership context later.
+Version `0.1.0` uses one active workout per device, one active weekly ISO-day
+template, today-only starts with device-local current-week day swaps, strength
+repetitions plus explicit `kg`/`lb` weight, cardio duration plus explicit
+`km`/`mi` distance, and read-only completed workouts. It targets a trusted
+single-user deployment without built-in authentication; the API layer remains
+the boundary for adding actor and ownership context later.

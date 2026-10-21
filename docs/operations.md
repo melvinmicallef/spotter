@@ -3,8 +3,9 @@
 ## Runtime model
 
 Spotter runs one Node.js process. Express serves the compiled PWA and `/api/*`,
-while SQLite stores canonical data at `/data/spotter.sqlite` and uploaded GIFs
-live at `/data/media`. The image runs as the non-root `node` user and exposes
+while SQLite stores canonical data at `/data/spotter.sqlite` and uploaded
+exercise images live at `/data/media`. The image runs as the non-root `node`
+user and exposes
 port `3000`.
 
 The initial application has no built-in authentication. Run it on a trusted
@@ -26,7 +27,7 @@ instead, make it writable by UID/GID `1000` and mount it at `/data`.
 | --------------- | ---------------------- | ---------------------------------------- |
 | `PORT`          | `3000`                 | HTTP listen port inside the container    |
 | `DATABASE_PATH` | `/data/spotter.sqlite` | Canonical SQLite file                    |
-| `MEDIA_PATH`    | `/data/media`          | Uploaded exercise GIF directory          |
+| `MEDIA_PATH`    | `/data/media`          | Uploaded GIF/PNG/JPEG exercise images    |
 | `APP_VERSION`   | `0.1.0`                | Version exposed by `/api/version`        |
 | `GIT_COMMIT`    | `unknown`              | Build revision exposed by `/api/version` |
 | `WEB_DIST_PATH` | bundled client         | Optional compiled-client override        |
@@ -71,3 +72,4 @@ state that the older image understands the newer schema.
 - Completed workouts are read-only.
 - There is no built-in account, authentication, export, or retention policy.
 - Catalogue and template changes require connectivity.
+- Weekly day swaps are device-local and apply only to the current ISO week.

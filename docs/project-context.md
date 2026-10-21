@@ -65,9 +65,11 @@ connectivity.
 
 1. The user loads or installs Spotter while online.
 2. The client synchronizes the muscle catalogue, typed exercise catalogue, and
-   available weekly workout templates.
-3. The user starts one populated day from a cached weekly template. Open or
-   empty workouts cannot be created.
+   weekly workout templates, exactly one of which is active when any exist.
+3. The user starts today's populated day from the cached active template. For
+   soreness or recovery, today's plan can be swapped with another weekday for
+   the current ISO week on that device. Open or empty workouts cannot be
+   created.
 4. Every workout change is committed to IndexedDB before the UI considers it
    saved.
 5. The user may lose connectivity, refresh the page, close the PWA, reopen it,
@@ -162,10 +164,9 @@ introduced without replacing the workout model or synchronization core.
   strength/cardio exercise types, ISO-weekday templates, `kg`/`lb` weight and
   `km`/`mi` distance, read-only completed workouts, and one trusted user per
   deployment without built-in authentication.
-- Exercise demonstrations are validated GIF uploads stored below `/data/media`
-  and prefetched into a dedicated offline application cache. Website import is
-  preview-only until explicit confirmation, records attribution, rejects
-  private network destinations, and never silently downloads external media.
+- Exercise demonstrations are validated GIF, PNG, or JPEG uploads of at most
+  five MiB, stored below `/data/media`, and prefetched into a dedicated offline
+  application cache. Website import is not part of the product.
 
 These remain revisable while Spotter is in the `0.x` development line.
 
