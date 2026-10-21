@@ -548,12 +548,42 @@ small {
 .check-grid input {
   width: auto;
 }
-.muscle-role-grid {
+.muscle-assignment-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.assigned-muscle-list {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-deep);
+}
+.assigned-muscle-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: minmax(0, 1fr) minmax(120px, 0.45fr) 38px;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 11px;
+}
+.assigned-muscle-row + .assigned-muscle-row {
+  border-top: 1px solid var(--border);
+}
+.assigned-muscle-row select {
+  padding-block: 8px;
+}
+.empty-muscle-assignment {
+  margin: 0;
+  padding: 14px;
+  color: var(--text-muted);
+}
+.muscle-add-controls {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) minmax(120px, 0.5fr) auto;
+  align-items: end;
   gap: 8px;
 }
-.muscle-role-grid label {
+.muscle-add-controls label {
   display: flex;
   flex-direction: column;
   gap: 5px;
@@ -1003,6 +1033,12 @@ small {
   }
 }
 @media (max-width: 540px) {
+  .muscle-add-controls {
+    grid-template-columns: 1fr 1fr;
+  }
+  .muscle-add-controls > button {
+    grid-column: 1 / -1;
+  }
   .brand > span:last-child {
     display: none;
   }

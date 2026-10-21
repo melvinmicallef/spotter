@@ -517,10 +517,12 @@ type MuscleRole = ExerciseInput['muscles'][number]['role'];
 type MuscleRoles = Record<string, MuscleRole>;
 
 export function exerciseMuscleLinks(selected: MuscleRoles) {
-  return Object.entries(selected).map(([muscleId, role]) => ({
-    muscleId,
-    role,
-  }));
+  return Object.entries(selected)
+    .sort((left, right) => roleOrder(left[1]) - roleOrder(right[1]))
+    .map(([muscleId, role]) => ({
+      muscleId,
+      role,
+    }));
 }
 
 export function exerciseMuscleSummary(exercise: Pick<Exercise, 'muscles'>) {
@@ -553,30 +555,109 @@ function MuscleRolesEditor({
   selected: MuscleRoles;
   onChange: (roles: MuscleRoles) => void;
 }) {
+  const [muscleId, setMuscleId] = useState('');
+  const [role, setRole] = useState<MuscleRole>('primary');
+  const availableMuscles = muscles.filter((muscle) => !selected[muscle.id]);
+  const assignedMuscles = Object.entries(selected)
+    .map(([id, assignedRole]) => ({
+      muscle: muscles.find((muscle) => muscle.id === id),
+      role: assignedRole,
+    }))
+    .filter(
+      (entry): entry is { muscle: Muscle; role: MuscleRole } =>
+        entry.muscle !== undefined,
+    )
+    .sort(
+      (left, right) =>
+        roleOrder(left.role) - roleOrder(right.role) ||
+        left.muscle.name.localeCompare(right.muscle.name),
+    );
+
   return (
-    <div className="muscle-role-grid" aria-label="Exercise muscle roles">
-      {muscles.map((muscle) => (
-        <label key={muscle.id}>
-          {muscle.name}
-          <select
-            aria-label={`${muscle.name} role`}
-            value={selected[muscle.id] ?? ''}
-            onChange={(event) => {
-              const next = { ...selected };
-              if (event.target.value) {
-                next[muscle.id] = event.target.value as MuscleRole;
-              } else {
-                delete next[muscle.id];
+    <div className="muscle-assignment-editor">
+      <div
+        className="assigned-muscle-list"
+        role="group"
+        aria-label="Assigned muscles"
+      >
+        {assignedMuscles.map(({ muscle, role: assignedRole }) => (
+          <div className="assigned-muscle-row" key={muscle.id}>
+            <strong>{muscle.name}</strong>
+            <select
+              aria-label={`${muscle.name} assigned role`}
+              value={assignedRole}
+              onChange={(event) =>
+                onChange({
+                  ...selected,
+                  [muscle.id]: event.target.value as MuscleRole,
+                })
               }
-              onChange(next);
-            }}
+            >
+              <option value="primary">Primary</option>
+              <option value="secondary">Secondary</option>
+            </select>
+            <button
+              className="icon-button danger-text"
+              type="button"
+              aria-label={`Remove ${muscle.name}`}
+              onClick={() => {
+                const next = { ...selected };
+                delete next[muscle.id];
+                onChange(next);
+              }}
+            >
+              ×
+            </button>
+          </div>
+        ))}
+        {assignedMuscles.length === 0 && (
+          <p className="empty-muscle-assignment">No target muscles added.</p>
+        )}
+      </div>
+      <div className="muscle-add-controls">
+        <label>
+          Muscle
+          <select
+            aria-label="Muscle to add"
+            value={muscleId}
+            onChange={(event) => setMuscleId(event.target.value)}
           >
-            <option value="">Not used</option>
+            <option value="">Choose a muscle…</option>
+            {availableMuscles.map((muscle) => (
+              <option key={muscle.id} value={muscle.id}>
+                {muscle.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Role
+          <select
+            aria-label="Muscle role"
+            value={role}
+            onChange={(event) => setRole(event.target.value as MuscleRole)}
+          >
             <option value="primary">Primary</option>
             <option value="secondary">Secondary</option>
           </select>
         </label>
-      ))}
+        <button
+          className="secondary"
+          type="button"
+          disabled={!muscleId}
+          onClick={() => {
+            if (!muscleId || selected[muscleId]) return;
+            onChange({ ...selected, [muscleId]: role });
+            setMuscleId('');
+          }}
+        >
+          Add muscle
+        </button>
+      </div>
     </div>
   );
+}
+
+function roleOrder(role: MuscleRole): number {
+  return role === 'primary' ? 0 : 1;
 }

@@ -17,6 +17,7 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
   const suffix = crypto.randomUUID().slice(0, 8);
   const primaryName = `Chest ${suffix}`;
   const secondaryName = `Triceps ${suffix}`;
+  const secondaryTwoName = `Shoulders ${suffix}`;
   const strengthName = `Image press ${suffix}`;
   const cardioName = `Tempo run ${suffix}`;
   const disposableName = `Disposable ${suffix}`;
@@ -42,7 +43,7 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
     .toEqual({ x: 0, width: 1280, viewport: 1280 });
 
   await page.getByRole('button', { name: 'Muscles' }).click();
-  for (const name of [primaryName, secondaryName]) {
+  for (const name of [primaryName, secondaryName, secondaryTwoName]) {
     await page.getByLabel('New muscle name').fill(name);
     await page.getByRole('button', { name: 'Add muscle' }).click();
     await expect(page.getByLabel(`${name} name`)).toBeVisible();
@@ -55,8 +56,29 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
     .getByLabel('Preparation')
     .fill('Set the bench and plant both feet');
   await page.getByLabel('Execution').fill('Control the descent');
-  await page.getByLabel(`${primaryName} role`).selectOption('primary');
-  await page.getByLabel(`${secondaryName} role`).selectOption('secondary');
+  await page.getByLabel('Muscle to add').selectOption({ label: secondaryName });
+  await page.getByLabel('Muscle role').selectOption('secondary');
+  await page.getByRole('button', { name: 'Add muscle' }).click();
+  await page
+    .getByLabel('Muscle to add')
+    .selectOption({ label: secondaryTwoName });
+  await page.getByLabel('Muscle role').selectOption('secondary');
+  await page.getByRole('button', { name: 'Add muscle' }).click();
+  await page.getByLabel('Muscle to add').selectOption({ label: primaryName });
+  await page.getByLabel('Muscle role').selectOption('primary');
+  await page.getByRole('button', { name: 'Add muscle' }).click();
+  const assignedMuscles = page.getByLabel('Assigned muscles');
+  await expect(
+    assignedMuscles.locator('.assigned-muscle-row').nth(0),
+  ).toContainText(primaryName);
+  await expect(assignedMuscles).toContainText(secondaryName);
+  await expect(assignedMuscles).toContainText(secondaryTwoName);
+  await expect(
+    assignedMuscles.locator('.assigned-muscle-row').nth(1).locator('select'),
+  ).toHaveValue('secondary');
+  await expect(
+    assignedMuscles.locator('.assigned-muscle-row').nth(2).locator('select'),
+  ).toHaveValue('secondary');
   await page.getByLabel('Exercise image').setInputFiles({
     name: 'press.png',
     mimeType: 'image/png',
@@ -72,6 +94,7 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
     .filter({ hasText: strengthName });
   await expect(strengthRow).toContainText(primaryName);
   await expect(strengthRow).toContainText(secondaryName);
+  await expect(strengthRow).toContainText(secondaryTwoName);
   await expect(
     strengthRow.getByRole('img', { name: `${strengthName} demonstration` }),
   ).toBeVisible();
@@ -82,6 +105,9 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
   );
   await expect(page.getByText('Secondary muscles').locator('..')).toContainText(
     secondaryName,
+  );
+  await expect(page.getByText('Secondary muscles').locator('..')).toContainText(
+    secondaryTwoName,
   );
   await expect(
     page.getByRole('button', { name: `Delete ${strengthName}` }),

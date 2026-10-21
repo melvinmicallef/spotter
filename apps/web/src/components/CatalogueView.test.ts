@@ -9,10 +9,15 @@ import {
 describe('exercise muscle roles', () => {
   it('preserves primary and secondary roles when preparing an update', () => {
     expect(
-      exerciseMuscleLinks({ chest: 'primary', triceps: 'secondary' }),
+      exerciseMuscleLinks({
+        triceps: 'secondary',
+        chest: 'primary',
+        shoulders: 'secondary',
+      }),
     ).toEqual([
       { muscleId: 'chest', role: 'primary' },
       { muscleId: 'triceps', role: 'secondary' },
+      { muscleId: 'shoulders', role: 'secondary' },
     ]);
   });
 
