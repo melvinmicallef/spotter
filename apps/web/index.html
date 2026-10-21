@@ -6,6 +6,22 @@
     <meta name="theme-color" content="#0b1713" />
     <meta name="description" content="Offline-first workout tracking" />
     <title>Spotter</title>
+    <script>
+      (() => {
+        const stored = localStorage.getItem('spotter-theme');
+        const theme =
+          stored === 'dark' || stored === 'light'
+            ? stored
+            : matchMedia('(prefers-color-scheme: light)').matches
+              ? 'light'
+              : 'dark';
+        document.documentElement.dataset.theme = theme;
+        document.documentElement.style.colorScheme = theme;
+        document
+          .querySelector('meta[name="theme-color"]')
+          .setAttribute('content', theme === 'dark' ? '#0b1713' : '#f4f8f6');
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

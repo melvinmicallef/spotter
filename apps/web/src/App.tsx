@@ -18,6 +18,8 @@ import { TemplatesView } from './components/TemplatesView.js';
 import { WorkoutView } from './components/WorkoutView.js';
 import { localRepository } from './db.js';
 import { drainOutbox, refreshReferences } from './sync.js';
+import { applyTheme, initialTheme } from './theme.js';
+import type { Theme } from './theme.js';
 import {
   addExercise,
   addSet,
@@ -35,6 +37,7 @@ type View = 'workout' | 'history' | 'muscles' | 'exercises' | 'templates';
 
 export function App() {
   const [view, setView] = useState<View>('workout');
+  const [theme, setTheme] = useState<Theme>(initialTheme);
   const [online, setOnline] = useState(() => navigator.onLine);
   const [activeWorkout, setActiveWorkout] = useState<Workout>();
   const [localWorkouts, setLocalWorkouts] = useState<Workout[]>([]);
@@ -50,6 +53,8 @@ export function App() {
   const [ready, setReady] = useState(false);
   const activeWorkoutRef = useRef<Workout | undefined>(undefined);
   const saveQueueRef = useRef(Promise.resolve());
+
+  useEffect(() => applyTheme(theme), [theme]);
 
   const loadLocal = useCallback(async () => {
     const [active, workouts, references, outbox] = await Promise.all([
@@ -200,13 +205,26 @@ export function App() {
           <span className="brand-mark">S</span>
           <span>Spotter</span>
         </button>
-        <StatusBar
-          online={online}
-          pending={pending}
-          syncError={syncError}
-          syncErrorDetails={syncErrorDetails}
-          onRetry={() => void syncNow()}
-        />
+        <div className="header-actions">
+          <button
+            className="theme-toggle"
+            type="button"
+            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            onClick={() =>
+              setTheme((current) => (current === 'dark' ? 'light' : 'dark'))
+            }
+          >
+            <span aria-hidden="true">{theme === 'dark' ? '☀' : '☾'}</span>
+            {theme === 'dark' ? 'Light' : 'Dark'}
+          </button>
+          <StatusBar
+            online={online}
+            pending={pending}
+            syncError={syncError}
+            syncErrorDetails={syncErrorDetails}
+            onRetry={() => void syncNow()}
+          />
+        </div>
       </header>
 
       {message && (
