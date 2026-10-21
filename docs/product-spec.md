@@ -48,25 +48,31 @@ exercises, optionally with a relationship such as primary or secondary.
 ### Exercise
 
 A movement that can be placed in a template or workout. Its initial fields are
-a stable ID, name, optional instructions or notes, and associated muscles.
+a stable ID, name, type, optional instructions or notes, and associated
+muscles. Every exercise is either:
 
-### Workout template
+- **strength**, recorded as sets with repetitions and optional weight; or
+- **cardio**, recorded as efforts with duration and optional distance.
 
-An ordered, reusable workout plan. A template contains exercises and may
-include initial targets or notes. Templates help start a workout but do not own
-the resulting history: a workout receives a snapshot that remains valid if the
-template later changes.
+### Weekly workout template
+
+An ordered, reusable seven-day workout plan. Each day from Monday through
+Sunday can contain multiple ordered exercises with type-appropriate targets and
+notes. A workout is started from one populated template day; an empty or ad-hoc
+"open workout" cannot be started. The workout receives a snapshot that remains
+valid if the weekly template later changes.
 
 ### Workout session
 
 A dated workout instance with a lifecycle of in progress or completed. It
 contains ordered exercise entries and their recorded sets.
 
-### Workout set
+### Recorded effort
 
-A single recorded effort. The initial model supports repetitions and weight,
-plus optional notes and a completion marker. The schema should be extensible
-for other measurement types without requiring them in the first release.
+A strength effort supports repetitions, weight, explicit `kg` or `lb` units,
+notes, and a completion marker. A cardio effort supports duration in seconds,
+distance, explicit `km` or `mi` units, notes, and a completion marker. The UI
+must show only the fields that apply to the exercise type.
 
 ## Functional requirements
 
@@ -76,6 +82,7 @@ While online, a user can:
 
 - create, view, edit, and delete muscles;
 - create, view, edit, and delete exercises;
+- choose whether an exercise is strength or cardio;
 - associate exercises with muscles as primary or secondary;
 - attach or replace a GIF demonstration;
 - preview metadata from a public exercise webpage, review it, and explicitly
@@ -104,9 +111,10 @@ source attribution but is never silently copied into Spotter media storage.
 
 While online, a user can:
 
-- create, rename, duplicate, edit, and delete a template;
-- add, remove, and reorder exercises; and
-- configure exercise-level notes or initial targets.
+- create, rename, duplicate, edit, and delete a weekly template;
+- add multiple exercises to any day of the week;
+- remove and reorder exercises within each day; and
+- configure exercise-level notes and type-appropriate initial targets.
 
 Template mutations are unavailable offline. A cached template can be used to
 start a workout if all data required for its workout snapshot is available.
@@ -115,11 +123,13 @@ start a workout if all data required for its workout snapshot is available.
 
 A user can:
 
-- start an empty workout or create one from a template;
+- start a workout only from a populated day in a weekly template;
 - resume the current in-progress workout;
 - add, remove, and reorder workout exercises;
 - add, edit, complete, and remove sets;
-- record repetitions, weight, and notes;
+- record repetitions and weight for strength exercises;
+- record duration and distance for cardio exercises;
+- record notes;
 - finish a workout; and
 - view synchronized workout history.
 
@@ -212,7 +222,14 @@ The first usable release is complete when:
 ## Initial `0.1.0` product decisions
 
 - One in-progress workout is supported per device.
-- Workout sets record repetitions and weight in explicit `kg` or `lb` units.
+- Weekly templates use ISO weekdays (`1` = Monday through `7` = Sunday) and
+  allow multiple ordered exercises on each day.
+- Ad-hoc open workouts are unavailable; every new workout is a snapshot of one
+  populated weekly-template day.
+- Strength efforts record repetitions and optional weight in explicit `kg` or
+  `lb` units.
+- Cardio efforts record duration and optional distance in explicit `km` or
+  `mi` units.
 - Completed workouts are read-only; only an active workout is edited offline.
 - The initial deployment is a trusted single-user installation without built-in
   authentication.

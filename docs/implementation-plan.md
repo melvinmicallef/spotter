@@ -54,7 +54,8 @@ healthy API response, and load the PWA shell.
 - Initial tables for muscles, exercises, and exercise-to-muscle relationships.
 - Shared request and response schemas.
 - Online API and UI for creating, listing, editing, and deleting muscles and
-  exercises.
+  exercises, using separate muscle and exercise pages.
+- Explicit strength/cardio exercise types with type-appropriate fields.
 - Role-aware primary and secondary muscle associations, validated GIF media,
   and review-before-create website metadata import with SSRF protections.
 - Dependency-safe deletion behavior that preserves future workout history.
@@ -73,33 +74,35 @@ Catalogue records can be managed end to end while online, invalid requests have
 stable errors, migrations work on a new database, and automated tests prove
 foreign-key and deletion behavior.
 
-## Milestone 2: Workout templates (implemented)
+## Milestone 2: Weekly workout templates (implementation being revised)
 
 ### Deliverables
 
-- Template and ordered template-exercise persistence.
+- Weekly template and per-day ordered template-exercise persistence.
 - Online API and UI to create, rename, duplicate, edit, reorder, and delete
   templates.
-- Exercise-level template notes or initial targets.
+- Multiple exercises on each ISO weekday.
+- Exercise-level template notes and type-appropriate initial targets.
 - Template read model suitable for caching and workout snapshot creation.
 - Tests for ordering, duplication, validation, and deletion dependencies.
 
 ### Exit gate
 
-A user can build and maintain a reusable ordered workout template online, and a
-template response contains everything needed to create an independent workout
-snapshot.
+A user can build and maintain a reusable seven-day workout template online,
+and a template response contains everything needed to create an independent
+snapshot for any populated day.
 
-## Milestone 3: Online workout vertical slice (implemented)
+## Milestone 3: Online workout vertical slice (implementation being revised)
 
 ### Deliverables
 
 - Workout session, workout exercise, and workout set persistence.
-- Start an empty workout or one based on a template snapshot.
+- Start a workout only from a populated weekly-template day.
 - Resume an in-progress workout.
 - Add, remove, and reorder workout exercises.
 - Add, edit, complete, and remove sets.
-- Record repetitions, weight, notes, and explicit unit semantics.
+- Record strength repetitions/weight or cardio duration/distance, notes, and
+  explicit unit semantics.
 - Finish a workout and view history.
 - Historical display remains valid after catalogue or template changes.
 

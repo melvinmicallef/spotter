@@ -64,8 +64,10 @@ The most important flow is recording a workout reliably in a gym with unstable
 connectivity.
 
 1. The user loads or installs Spotter while online.
-2. The client synchronizes the catalogue and available workout templates.
-3. The user starts an empty workout or creates one from a cached template.
+2. The client synchronizes the muscle catalogue, typed exercise catalogue, and
+   available weekly workout templates.
+3. The user starts one populated day from a cached weekly template. Open or
+   empty workouts cannot be created.
 4. Every workout change is committed to IndexedDB before the UI considers it
    saved.
 5. The user may lose connectivity, refresh the page, close the PWA, reopen it,
@@ -124,7 +126,8 @@ Do not infer answers to these questions from the rest of the architecture:
 
 - history export and retention requirements;
 - account and tenancy behavior after the trusted single-user `0.1.x` line;
-- measurement types beyond repetitions and weighted sets; and
+- measurement types beyond strength repetitions/weight and cardio
+  duration/distance; and
 - completed-workout editing in a future release.
 
 The architecture intentionally leaves boundaries where these decisions can be
@@ -156,7 +159,8 @@ introduced without replacing the workout model or synchronization core.
 - `idb` provides the browser repository boundary. Workout and outbox changes
   share one transaction; synchronization is serialized and idempotent.
 - The `0.1.0` product boundary is one active workout per device, explicit
-  `kg`/`lb` weight, read-only completed workouts, and one trusted user per
+  strength/cardio exercise types, ISO-weekday templates, `kg`/`lb` weight and
+  `km`/`mi` distance, read-only completed workouts, and one trusted user per
   deployment without built-in authentication.
 - Exercise demonstrations are validated GIF uploads stored below `/data/media`
   and prefetched into a dedicated offline application cache. Website import is

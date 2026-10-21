@@ -12,6 +12,9 @@ The first planned development release is `0.1.0`.
 
 - Workout logging must remain usable when the device loses connectivity.
 - Exercises, muscles, and workout templates are managed only while online.
+- Strength and cardio exercises use different planning and recording fields.
+- Workouts start from a day in a weekly template; ad-hoc open workouts are not
+  part of the product.
 - Offline writes must synchronize without creating duplicate workouts or sets.
 - Deployment should be simple: one container and one persistent data volume.
 - Release images are published deliberately from `v*` tags or a manual
@@ -37,9 +40,10 @@ updates do not replace user data.
 The installed application will cache enough read-only exercise and template
 data to log a workout without a network connection. While offline, a user can:
 
-- start or resume a workout;
-- add exercises from the cached catalogue;
-- record sets, repetitions, weight, notes, and completion state; and
+- start or resume a workout from a cached weekly-template day;
+- record sets, repetitions, and weight for strength exercises;
+- record duration and distance for cardio exercises;
+- record notes and completion state; and
 - finish a workout.
 
 Creating or editing exercises, muscles, and templates requires a connection.
@@ -131,8 +135,9 @@ The implementation order is:
 5. package the application as one Docker image; and
 6. add validation and release workflows.
 
-The catalogue, templates, workout lifecycle, IndexedDB persistence, idempotent
-synchronization, PWA shell, and production container are implemented.
+The separate muscle and exercise catalogues, weekly templates, workout
+lifecycle, IndexedDB persistence, idempotent synchronization, PWA shell, and
+production container are implemented.
 The exercise catalogue supports primary and secondary muscle roles, validated
 GIF demonstrations, and a review-before-create website metadata importer.
 Workout, exercise-entry, set, and template-entry notes are editable, and

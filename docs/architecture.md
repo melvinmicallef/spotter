@@ -55,6 +55,11 @@ be treated as the source of truth for workout data; that belongs in IndexedDB.
 Separating these concerns makes service-worker upgrades safer and keeps workout
 records queryable by application code.
 
+The catalogue has separate muscle and exercise views. Muscles are focused
+reference records; exercises own their strength/cardio type, muscle roles,
+instructions, media, and source attribution. Keeping the editors separate
+avoids one oversized catalogue screen on a phone.
+
 ### IndexedDB stores
 
 The initial client database should expose repositories rather than raw storage
@@ -89,6 +94,22 @@ workout mutations apply immediately against the latest local snapshot and enter
 a serialized IndexedDB persistence queue. The server ignores snapshots whose
 `updatedAt` is equal to or older than its canonical row, preventing a delayed
 operation from replacing a newer workout.
+
+### Typed exercises and weekly templates
+
+`exercises.exercise_type` is either `strength` or `cardio` and is copied into
+each workout-exercise snapshot. Strength efforts use repetitions, weight, and
+`kg`/`lb`; cardio efforts use duration seconds, distance, and `km`/`mi`. The
+persistence model retains nullable columns for both measurement families so
+migrations and historical reads remain straightforward, while the client shows
+and writes only the fields valid for the snapshot type.
+
+Template entries use ISO weekday numbers (`1` Monday through `7` Sunday) plus a
+position that is unique within that day. A weekly template can contain multiple
+entries on every day. Creating a workout requires a template and a populated
+day; the session stores the chosen template day and snapshots only that day's
+entries. Legacy open-workout rows remain readable after migration, but the
+client cannot create new ones.
 
 ### Exercise media and website import
 
@@ -180,9 +201,9 @@ Foreign keys are enabled for every connection. Transactions protect ordered
 changes and synchronization batches. Migrations run before the HTTP server
 reports readiness.
 
-Historical workout rows should store snapshots of mutable labels or exercise
-details needed for display. Foreign-key behavior must not allow a catalogue
-deletion to erase workout history.
+Historical workout rows store snapshots of mutable labels, exercise type,
+template day, and targets needed for display. Foreign-key behavior must not
+allow a catalogue deletion to erase workout history.
 
 The production database path is configured through an environment variable and
 defaults to `/data/spotter.sqlite`. The container documentation must call out
@@ -301,7 +322,8 @@ than copying an actively changing database file without coordination.
 - SQLite driver and migration library.
 - IndexedDB wrapper or direct API usage.
 - Authentication and deployment exposure expectations.
-- Required unit system and non-repetition exercise measurements.
+- Additional exercise types or measurements beyond the recorded strength and
+  cardio baseline.
 - Whether completed workouts can be edited offline.
 
 ## Recorded implementation decisions
@@ -325,7 +347,8 @@ serializes outbox drains, retries transient failures with bounded exponential
 backoff, and retains rejected operations for user-visible retry. Reference data
 uses the server's monotonically increasing revision cursor.
 
-Version `0.1.0` uses one active workout per device, repetitions plus explicitly
-stored `kg` or `lb` weight, and read-only completed workouts. It targets a
+Version `0.1.0` uses one active workout per device, weekly ISO-day templates,
+strength repetitions plus explicit `kg`/`lb` weight, cardio duration plus
+explicit `km`/`mi` distance, and read-only completed workouts. It targets a
 trusted single-user deployment without built-in authentication; the API layer
 remains the boundary for adding actor and ownership context later.
