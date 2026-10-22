@@ -779,20 +779,10 @@ function ExerciseTypeIcon({
       role="img"
       aria-label="Cardio exercise"
     >
-      <circle cx="30" cy="7" r="4" fill="currentColor" />
-      <g
-        fill="none"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="4"
-      >
-        <path d="m27 14-6 10" />
-        <path d="m26 15-6 2-5-3" />
-        <path d="m28 15 6-3 5 3" />
-        <path d="m21 24-7 6-5-1-4 5" />
-        <path d="m21 24 8 5 7-1 7 5" />
-      </g>
+      <path
+        d="M24 41.2 21.1 38.6C10.8 29.3 4 23.1 4 15.5 4 9.3 8.9 4.5 15 4.5c3.5 0 6.8 1.6 9 4.3 2.2-2.7 5.5-4.3 9-4.3 6.1 0 11 4.8 11 11 0 7.6-6.8 13.8-17.1 23.1L24 41.2Z"
+        fill="currentColor"
+      />
     </svg>
   );
 }
