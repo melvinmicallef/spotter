@@ -372,12 +372,13 @@ receives package-write permission and logs into GHCR. Buildx uses the GitHub
 Actions cache without changing image contents or tags.
 
 The broad `v*` trigger is guarded by a tested strict SemVer validator before
-registry login or publication. The first release tag is `v0.1.0`; it produces
-`0.1.0`, `0.1`, and `latest`, and exposes `0.1.0` (without `v`) through
-`/api/version`. A prerelease such as `v0.2.0-beta.1` publishes only its exact
-tag. A manual run uses a supplied tag or a unique `sha-<commit>` tag, never
-moves release aliases, and receives a traceable application version such as
-`0.1.0+sha.0123456789ab`.
+registry login or publication. The first release tag `v0.1.0` produced
+`0.1.0`, `0.1`, and `latest`; the current `v0.2.0` release produces `0.2.0`,
+`0.2`, and `latest`, and exposes `0.2.0` (without `v`) through `/api/version`.
+A prerelease such as `v0.2.0-beta.1` publishes only its exact tag. A manual run
+uses a supplied tag or a unique `sha-<commit>` tag, never moves release aliases,
+and receives a traceable application version such as
+`0.2.0+sha.0123456789ab`.
 
 ## Testing strategy
 
@@ -397,7 +398,13 @@ an isolated temporary SQLite database. It verifies manifest metadata and
 service-worker control, loads reference data online, reloads the cached shell
 and active workout offline, finishes offline, then simulates a server-applied
 sync request whose acknowledgement is lost. Reconnection must drain the
-replayed outbox without duplicating the workout, exercise entry, or set.
+replayed outbox without duplicating the workout, exercise entry, or set. Other
+browser scenarios exercise muscle and exercise browsing, image upload,
+comments, in-app deletion confirmations, weekly template editing and day names,
+typed strength/calisthenics/cardio entries, previous-set hints, interval timer
+beeps and recovery, exercise-guide modals, Settings, and stretching-poster
+upload, removal, and offline viewing. The release workflow installs Chromium
+and runs this suite before it publishes a release image.
 
 ## Observability and recovery
 
@@ -440,12 +447,13 @@ serializes outbox drains, retries transient failures with bounded exponential
 backoff, and retains rejected operations for user-visible retry. Reference data
 uses the server's monotonically increasing revision cursor.
 
-Version `0.1.0` uses one active workout per device, one active weekly ISO-day
-template, today-only starts with device-local current-week day swaps, strength
-repetitions plus explicit `kg`/`lb` weight, calisthenics repetitions without
-weight, cardio duration plus explicit `km`/`mi` distance, a device-local Metric/Imperial preference (Metric by
-default), and read-only completed workouts. The preference derives entry units
-and converts active workout and template target displays while preserving
-recorded units in completed history. It targets a trusted single-user
-deployment without built-in authentication; the API layer remains the boundary
+The current `0.2.0` implementation uses one active workout per device, one
+active weekly ISO-day template, today-only starts with device-local current-week
+day swaps, strength repetitions plus explicit `kg`/`lb` weight, calisthenics
+repetitions without weight, and cardio duration or interval timers plus explicit
+`km`/`mi` distance. Metric is the device-local default. Settings converts active
+entry and template target displays while preserving recorded units in completed
+history. Workout entries retain their progress locally, including completion
+state and interval timer checkpoints. The deployment remains trusted and
+single-user without built-in authentication; the API layer remains the boundary
 for adding actor and ownership context later.

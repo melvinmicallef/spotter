@@ -21,7 +21,7 @@ it whenever an implementation decision changes the documented behavior.
 - The project contains a working pre-release application with an npm workspace,
   React PWA, Express API, SQLite persistence, IndexedDB outbox, Docker image,
   and GitHub Actions workflows.
-- The first planned version is `0.1.0`.
+- The first release `0.1.0` is published; the current release is `0.2.0`.
 - The production image will be `ghcr.io/melvinmicallef/spotter`.
 
 ## Non-negotiable initial constraints
@@ -68,13 +68,20 @@ architecture document or a dedicated decision record and explain its impact.
 - Never use the service worker cache as the source of truth for workout data.
 - Add tests with every vertical slice, especially for offline persistence,
   retry behavior, migrations, and duplicate prevention.
+- Add or update Playwright coverage for user-visible browser behavior, including
+  online catalogue/template flows, typed workouts, Settings, PWA installation
+  and offline recovery. Run `npm run test:e2e` for release candidates in
+  addition to `npm run check`.
 - Keep changes focused and leave the worktree clean after committed work.
 
 ## Release discipline
 
 - `develop` is the source branch unless the repository workflow later defines
   another release process.
-- The first release tag is `v0.1.0`.
+- The first release tag is `v0.1.0`; the current release tag is `v0.2.0`.
 - Normal `0.x` release tags may update `latest`; prerelease tags such as
   `v0.2.0-beta.1` must not.
 - A manual image build uses an explicit image tag or a unique `sha-<commit>` tag.
+- Do not tag or push a release until formatting, lint, type checks, unit and
+  integration tests, Playwright browser tests, production build, and Docker
+  build have passed and release documentation is current.

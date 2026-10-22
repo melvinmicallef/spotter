@@ -8,6 +8,7 @@ test('stores the selected light or dark mode on the device', async ({
   await page.reload();
 
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await page.getByRole('link', { name: 'Settings' }).click();
   await page.getByRole('button', { name: 'Switch to light mode' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
   await expect

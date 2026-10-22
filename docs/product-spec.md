@@ -1,7 +1,7 @@
 # Spotter Product Specification
 
-Status: Approved initial baseline. Items in "Open product decisions" remain
-unresolved.
+Status: Current product behavior for the `0.2.0` release. Items in "Open
+product decisions" remain unresolved.
 
 ## Purpose
 
@@ -32,11 +32,11 @@ be synchronized.
 - Collaborative editing or real-time multi-device workout updates.
 - Publishing a native iOS or Android application.
 
-Version `0.1.0` targets one trusted user per deployment without built-in
-authentication. The server boundary keeps ownership and authorization concerns
-isolated so accounts can be added without rewriting the workout model. An
-untrusted or internet-exposed deployment requires an authenticating reverse
-proxy until that product work is completed.
+The initial `0.1.0` release and current `0.2.0` target one trusted user per
+deployment without built-in authentication. The server boundary keeps
+ownership and authorization concerns isolated so accounts can be added without
+rewriting the workout model. An untrusted or internet-exposed deployment
+requires an authenticating reverse proxy until that product work is completed.
 
 ## Core concepts
 
@@ -299,7 +299,7 @@ The initial conflict policy is deliberately narrow:
 - Pull requests and ordinary branch pushes validate the application without
   publishing an image.
 
-## Initial acceptance criteria
+## Initial `0.1.0` acceptance criteria
 
 The first usable release is complete when:
 
@@ -316,11 +316,28 @@ The first usable release is complete when:
 9. the initial `v0.1.0` tag publishes a versioned image to GHCR, while a normal
    commit does not.
 
+## `0.2.0` acceptance additions
+
+1. Calisthenics can be planned and recorded with repetitions and sets without
+   weight fields; duration cardio accepts minutes and seconds, while interval
+   cardio configures prep, work, rest, and iterations.
+2. The interval timer beeps for the final five seconds and on stage changes,
+   records total work duration, and restores its countdown after a refresh.
+3. Strength inputs show previous completed values as placeholders, leave the
+   new workout empty, and only display sets that are planned today. Sets can be
+   added or removed, and completed exercises can be collapsed and reopened.
+4. Settings stores a device-local Metric or Imperial preference and a shared
+   stretching poster can be opened from Today and viewed offline after it has
+   loaded on that device.
+5. Playwright covers these user flows along with catalogue and template
+   management, deletion dialogs, PWA shell behavior, history, and offline
+   synchronization before a release is tagged.
+
 ## Open product decisions
 
 - What retention or export behavior is required for workout history?
 
-## Initial `0.1.0` product decisions
+## Initial `0.1.0` product decisions carried forward
 
 - One in-progress workout is supported per device.
 - Weekly templates use ISO weekdays (`1` = Monday through `7` = Sunday) and

@@ -2,8 +2,9 @@
 
 Spotter releases are deliberate. A pushed, strict Semantic Version tag builds
 the production image; ordinary branch pushes and pull requests only validate
-the repository. Do not create `v0.1.0` until the product acceptance criteria
-and the implementation-plan test matrix have passed.
+the repository. The first release `v0.1.0` is published. Do not create the
+current `v0.2.0` release tag until the product acceptance criteria and browser
+test matrix have passed.
 
 ## Version and image policy
 
@@ -11,22 +12,23 @@ and the implementation-plan test matrix have passed.
   build suffix. Examples: `v0.1.0` and `v0.2.0-beta.1`.
 - The tag version must match the root package version, ignoring only optional
   SemVer build metadata.
-- A stable `v0.1.0` tag publishes `0.1.0`, `0.1`, and `latest`.
+- A stable `v0.2.0` tag publishes `0.2.0`, `0.2`, and `latest`; `v0.1.0`
+  remains available as an immutable image tag.
 - A prerelease such as `v0.2.0-beta.1` publishes only
   `0.2.0-beta.1`; it does not move `0.2` or `latest`.
 - The image receives `APP_VERSION` without the leading `v`, so `/api/version`
-  reports `0.1.0` for tag `v0.1.0`.
+  reports `0.2.0` for tag `v0.2.0`.
 - A manual workflow run publishes its explicit image tag, or the unique
   `sha-<full-commit>` fallback. Its application version is the package version
-  plus `sha` build metadata, such as `0.1.0+sha.0123456789ab`.
+  plus `sha` build metadata, such as `0.2.0+sha.0123456789ab`.
 - Strings that merely start with `v` but are not valid Semantic Versions fail
   before registry login or image publication.
 
 The release workflow is the only automation that pushes images. Its read-only
-validation job runs `npm run check` and validates the release metadata before a
-separate package-write job can authenticate to GHCR. The ordinary validation
-workflow also runs the checks and a non-publishing Docker build for every
-branch push and pull request.
+validation job runs `npm run check`, Playwright browser tests, and release
+metadata validation before a separate package-write job can authenticate to
+GHCR. The ordinary validation workflow also runs the checks, browser tests, and
+a non-publishing Docker build for every branch push and pull request.
 
 ## Release candidate checklist
 
@@ -47,11 +49,16 @@ branch push and pull request.
 - [ ] `npm ci` succeeds from a clean checkout.
 - [ ] `npm run check` passes, including the deterministic release metadata
       tests.
+- [ ] `npm run test:e2e` passes against the production build and an isolated
+      temporary SQLite database.
 - [ ] `docker build --tag spotter:release-candidate .` succeeds.
 - [ ] The container health, PWA, API, mounted-volume persistence, backup, and
       restore smoke tests pass.
 - [ ] Browser testing covers install/reopen, offline start/edit/finish,
       reload, reconnect, retry, and exactly-once server synchronization.
+- [ ] Browser testing also covers catalogue and template management, exercise
+      guide/comments, typed strength and calisthenics inputs, duration/interval
+      cardio, previous-set hints, Settings, and the stretching-poster lifecycle.
 - [ ] Mobile layout, keyboard operation, labels, focus, and screen-reader
       announcements have been checked.
 - [ ] An ordinary branch push has run validation and has not published an
@@ -63,8 +70,8 @@ branch push and pull request.
 - [ ] Create an annotated tag only after the checklist is complete:
 
   ```bash
-  git tag -a v0.1.0 -m "Spotter v0.1.0"
-  git push origin v0.1.0
+  git tag -a v0.2.0 -m "Spotter v0.2.0"
+  git push origin develop v0.2.0
   ```
 
 - [ ] Confirm the `Publish container` workflow succeeded for the tagged

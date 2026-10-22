@@ -14,11 +14,11 @@ questions.
 The repository is public at `https://github.com/melvinmicallef/spotter`.
 
 - Default branch: `develop`
-- Application status: working pre-release implementation; catalogue and
-  template management, offline workouts, synchronization, PWA packaging,
+- Application status: working 0.x application; catalogue and template
+  management, typed and offline workouts, synchronization, PWA packaging,
   container delivery, and CI/release automation are present
-- Planned first release: `0.1.0`
-- Planned first release tag: `v0.1.0`
+- First release: `0.1.0` (`v0.1.0`)
+- Current release: `0.2.0` (`v0.2.0`)
 - Planned image: `ghcr.io/melvinmicallef/spotter`
 - Current documents: product specification, architecture, implementation plan,
   this handoff, and repository agent instructions
@@ -117,12 +117,13 @@ tests, a production application build, and a non-publishing Docker build for
 every branch push and pull request. Container publication is separate and runs
 only for strict Semantic Version tags beginning with `v`, or manual dispatch.
 
-The first release is `v0.1.0`. A normal semantic version tag publishes exact,
-minor, and `latest` image tags. A prerelease such as `v0.2.0-beta.1` publishes
-only its exact tag. A manually dispatched build uses an explicit tag or a
-collision-safe `sha-<commit>` tag and never moves release aliases. Tag and
-manual builds expose a normalized, traceable version through `/api/version`.
-The checklist and release-note process are in `docs/releasing.md`.
+The first release `v0.1.0` and current release `v0.2.0` are published. A stable
+semantic-version tag publishes exact, minor, and `latest`
+image tags. A prerelease such as `v0.2.0-beta.1` publishes only its exact tag.
+A manually dispatched build uses an explicit tag or a collision-safe
+`sha-<commit>` tag and never moves release aliases. Tag and manual builds expose
+a normalized, traceable version through `/api/version`. The checklist and
+release-note process are in `docs/releasing.md`.
 
 ## Explicitly not finalized
 
@@ -145,7 +146,8 @@ introduced without replacing the workout model or synchronization core.
 - Do not require separate frontend, backend, and database containers for the
   initial production deployment.
 - Do not silently choose product behavior for an explicitly open question.
-- Do not tag `v0.1.0` until its acceptance criteria are met.
+- Do not create a release tag until the acceptance criteria and required tests
+  for that version pass.
 
 ## Implemented scaffolding decisions
 
@@ -161,11 +163,12 @@ introduced without replacing the workout model or synchronization core.
   file-backed databases use WAL mode.
 - `idb` provides the browser repository boundary. Workout and outbox changes
   share one transaction; synchronization is serialized and idempotent.
-- The `0.1.0` product boundary is one active workout per device, explicit
-  strength/calisthenics/cardio exercise types, ISO-weekday templates with optional named
-  days, `kg`/`lb` weight and `km`/`mi` distance, cardio duration and interval
-  modes, read-only completed workouts, and one trusted user per deployment
-  without built-in authentication.
+- The current `0.2.0` product contract includes one active workout per device,
+  strength/calisthenics/cardio types, ISO-weekday templates with optional named
+  days, device-local Metric/Imperial units, duration and interval cardio,
+  previous-set hints, collapsible completed exercises, and a shared stretching
+  poster. The deployment remains trusted and single-user without built-in
+  authentication; completed workouts remain read-only.
 - Exercise demonstrations are validated GIF, PNG, or JPEG uploads of at most
   five MiB, stored below `/data/media`, and prefetched into a dedicated offline
   application cache. Website import is not part of the product. Exercises may
@@ -177,11 +180,13 @@ introduced without replacing the workout model or synchronization core.
 
 These remain revisable while Spotter is in the `0.x` development line.
 
-## Recommended next task
+## Release and next task
 
-Exercise the browser-level offline/reload/reconnect path, complete accessibility
-and mobile QA, smoke-test container persistence, and prepare the deliberate
-`v0.1.0` release only after every acceptance criterion passes.
+For `v0.2.0`, run the browser-level offline/reload/reconnect and current UI
+flows, complete accessibility and mobile QA, smoke-test container persistence,
+and release only after every acceptance criterion passes. After that release,
+continue with the remaining work in the implementation plan and open product
+decisions.
 
 ## Starter prompt for a new AI chat
 

@@ -104,7 +104,7 @@ describe('service contracts', () => {
         exerciseType: 'strength',
         dayOfWeek: 1,
       }),
-    ).toThrow(/duration or distance targets/);
+    ).toThrow(/cannot contain cardio timing or distance targets/);
     expect(() =>
       templateExerciseSchema.parse({
         ...base,

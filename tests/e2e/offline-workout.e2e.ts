@@ -4,7 +4,11 @@ import type { Page } from '@playwright/test';
 interface WorkoutSetSnapshot {
   reps: number | null;
   weight: number | null;
+}
+
+interface WorkoutExerciseSnapshot {
   completed: boolean;
+  sets: WorkoutSetSnapshot[];
 }
 
 async function activeSetSnapshot(page: Page) {
@@ -19,7 +23,7 @@ async function activeSetSnapshot(page: Page) {
     const records = await new Promise<
       Array<{
         status: string;
-        exercises: Array<{ sets: WorkoutSetSnapshot[] }>;
+        exercises: WorkoutExerciseSnapshot[];
       }>
     >((resolve, reject) => {
       workouts.onsuccess = () => resolve(workouts.result);
@@ -28,6 +32,29 @@ async function activeSetSnapshot(page: Page) {
     database.close();
     return records.find((workout) => workout.status === 'in_progress')
       ?.exercises[0]?.sets[0];
+  });
+}
+
+async function activeExerciseCompleted(page: Page) {
+  return page.evaluate<boolean | undefined>(async () => {
+    const request = indexedDB.open('spotter');
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const workouts = database
+      .transaction('workouts', 'readonly')
+      .objectStore('workouts')
+      .getAll();
+    const records = await new Promise<
+      Array<{ status: string; exercises: WorkoutExerciseSnapshot[] }>
+    >((resolve, reject) => {
+      workouts.onsuccess = () => resolve(workouts.result);
+      workouts.onerror = () => reject(workouts.error);
+    });
+    database.close();
+    return records.find((workout) => workout.status === 'in_progress')
+      ?.exercises[0]?.completed;
   });
 }
 
@@ -245,10 +272,10 @@ test('installs its shell and synchronizes one offline workout after reload', asy
     .toBe(42.5);
   await page.getByLabel(`${exerciseName} repetitions set 1`).fill('8');
   await expect.poll(async () => (await activeSetSnapshot(page))?.reps).toBe(8);
-  await page.getByLabel(`${exerciseName} set 1 complete`).check();
-  await expect
-    .poll(async () => (await activeSetSnapshot(page))?.completed)
-    .toBe(true);
+  await page
+    .getByRole('button', { name: `Mark ${exerciseName} as completed` })
+    .click();
+  await expect.poll(() => activeExerciseCompleted(page)).toBe(true);
   await expect.poll(() => outboxSize(page)).toBeGreaterThan(0);
 
   await page.goto('/offline-reload-check');
@@ -257,21 +284,23 @@ test('installs its shell and synchronizes one offline workout after reload', asy
       name: new RegExp(`Offline week .* · ${otherDayName}`),
     }),
   ).toBeVisible();
-  await expect(page.getByLabel(`${exerciseName} weight set 1`)).toHaveValue(
-    '42.5',
-  );
   await expect(
-    page.getByLabel(`${exerciseName} repetitions set 1`),
-  ).toHaveValue('8');
-  await expect(page.getByLabel(`${exerciseName} set 1 complete`)).toBeChecked();
+    page.getByRole('button', { name: `Reopen ${exerciseName}` }),
+  ).toBeVisible();
+  await expect(page.getByLabel(`${exerciseName} weight set 1`)).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Finish' }).click();
   await page.getByRole('link', { name: 'History' }).click();
-  await expect(page.getByText('1 completed efforts')).toBeVisible();
+  const historyEntry = page
+    .locator('details')
+    .filter({ hasText: `Offline week ${suffix}` });
+  await historyEntry.locator('summary').click();
+  await expect(historyEntry).toContainText('42.5 kg × 8 reps');
+  await expect(historyEntry).toContainText(exerciseName);
 
   await page.reload();
   await page.getByRole('link', { name: 'History' }).click();
-  await expect(page.getByText('1 completed efforts')).toBeVisible();
+  await expect(historyEntry).toBeVisible();
 
   let acknowledgementDropped = false;
   await page.route('**/api/sync', async (route) => {
@@ -296,6 +325,7 @@ test('installs its shell and synchronizes one offline workout after reload', asy
     status: string;
     exercises: Array<{
       exerciseName: string;
+      completed: boolean;
       sets: WorkoutSetSnapshot[];
     }>;
   }>;
@@ -309,14 +339,31 @@ test('installs its shell and synchronizes one offline workout after reload', asy
     status: 'completed',
     exercises: [
       {
+        completed: true,
         sets: [
           {
             reps: 8,
             weight: 42.5,
-            completed: true,
           },
         ],
       },
     ],
   });
+
+  const deleteButton = page.getByRole('button', {
+    name: new RegExp(`Delete workout Offline week ${suffix}`),
+  });
+  await deleteButton.click();
+  const deleteDialog = page.getByRole('alertdialog');
+  await expect(deleteDialog).toBeVisible();
+  await deleteDialog
+    .getByRole('button', { name: 'Cancel', exact: true })
+    .click();
+  await expect(historyEntry).toBeVisible();
+  await deleteButton.click();
+  await page
+    .getByRole('alertdialog')
+    .getByRole('button', { name: 'Delete workout' })
+    .click();
+  await expect(historyEntry).toHaveCount(0);
 });

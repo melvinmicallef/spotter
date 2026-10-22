@@ -4,9 +4,9 @@ Spotter is a self-hosted, installable workout-tracking PWA. It combines a
 React and TypeScript client with an Express API and SQLite database, delivered
 as a single Docker image.
 
-The project is under active implementation on the `develop` branch. Its npm
-workspace contains the React client, Express server, and shared wire contracts.
-The current development release is `0.1.0`.
+The project is developed on the `develop` branch. Its npm workspace contains
+the React client, Express server, and shared wire contracts. The current release
+is `0.2.0`.
 
 Spotter is a vibe-coded app built with OpenAI Codex.
 
@@ -25,6 +25,8 @@ Spotter is a vibe-coded app built with OpenAI Codex.
 - A light/dark appearance switch on the Settings page is retained on the current device.
 - A device-local Metric or Imperial preference derives weight and distance
   units; Metric is the default for new installations.
+- Settings can store one shared stretching poster; Today opens its uncropped
+  view, which is cached for offline viewing after it loads on a device.
 - Offline writes must synchronize without creating duplicate workouts or sets.
 - Deployment should be simple: one container and one persistent host data directory.
 - Release images are published deliberately from `v*` tags or a manual
@@ -126,7 +128,7 @@ Express server on `http://localhost:3000`. Validate the complete workspace with
 `npm run check`; build it with `npm run build`; and serve the compiled client
 and API together with `npm start`.
 
-The browser-level PWA test runs against a production build and an isolated,
+The Playwright suite runs the production PWA and API against an isolated,
 temporary SQLite database:
 
 ```bash
@@ -134,15 +136,14 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-It seeds reference data online, caches the application shell, records and
-finishes a workout offline, reloads while offline, reconnects after a simulated
-lost synchronization acknowledgement, and verifies that the server contains
-exactly one workout and set. If the Playwright browser download is unavailable,
-set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` to a compatible local Chromium or
-Chrome executable. The validation workflow installs Chromium before running
-this test. A second regression covers primary/secondary muscle roles through
-the compact exercise list and detail/edit flow, PNG upload, the visual template
-picker, typed strength/cardio recording, and expanded historical details.
+It covers offline installation and synchronization, online exercise and
+template management, in-app deletion confirmations, typed strength,
+calisthenics, and cardio workouts, cardio interval setup and audible timer
+recovery, previous-set hints, unit preferences, theme persistence, and
+stretching-poster upload, removal, and offline viewing. If the Playwright
+browser download is unavailable, set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` to a
+compatible local Chromium or Chrome executable. The validation and release
+workflows install Chromium before running the browser suite.
 
 The implementation order is:
 
@@ -153,16 +154,14 @@ The implementation order is:
 5. package the application as one Docker image; and
 6. add validation and release workflows.
 
-The separate muscle and exercise catalogues, weekly templates, workout
+The separate muscle and exercise catalogues, weekly templates, offline workout
 lifecycle, IndexedDB persistence, idempotent synchronization, PWA shell, and
-production container are implemented.
-The exercise catalogue supports a compact list/detail workflow, primary and
-secondary muscle roles, separate preparation and execution instructions,
-optional exercise comments,
-optional HTTP/HTTPS reference links that remain available in workout snapshots,
-and validated GIF, PNG, or JPEG demonstrations.
-Workout, exercise-entry, set, and template-entry notes are editable, and
-history expands to show the preserved exercise and set snapshots.
+production container are implemented. The exercise catalogue supports primary
+and secondary muscle roles, preparation and execution instructions, optional
+comments and reference links, and validated GIF, PNG, or JPEG demonstrations.
+Workout entry uses compact, type-specific fields. Template-wide notes and
+optional names for each weekday are supported; workout history preserves
+completed exercise and set snapshots.
 
 ## Run the production image
 
@@ -181,7 +180,7 @@ services:
 
 The `./data` directory next to `compose.yaml` stores the SQLite database and
 uploaded exercise images on the host, outside the container. To pin upgrades,
-replace `latest` with a released version such as `0.1.0`.
+replace `latest` with a released version such as `0.2.0`.
 
 Start the instance:
 
@@ -215,7 +214,7 @@ Open the repository at its root and ask the new chat to read `AGENTS.md` and the
 documentation listed above before changing files. A complete starter prompt is
 available in [the project handoff](docs/project-context.md#starter-prompt-for-a-new-ai-chat).
 
-Release `v0.1.0` is published. Future releases should follow the acceptance,
+Release `v0.2.0` is the current version. Releases should follow the acceptance,
 test, accessibility, mobile QA, and release-candidate gates in the
 [release guide](docs/releasing.md).
 
@@ -224,18 +223,18 @@ test, accessibility, mobile QA, and release-candidate gates in the
 Ordinary commits and pull requests should run validation such as linting,
 type-checking, tests, and a production build. They should not publish an image.
 
-The first application version will be `0.1.0`. Spotter will remain on `0.x`
+The first application version was `0.1.0`. Spotter will remain on `0.x`
 versions while its product behavior, data model, and API are still under active
 development. Version `1.0.0` will mark the first stable public contract.
 
 Container publishing is triggered by:
 
-- pushing a strict Semantic Version tag beginning with `v`, such as `v0.1.0`;
+- pushing a strict Semantic Version tag beginning with `v`, such as `v0.2.0`;
   malformed `v*` tags fail validation before publication; or
 - starting the release workflow manually through GitHub Actions.
 
 Images will be published to `ghcr.io/melvinmicallef/spotter`.
 Stable tags publish exact, minor, and `latest` image tags. Prereleases publish
 only the exact prerelease version, and manual runs publish only an explicit tag
-or a unique `sha-<commit>` fallback. Release `v0.1.0` is available as `0.1.0`,
-`0.1`, and `latest`.
+or a unique `sha-<commit>` fallback. Release `v0.2.0` publishes `0.2.0`,
+`0.2`, and `latest`; the immutable `0.1.0` image remains available.

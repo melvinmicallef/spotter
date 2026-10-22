@@ -206,7 +206,8 @@ network connection, and upgrades without losing an active workout or outbox.
 - SQLite database path defaulting to `/data/spotter.sqlite`.
 - Startup migration behavior and readiness handling.
 - Container health check.
-- Example run command or Compose file showing the persistent `/data` volume.
+- Example run command or Compose file showing the persistent host directory
+  bind-mounted at `/data`.
 - Container smoke test that proves data survives container replacement.
 - Backup and restore documentation appropriate to the selected SQLite journal
   mode.
@@ -216,7 +217,7 @@ network connection, and upgrades without losing an active workout or outbox.
 One image starts with an empty volume, migrates the database, serves the API and
 PWA, reports healthy, preserves data across replacement, and shuts down cleanly.
 
-## Milestone 8: Release automation and `0.1.0` (automation implemented; release candidate pending)
+## Milestone 8: Release automation and `0.2.0` (automation implemented; release candidate pending)
 
 ### Deliverables
 
@@ -230,18 +231,19 @@ PWA, reports healthy, preserves data across replacement, and shuts down cleanly.
 - Manual image tag input with a safe `sha-<commit>` fallback.
 - Confirmation that ordinary commits never publish an image.
 - Release checklist and changelog or release-note process.
+- Playwright browser tests run in both the ordinary validation workflow and
+  the release workflow before an image can be published.
 
 ### Exit gate
 
-All initial product acceptance criteria pass. A deliberate `v0.1.0` tag builds
-and publishes the expected versioned image to
-`ghcr.io/melvinmicallef/spotter`, while a normal commit and pull request only
-run validation.
+All `0.2.0` acceptance criteria pass. A deliberate `v0.2.0` tag builds and
+publishes the expected versioned image to `ghcr.io/melvinmicallef/spotter`,
+while a normal commit and pull request only run validation.
 
 The automation, strict tag validation, normalized application versioning,
-release checklist, and changelog process are implemented. The milestone is not
-complete: `v0.1.0` must not be created until the full acceptance criteria and
-required test matrix pass, and no published image has yet been verified.
+complete until the full `0.2.0` acceptance criteria and required test matrix
+pass and the published image has been verified. The `0.1.0` release is already
+published.
 
 ## Required test matrix
 
@@ -258,23 +260,23 @@ required test matrix pass, and no published image has yet been verified.
 | Container        | Startup, health, migrations, persistent volume, graceful stop                     |
 | Workflows        | Normal commit does not publish; tag/manual run produces intended tags             |
 
-The browser-level PWA paths are automated in `tests/e2e`. They exercise
-installation metadata, service-worker shell caching, IndexedDB recovery after
-an offline navigation, offline workout completion, an ambiguous synchronization
-acknowledgement, exactly-once server persistence, role-aware catalogue edits,
-PNG upload, compact exercise details, fixed full-width header, active-template
-today-only start, persisted current-week day swaps, typed workout inputs, and
-detailed history. They run separately from the fast Vitest suite with
-`npm run test:e2e`; CI installs Chromium before invoking it.
+The browser-level paths run in Playwright from `tests/e2e`, separately from the
+fast Vitest suite with `npm run test:e2e`. They cover installation metadata,
+service-worker shell caching, offline IndexedDB recovery and exactly-once
+synchronization, catalogue and template CRUD, exercise guide/comments and media,
+confirmation dialogs, typed strength/calisthenics/cardio inputs, interval timer
+beeps and refresh recovery, previous-value placeholders, measurement and theme
+preferences, stretching-poster caching and deletion, and history. CI and the
+release workflow install Chromium before running them.
 
-## Documentation required before `v0.1.0`
+## Release documentation
 
 - Installation and upgrade instructions.
 - Runtime environment variable reference.
-- Persistent volume and permissions guidance.
+- Persistent host directory and permissions guidance.
 - SQLite backup and restore procedure.
 - Offline behavior and synchronization-status explanation for users.
 - Release process and image-tag policy.
 - Known limitations, including unsupported simultaneous multi-device editing.
 - Decisions or explicit deferrals for every open product question that blocks
-  the first release.
+  the target release.

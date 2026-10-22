@@ -61,6 +61,7 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
     .getByLabel('Preparation')
     .fill('Set the bench and plant both feet');
   await page.getByLabel('Execution').fill('Control the descent');
+  await page.getByLabel('Comments').fill('Keep elbows soft');
   await page.getByLabel('Reference website (optional)').fill(referenceUrl);
   await page.getByLabel('Muscle to add').selectOption({ label: secondaryName });
   await page.getByLabel('Muscle role').selectOption('secondary');
@@ -112,6 +113,9 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
   await expect(
     strengthRow.getByRole('img', { name: `${strengthName} demonstration` }),
   ).toBeVisible();
+  await expect(
+    strengthRow.getByRole('img', { name: `${strengthName} demonstration` }),
+  ).toHaveCSS('object-fit', 'contain');
   await strengthRow.click();
   await expect(page.getByRole('heading', { name: strengthName })).toBeVisible();
   await expect(page.getByText('Primary muscles').locator('..')).toContainText(
@@ -130,6 +134,7 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
     page.getByText('Set the bench and plant both feet'),
   ).toBeVisible();
   await expect(page.getByText('Control the descent')).toBeVisible();
+  await expect(page.getByText('Keep elbows soft')).toBeVisible();
   await expect(
     page.getByRole('link', { name: 'Open exercise reference' }),
   ).toHaveAttribute('href', referenceUrl);
@@ -139,10 +144,12 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
   await expect(page.getByLabel('Exercise name')).toHaveValue(strengthName);
   await page.getByLabel('Preparation').fill('Retract the shoulder blades');
   await page.getByLabel('Execution').fill('Pause at the bottom');
+  await page.getByLabel('Comments').fill('Keep the wrists stacked');
   await page.getByRole('button', { name: 'Save changes' }).click();
   await expect(page).toHaveURL(/\/exercises\/[0-9a-f-]+$/);
   await expect(page.getByText('Retract the shoulder blades')).toBeVisible();
   await expect(page.getByText('Pause at the bottom')).toBeVisible();
+  await expect(page.getByText('Keep the wrists stacked')).toBeVisible();
   await page.getByRole('button', { name: '← Exercises' }).click();
 
   await createExercise(page, cardioName, 'cardio');
@@ -151,8 +158,12 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
     .locator('button.exercise-library-row')
     .filter({ hasText: disposableName });
   await disposableRow.click();
-  page.once('dialog', (dialog) => dialog.accept());
   await page.getByRole('button', { name: `Delete ${disposableName}` }).click();
+  const exerciseDeleteDialog = page.getByRole('alertdialog');
+  await expect(exerciseDeleteDialog).toBeVisible();
+  await exerciseDeleteDialog
+    .getByRole('button', { name: 'Delete exercise' })
+    .click();
   await expect(disposableRow).toHaveCount(0);
 
   await page.getByRole('link', { name: 'Templates' }).click();
@@ -168,9 +179,13 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
   await page.getByRole('button', { name: 'Add template' }).click();
   await page.getByLabel('Template name').fill(disposablePlanName);
   await page.getByRole('button', { name: 'Create template' }).click();
-  page.once('dialog', (dialog) => dialog.accept());
   await page
     .getByRole('button', { name: `Delete ${disposablePlanName}` })
+    .click();
+  const templateDeleteDialog = page.getByRole('alertdialog');
+  await expect(templateDeleteDialog).toBeVisible();
+  await templateDeleteDialog
+    .getByRole('button', { name: 'Delete template' })
     .click();
   await expect(page).toHaveURL(/\/templates$/);
 
@@ -183,6 +198,7 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
   await page.reload();
   await expect(page.getByLabel('Template name')).toHaveValue(planName);
   const template = page.locator('.template-card');
+  await template.getByLabel(`${today} workout name`).fill('Chest & Back');
 
   await template.getByLabel(`Add exercise to ${today}`).click();
   let picker = page.getByRole('dialog', { name: 'Choose exercises' });
@@ -205,13 +221,13 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
   await picker.getByRole('button', { name: `Add to ${otherDay}` }).click();
   await picker.getByRole('button', { name: 'Done' }).click();
   await template
-    .getByLabel(`${strengthName} target sets on ${today}`)
-    .fill('1');
-  await template
     .getByLabel(`${strengthName} target reps on ${today}`)
     .fill('10');
   await template
-    .getByLabel(`${cardioName} target minutes on ${today}`)
+    .getByLabel(`${strengthName} target sets on ${today}`)
+    .fill('1');
+  await template
+    .getByLabel(`${cardioName} duration on ${today} minutes`)
     .fill('30');
   await template
     .getByLabel(`${cardioName} target distance on ${today}`)
@@ -227,19 +243,26 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
     page.getByRole('button', { name: "Start today's workout" }),
   ).toBeEnabled();
   await page.getByRole('button', { name: "Start today's workout" }).click();
+  await expect(page.getByText('Chest & Back', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: `How to do ${strengthName}` }).click();
+  const exerciseGuide = page.getByRole('dialog', { name: strengthName });
+  await expect(exerciseGuide).toContainText('Pause at the bottom');
+  await expect(exerciseGuide).toContainText('Keep the wrists stacked');
+  await exerciseGuide
+    .getByRole('button', { name: 'Close exercise details' })
+    .click();
   await expect(
     page.getByRole('link', { name: 'Reference' }).first(),
   ).toHaveAttribute('href', referenceUrl);
   await page.getByLabel(`${strengthName} weight set 1`).fill('52.5');
   await page.getByLabel(`${strengthName} repetitions set 1`).fill('10');
-  await page.getByLabel(`${strengthName} set 1 complete`).check();
-  await expect(
-    page.getByLabel(`${cardioName} duration minutes effort 1`),
-  ).toBeVisible();
+  await page
+    .getByRole('button', { name: `Mark ${strengthName} as completed` })
+    .click();
+  await expect(page.getByLabel(`${cardioName} duration minutes`)).toBeVisible();
   await expect(page.getByLabel(`${cardioName} weight set 1`)).toHaveCount(0);
-  await page.getByLabel(`${cardioName} duration minutes effort 1`).fill('31');
-  await page.getByLabel(`${cardioName} distance effort 1`).fill('5.2');
-  await page.getByLabel(`${cardioName} effort 1 complete`).check();
+  await page.getByLabel(`${cardioName} duration minutes`).fill('31');
+  await page.getByLabel(`${cardioName} distance`).fill('5.2');
   await page.getByRole('button', { name: 'Finish' }).click();
 
   await page.getByRole('link', { name: 'History' }).click();
