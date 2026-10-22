@@ -21,6 +21,19 @@ curl --fail http://localhost:3000/api/health
 The `spotter-data` volume persists the database. To use a host directory
 instead, make it writable by UID/GID `1000` and mount it at `/data`.
 
+## Reset development data
+
+Before the first release, the Compose database and uploaded exercise media can
+be cleared by removing the project volume and starting a fresh container:
+
+```bash
+docker compose down -v
+docker compose up --build -d
+```
+
+This permanently deletes the contents of the Compose-managed `/data` volume.
+It does not clear IndexedDB or other site data stored in a browser profile.
+
 ## Environment variables
 
 | Variable        | Default                | Purpose                                  |

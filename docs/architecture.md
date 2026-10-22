@@ -62,6 +62,12 @@ preference when unset) before React and the stylesheet render, avoiding an
 incorrect-theme flash. Theme changes also update the browser theme-color
 metadata.
 
+Each primary view has a stable client-side route: `/workout`, `/history`,
+`/muscles`, `/exercises`, and `/templates`. Navigation writes browser history,
+back/forward navigation restores the corresponding view, and Express plus the
+service-worker navigation fallback both return the PWA shell for a direct load
+or refresh on those paths.
+
 The catalogue has separate muscle and exercise views. The muscle view renders a
 read-only built-in hierarchy sourced from the ExRx directory: only leaf records
 are selectable, while group and subgroup headings are navigation metadata.
