@@ -15,17 +15,6 @@ export function MusclesView({ muscles }: MusclesViewProps) {
           <h2>Muscles</h2>
         </div>
       </div>
-      <p className="catalogue-intro">
-        Exercise targets use the selectable leaf muscles from the{' '}
-        <a
-          href="https://exrx.net/Lists/Directory"
-          target="_blank"
-          rel="noreferrer"
-        >
-          ExRx Exercise &amp; Muscle Directory
-        </a>
-        . Group headings organize the catalogue and cannot be assigned.
-      </p>
       <div className="muscle-directory">
         {groups.map(([group, entries]) => (
           <section className="muscle-directory-group" key={group}>

@@ -451,8 +451,7 @@ small {
   white-space: pre-wrap;
 }
 .exercise-reference-link,
-.workout-reference-link,
-.catalogue-intro a {
+.workout-reference-link {
   color: var(--accent);
 }
 .exercise-reference-link {
@@ -509,11 +508,6 @@ small {
 }
 .check-label input {
   width: auto;
-}
-.catalogue-intro {
-  max-width: 760px;
-  color: var(--text-secondary);
-  line-height: 1.6;
 }
 .muscle-directory {
   display: grid;
