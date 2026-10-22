@@ -574,6 +574,7 @@ function TemplateEditor({
                                 Target minutes
                                 <input
                                   aria-label={`${exercise.name} target minutes on ${day.label}`}
+                                  inputMode="numeric"
                                   type="number"
                                   min="1"
                                   value={
@@ -596,6 +597,7 @@ function TemplateEditor({
                                 Target distance ({distanceUnit})
                                 <input
                                   aria-label={`${exercise.name} target distance on ${day.label}`}
+                                  inputMode="decimal"
                                   type="number"
                                   min="0"
                                   step="0.01"
@@ -623,6 +625,7 @@ function TemplateEditor({
                                 Target reps
                                 <input
                                   aria-label={`${exercise?.name ?? 'Exercise'} target reps on ${day.label}`}
+                                  inputMode="numeric"
                                   type="number"
                                   min="1"
                                   value={entry.targetReps ?? ''}
@@ -639,6 +642,7 @@ function TemplateEditor({
                                 Target sets
                                 <input
                                   aria-label={`${exercise?.name ?? 'Exercise'} target sets on ${day.label}`}
+                                  inputMode="numeric"
                                   type="number"
                                   min="1"
                                   value={entry.targetSets ?? ''}
