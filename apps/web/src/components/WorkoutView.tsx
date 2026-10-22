@@ -246,9 +246,21 @@ export function WorkoutView({
               </p>
               {scheduledExercises.length > 0 && (
                 <ol className="scheduled-exercise-list">
-                  {scheduledExercises.map((entry) => (
-                    <li key={entry.id}>{entry.exerciseName}</li>
-                  ))}
+                  {scheduledExercises.map((entry) => {
+                    const primaryMuscles =
+                      exercises
+                        .find((exercise) => exercise.id === entry.exerciseId)
+                        ?.muscles.filter((muscle) => muscle.role === 'primary')
+                        .map((muscle) => muscle.name) ?? [];
+
+                    return (
+                      <li key={entry.id}>
+                        {entry.exerciseName}
+                        {primaryMuscles.length > 0 &&
+                          ` [${primaryMuscles.join(', ')}]`}
+                      </li>
+                    );
+                  })}
                 </ol>
               )}
             </div>
