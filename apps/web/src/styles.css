@@ -1187,8 +1187,7 @@ small {
 .template-day-swap-controls {
   display: grid;
   grid-template-columns:
-    minmax(0, 1fr) minmax(130px, 0.55fr) minmax(130px, 0.55fr)
-    auto;
+    minmax(0, 1fr) minmax(130px, 0.55fr) minmax(130px, 0.55fr);
   align-items: end;
   gap: 10px;
   padding: 14px;
@@ -1254,8 +1253,15 @@ small {
   white-space: pre-wrap;
 }
 .template-editor-actions {
-  justify-content: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
   margin-top: 4px;
+}
+.template-editor-action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
 }
 .target-fields {
   display: grid;
@@ -2093,9 +2099,6 @@ small {
   }
   .template-day-swap-copy {
     grid-column: auto;
-  }
-  .template-day-swap-controls > button {
-    width: 100%;
   }
   .workout-active-page > .section-heading {
     align-items: flex-start;

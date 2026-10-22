@@ -539,18 +539,6 @@ function TemplateEditor({
                 ))}
               </select>
             </label>
-            <button
-              className="secondary"
-              type="button"
-              disabled={
-                !firstSwapDay ||
-                !secondSwapDay ||
-                firstSwapDay === secondSwapDay
-              }
-              onClick={swapSelectedDays}
-            >
-              Swap days
-            </button>
           </div>
           <div className="week-grid">
             {WEEKDAYS.map((day) => {
@@ -805,10 +793,24 @@ function TemplateEditor({
           )}
 
           <div className="inline-actions template-editor-actions">
-            <button className="secondary" type="button" onClick={onCancel}>
-              Cancel
+            <button
+              className="secondary"
+              type="button"
+              disabled={
+                !firstSwapDay ||
+                !secondSwapDay ||
+                firstSwapDay === secondSwapDay
+              }
+              onClick={swapSelectedDays}
+            >
+              Swap days
             </button>
-            <button type="submit">{submitLabel}</button>
+            <div className="template-editor-action-buttons">
+              <button className="secondary" type="button" onClick={onCancel}>
+                Cancel
+              </button>
+              <button type="submit">{submitLabel}</button>
+            </div>
           </div>
         </form>
       </fieldset>
