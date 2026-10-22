@@ -464,6 +464,10 @@ small {
   background: var(--surface);
   box-shadow: 0 18px 60px var(--shadow);
 }
+.exercise-library-filter {
+  max-width: 380px;
+  margin-bottom: 12px;
+}
 .exercise-library-row {
   display: grid;
   width: 100%;
@@ -1186,8 +1190,10 @@ small {
 }
 .template-day-swap-controls {
   display: grid;
-  grid-template-columns:
-    minmax(0, 1fr) minmax(130px, 0.55fr) minmax(130px, 0.55fr);
+  grid-template-columns: minmax(0, 1fr) minmax(130px, 0.55fr) minmax(
+      130px,
+      0.55fr
+    );
   align-items: end;
   gap: 10px;
   padding: 14px;

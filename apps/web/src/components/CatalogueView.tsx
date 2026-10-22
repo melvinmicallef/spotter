@@ -22,7 +22,30 @@ interface ExercisesViewProps {
 
 export function ExercisesView(props: ExercisesViewProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [primaryMuscleFilter, setPrimaryMuscleFilter] = useState('');
   const screen = exerciseRouteFromPath(props.routePath);
+  const primaryMuscles = Array.from(
+    new Map(
+      props.exercises.flatMap((exercise) =>
+        exercise.muscles
+          .filter((muscle) => muscle.role === 'primary')
+          .map((muscle) => [muscle.id, muscle] as const),
+      ),
+    ).values(),
+  ).sort((a, b) => muscleDisplayName(a).localeCompare(muscleDisplayName(b)));
+  const visibleExercises = props.exercises
+    .filter(
+      (exercise) =>
+        !primaryMuscleFilter ||
+        exercise.muscles.some(
+          (muscle) =>
+            muscle.role === 'primary' && muscle.id === primaryMuscleFilter,
+        ),
+    )
+    .slice()
+    .sort((a, b) =>
+      a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }),
+    );
   const selectedExercise =
     'exerciseId' in screen
       ? props.exercises.find((exercise) => exercise.id === screen.exerciseId)
@@ -211,34 +234,57 @@ export function ExercisesView(props: ExercisesViewProps) {
           No exercises yet. Add your first exercise.
         </p>
       ) : (
-        <div className="exercise-library-list">
-          {props.exercises.map((exercise) => (
-            <button
-              className="exercise-library-row"
-              type="button"
-              key={`${exercise.id}-${exercise.updatedAt}`}
-              onClick={() =>
-                props.onNavigate(
-                  pathForExercise({
-                    kind: 'details',
-                    exerciseId: exercise.id,
-                  }),
-                )
-              }
+        <>
+          <label className="field exercise-library-filter">
+            Filter by primary muscle
+            <select
+              aria-label="Filter by primary muscle"
+              value={primaryMuscleFilter}
+              onChange={(event) => setPrimaryMuscleFilter(event.target.value)}
             >
-              <ExerciseImage exercise={exercise} compact />
-              <span className="exercise-library-copy">
-                <span className="exercise-library-title">{exercise.name}</span>
-                <span className="exercise-library-muscles">
-                  {exerciseMuscleSummary(exercise)}
-                </span>
-              </span>
-              <span className="exercise-row-chevron" aria-hidden="true">
-                ›
-              </span>
-            </button>
-          ))}
-        </div>
+              <option value="">All primary muscles</option>
+              {primaryMuscles.map((muscle) => (
+                <option key={muscle.id} value={muscle.id}>
+                  {muscleDisplayName(muscle)}
+                </option>
+              ))}
+            </select>
+          </label>
+          {visibleExercises.length === 0 ? (
+            <p className="empty-state">No exercises use this primary muscle.</p>
+          ) : (
+            <div className="exercise-library-list">
+              {visibleExercises.map((exercise) => (
+                <button
+                  className="exercise-library-row"
+                  type="button"
+                  key={`${exercise.id}-${exercise.updatedAt}`}
+                  onClick={() =>
+                    props.onNavigate(
+                      pathForExercise({
+                        kind: 'details',
+                        exerciseId: exercise.id,
+                      }),
+                    )
+                  }
+                >
+                  <ExerciseImage exercise={exercise} compact />
+                  <span className="exercise-library-copy">
+                    <span className="exercise-library-title">
+                      {exercise.name}
+                    </span>
+                    <span className="exercise-library-muscles">
+                      {exerciseMuscleSummary(exercise)}
+                    </span>
+                  </span>
+                  <span className="exercise-row-chevron" aria-hidden="true">
+                    ›
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </section>
   );
