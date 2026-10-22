@@ -50,7 +50,7 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
   await expect(page.getByRole('heading', { name: 'Chest' })).toBeVisible();
   await expect(page.getByText('Pectoralis Major').first()).toBeVisible();
   await expect(
-    page.getByText(primaryName, { exact: true }).first(),
+    page.getByRole('link', { name: primaryName, exact: true }).first(),
   ).toBeVisible();
   await expect(page.getByLabel('New muscle name')).toHaveCount(0);
 
