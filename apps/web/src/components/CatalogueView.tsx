@@ -3,33 +3,33 @@ import { useState, type ReactNode } from 'react';
 import type { Exercise, ExerciseInput, Muscle } from '@spotter/shared';
 
 import { api } from '../api.js';
+import { exerciseRouteFromPath, pathForExercise } from '../routes.js';
 
 interface ExercisesViewProps {
   online: boolean;
   muscles: Muscle[];
   exercises: Exercise[];
+  routePath: string;
+  onNavigate: (path: string) => void;
   onRefresh: () => Promise<void>;
   onError: (message: string) => void;
 }
 
-type ExerciseScreen =
-  | { kind: 'list' }
-  | { kind: 'create' }
-  | { kind: 'details'; exerciseId: string }
-  | { kind: 'edit'; exerciseId: string };
-
 export function ExercisesView(props: ExercisesViewProps) {
-  const [screen, setScreen] = useState<ExerciseScreen>({ kind: 'list' });
+  const screen = exerciseRouteFromPath(props.routePath);
   const selectedExercise =
     'exerciseId' in screen
       ? props.exercises.find((exercise) => exercise.id === screen.exerciseId)
       : undefined;
 
-  async function run(action: () => Promise<unknown>, onSuccess?: () => void) {
+  async function run<T>(
+    action: () => Promise<T>,
+    onSuccess?: (result: T) => void,
+  ) {
     try {
-      await action();
+      const result = await action();
       await props.onRefresh();
-      onSuccess?.();
+      onSuccess?.(result);
     } catch (error) {
       props.onError(
         error instanceof Error ? error.message : 'Exercise update failed',
@@ -51,7 +51,7 @@ export function ExercisesView(props: ExercisesViewProps) {
         online={props.online}
         muscles={props.muscles}
         notice={offlineNotice}
-        onCancel={() => setScreen({ kind: 'list' })}
+        onCancel={() => props.onNavigate(pathForExercise({ kind: 'list' }))}
         onError={props.onError}
         onSubmit={(draft, imageFile) =>
           void run(
@@ -60,7 +60,7 @@ export function ExercisesView(props: ExercisesViewProps) {
                 ? await api.uploadImage(imageFile)
                 : undefined;
               try {
-                await api.createExercise({
+                return await api.createExercise({
                   ...draft,
                   mediaId: image?.id ?? null,
                   source: null,
@@ -70,7 +70,13 @@ export function ExercisesView(props: ExercisesViewProps) {
                 throw error;
               }
             },
-            () => setScreen({ kind: 'list' }),
+            (createdExercise) =>
+              props.onNavigate(
+                pathForExercise({
+                  kind: 'details',
+                  exerciseId: createdExercise.id,
+                }),
+              ),
           )
         }
       />
@@ -86,7 +92,12 @@ export function ExercisesView(props: ExercisesViewProps) {
         exercise={selectedExercise}
         notice={offlineNotice}
         onCancel={() =>
-          setScreen({ kind: 'details', exerciseId: selectedExercise.id })
+          props.onNavigate(
+            pathForExercise({
+              kind: 'details',
+              exerciseId: selectedExercise.id,
+            }),
+          )
         }
         onError={props.onError}
         onSubmit={(draft, imageFile, removeImage) =>
@@ -95,14 +106,20 @@ export function ExercisesView(props: ExercisesViewProps) {
               const replacement = imageFile
                 ? await api.uploadImage(imageFile)
                 : undefined;
+              let updatedExercise: Exercise;
               try {
-                await api.updateExercise(selectedExercise.id, {
-                  ...draft,
-                  mediaId:
-                    replacement?.id ??
-                    (removeImage ? null : (selectedExercise.media?.id ?? null)),
-                  source: null,
-                });
+                updatedExercise = await api.updateExercise(
+                  selectedExercise.id,
+                  {
+                    ...draft,
+                    mediaId:
+                      replacement?.id ??
+                      (removeImage
+                        ? null
+                        : (selectedExercise.media?.id ?? null)),
+                    source: null,
+                  },
+                );
               } catch (error) {
                 if (replacement)
                   await api.deleteMedia(replacement.id).catch(() => {});
@@ -113,12 +130,15 @@ export function ExercisesView(props: ExercisesViewProps) {
                   .deleteMedia(selectedExercise.media.id)
                   .catch(() => {});
               }
+              return updatedExercise;
             },
             () =>
-              setScreen({
-                kind: 'details',
-                exerciseId: selectedExercise.id,
-              }),
+              props.onNavigate(
+                pathForExercise({
+                  kind: 'details',
+                  exerciseId: selectedExercise.id,
+                }),
+              ),
           )
         }
       />
@@ -131,16 +151,28 @@ export function ExercisesView(props: ExercisesViewProps) {
         exercise={selectedExercise}
         online={props.online}
         notice={offlineNotice}
-        onBack={() => setScreen({ kind: 'list' })}
+        onBack={() => props.onNavigate(pathForExercise({ kind: 'list' }))}
         onEdit={() =>
-          setScreen({ kind: 'edit', exerciseId: selectedExercise.id })
-        }
-        onDelete={() =>
-          void run(
-            () => api.deleteExercise(selectedExercise.id),
-            () => setScreen({ kind: 'list' }),
+          props.onNavigate(
+            pathForExercise({
+              kind: 'edit',
+              exerciseId: selectedExercise.id,
+            }),
           )
         }
+        onDelete={() => {
+          if (
+            !window.confirm(
+              `Delete "${selectedExercise.name}"? This cannot be undone.`,
+            )
+          ) {
+            return;
+          }
+          void run(
+            () => api.deleteExercise(selectedExercise.id),
+            () => props.onNavigate(pathForExercise({ kind: 'list' })),
+          );
+        }}
       />
     );
   }
@@ -155,7 +187,7 @@ export function ExercisesView(props: ExercisesViewProps) {
         <button
           type="button"
           disabled={!props.online}
-          onClick={() => setScreen({ kind: 'create' })}
+          onClick={() => props.onNavigate(pathForExercise({ kind: 'create' }))}
         >
           Add exercise
         </button>
@@ -173,7 +205,12 @@ export function ExercisesView(props: ExercisesViewProps) {
               type="button"
               key={`${exercise.id}-${exercise.updatedAt}`}
               onClick={() =>
-                setScreen({ kind: 'details', exerciseId: exercise.id })
+                props.onNavigate(
+                  pathForExercise({
+                    kind: 'details',
+                    exerciseId: exercise.id,
+                  }),
+                )
               }
             >
               <ExerciseImage exercise={exercise} compact />
@@ -398,7 +435,6 @@ function ExerciseEditorPage({
               value={referenceUrl}
               onChange={(event) => setReferenceUrl(event.target.value)}
             />
-            <small>This link is available from the exercise and workout.</small>
           </label>
           <div className="field">
             <span>Target muscles</span>

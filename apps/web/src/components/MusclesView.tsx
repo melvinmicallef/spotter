@@ -49,7 +49,11 @@ export function MusclesView({ muscles }: MusclesViewProps) {
 function MuscleLeaf({ muscle, level }: { muscle: Muscle; level: 2 | 3 }) {
   return (
     <li className={`muscle-tree-leaf muscle-tree-level-${level}`}>
-      <a href={muscle.referenceUrl ?? undefined}>
+      <a
+        href={muscle.referenceUrl ?? undefined}
+        target="_blank"
+        rel="noreferrer"
+      >
         {muscle.name}
         <span aria-hidden="true">↗</span>
       </a>

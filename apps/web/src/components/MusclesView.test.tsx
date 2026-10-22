@@ -28,7 +28,8 @@ describe('muscle directory hierarchy', () => {
       '>Supraspinatus<span aria-hidden="true">↗</span></a>',
     );
     expect(html).not.toContain('href="https://exrx.net/Shoulders"');
-    expect(html).not.toContain('target="_blank"');
+    expect(html).toContain('target="_blank"');
+    expect(html).toContain('rel="noreferrer"');
   });
 });
 

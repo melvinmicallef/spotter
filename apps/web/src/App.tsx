@@ -42,9 +42,8 @@ import {
 } from './workout.js';
 
 export function App() {
-  const [view, setView] = useState<View>(() =>
-    viewFromPath(window.location.pathname),
-  );
+  const [pathname, setPathname] = useState(() => window.location.pathname);
+  const view = viewFromPath(pathname);
   const [theme, setTheme] = useState<Theme>(initialTheme);
   const [online, setOnline] = useState(() => navigator.onLine);
   const [activeWorkout, setActiveWorkout] = useState<Workout>();
@@ -73,9 +72,9 @@ export function App() {
   useEffect(() => applyTheme(theme), [theme]);
 
   useEffect(() => {
-    const restoreView = () => setView(viewFromPath(window.location.pathname));
-    window.addEventListener('popstate', restoreView);
-    return () => window.removeEventListener('popstate', restoreView);
+    const restorePath = () => setPathname(window.location.pathname);
+    window.addEventListener('popstate', restorePath);
+    return () => window.removeEventListener('popstate', restorePath);
   }, []);
 
   useEffect(() => {
@@ -189,12 +188,15 @@ export function App() {
       });
   }
 
-  function navigate(nextView: View) {
-    const nextPath = pathForView(nextView);
+  function navigatePath(nextPath: string) {
     if (window.location.pathname !== nextPath)
       window.history.pushState(null, '', nextPath);
-    setView(nextView);
+    setPathname(nextPath);
     window.scrollTo({ top: 0 });
+  }
+
+  function navigate(nextView: View) {
+    navigatePath(pathForView(nextView));
   }
 
   function mutateWorkout(update: (workout: Workout) => Workout) {
@@ -351,6 +353,8 @@ export function App() {
             online={online}
             muscles={muscles}
             exercises={exercises}
+            routePath={pathname}
+            onNavigate={navigatePath}
             onRefresh={refreshOnlineReferences}
             onError={setMessage}
           />

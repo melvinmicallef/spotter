@@ -96,6 +96,12 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
   });
   await page.getByRole('button', { name: 'Create exercise' }).click();
 
+  await expect(page).toHaveURL(/\/exercises\/[0-9a-f-]+$/);
+  await expect(page.getByRole('heading', { name: strengthName })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('heading', { name: strengthName })).toBeVisible();
+  await page.getByRole('button', { name: '← Exercises' }).click();
+
   const strengthRow = page
     .locator('button.exercise-library-row')
     .filter({ hasText: strengthName });
@@ -127,9 +133,13 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
     page.getByRole('link', { name: 'Open exercise reference' }),
   ).toHaveAttribute('href', referenceUrl);
   await page.getByRole('button', { name: `Edit ${strengthName}` }).click();
+  await expect(page).toHaveURL(/\/exercises\/[0-9a-f-]+\/edit$/);
+  await page.reload();
+  await expect(page.getByLabel('Exercise name')).toHaveValue(strengthName);
   await page.getByLabel('Preparation').fill('Retract the shoulder blades');
   await page.getByLabel('Execution').fill('Pause at the bottom');
   await page.getByRole('button', { name: 'Save changes' }).click();
+  await expect(page).toHaveURL(/\/exercises\/[0-9a-f-]+$/);
   await expect(page.getByText('Retract the shoulder blades')).toBeVisible();
   await expect(page.getByText('Pause at the bottom')).toBeVisible();
   await page.getByRole('button', { name: '← Exercises' }).click();
@@ -140,6 +150,7 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
     .locator('button.exercise-library-row')
     .filter({ hasText: disposableName });
   await disposableRow.click();
+  page.once('dialog', (dialog) => dialog.accept());
   await page.getByRole('button', { name: `Delete ${disposableName}` }).click();
   await expect(disposableRow).toHaveCount(0);
 
@@ -224,6 +235,8 @@ async function createExercise(
   await page.getByLabel('Exercise name').fill(name);
   await page.getByLabel('Exercise type').selectOption(type);
   await page.getByRole('button', { name: 'Create exercise' }).click();
+  await expect(page.getByRole('heading', { name })).toBeVisible();
+  await page.getByRole('button', { name: '← Exercises' }).click();
   await expect(
     page.locator('button.exercise-library-row').filter({ hasText: name }),
   ).toBeVisible();
