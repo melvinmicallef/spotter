@@ -72,8 +72,9 @@ connectivity.
    Today shows how many local calendar days the active template has been in use.
 3. The current weekday is selected by default. The user can select any other
    unfinished day directly from the cached active weekly template. Finished
-   days stay unavailable until local Monday midnight; cancelling a workout
-   leaves its day available. Open or empty workouts cannot be created.
+   days stay marked until local Monday midnight, but can be selected again
+   after confirmation to repeat their workout; cancelling a workout leaves its
+   day available. Open or empty workouts cannot be created.
 4. Every workout change is committed to IndexedDB before the UI considers it
    saved.
 5. The user may lose connectivity, refresh the page, close the PWA, reopen it,

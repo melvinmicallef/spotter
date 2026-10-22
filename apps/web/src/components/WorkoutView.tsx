@@ -32,8 +32,12 @@ interface WorkoutViewProps {
   weekProgressReady: boolean;
   weightUnit: WeightUnit;
   distanceUnit: DistanceUnit;
-  onStart: (template: WorkoutTemplate, dayOfWeek: DayOfWeek) => void;
-  onSelectDay: (dayOfWeek: DayOfWeek) => void;
+  onStart: (
+    template: WorkoutTemplate,
+    dayOfWeek: DayOfWeek,
+    repeatCompleted?: boolean,
+  ) => void;
+  onSelectDay: (dayOfWeek: DayOfWeek, allowCompleted?: boolean) => void;
   onCancelWorkout: () => void;
   onShowStretching: () => void;
   onChange: (update: (workout: Workout) => Workout) => void;
@@ -100,6 +104,10 @@ export function WorkoutView({
   const [exercisePickerOpen, setExercisePickerOpen] = useState(false);
   const [finishWarningOpen, setFinishWarningOpen] = useState(false);
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
+  const [completedDayToConfirm, setCompletedDayToConfirm] =
+    useState<DayOfWeek | null>(null);
+  const [confirmedRepeatDay, setConfirmedRepeatDay] =
+    useState<DayOfWeek | null>(null);
   useEffect(() => {
     const now = new Date();
     const nextLocalMidnight = new Date(
@@ -217,8 +225,16 @@ export function WorkoutView({
                     type="button"
                     key={day.value}
                     aria-pressed={isSelected}
-                    disabled={isCompleted || !weekProgressReady}
-                    onClick={() => onSelectDay(day.value)}
+                    disabled={!weekProgressReady}
+                    onClick={() => {
+                      if (isCompleted) {
+                        setConfirmedRepeatDay(null);
+                        setCompletedDayToConfirm(day.value);
+                      } else {
+                        setConfirmedRepeatDay(null);
+                        onSelectDay(day.value);
+                      }
+                    }}
                   >
                     <span>{day.label}</span>
                     <small>({dayTitle})</small>
@@ -268,16 +284,38 @@ export function WorkoutView({
               type="button"
               disabled={
                 scheduledExercises.length === 0 ||
-                selectedDayCompleted ||
+                (selectedDayCompleted && confirmedRepeatDay !== selectedDay) ||
                 !weekProgressReady
               }
-              onClick={() => onStart(activeTemplate, selectedDay)}
+              onClick={() => {
+                const repeatCompleted =
+                  selectedDayCompleted && confirmedRepeatDay === selectedDay;
+                if (repeatCompleted) setConfirmedRepeatDay(null);
+                onStart(activeTemplate, selectedDay, repeatCompleted);
+              }}
             >
-              {selectedDay === today
-                ? "Start today's workout"
-                : `Start ${weekdayName(selectedDay)}'s workout`}
+              {selectedDayCompleted
+                ? `Repeat ${weekdayName(selectedDay)}'s workout`
+                : selectedDay === today
+                  ? "Start today's workout"
+                  : `Start ${weekdayName(selectedDay)}'s workout`}
             </button>
           </article>
+        )}
+        {completedDayToConfirm !== null && (
+          <ConfirmDialog
+            eyebrow="WORKOUT ALREADY COMPLETED"
+            title="Day already completed"
+            message={`${weekdayName(completedDayToConfirm)} is already completed this week. Do you want to select it and do the workout again?`}
+            confirmLabel="Select day"
+            closeLabel="Close confirmation"
+            onCancel={() => setCompletedDayToConfirm(null)}
+            onConfirm={() => {
+              onSelectDay(completedDayToConfirm, true);
+              setConfirmedRepeatDay(completedDayToConfirm);
+              setCompletedDayToConfirm(null);
+            }}
+          />
         )}
       </section>
     );

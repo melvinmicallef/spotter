@@ -24,7 +24,8 @@ Spotter is a vibe-coded app built with OpenAI Codex.
 - Today shows how many local calendar days the active plan has been in use.
 - Finishing a workout marks its template day complete for the current ISO week
   on this device. Completed days are greyed out until Monday at local midnight;
-  cancelling a workout leaves its day available.
+  selecting one again asks for confirmation before repeating it. Cancelling a
+  workout leaves its day available.
 - A light/dark appearance switch on the Settings page is retained on the current device.
 - A device-local Metric or Imperial preference derives weight and distance
   units; Metric is the default for new installations.

@@ -65,12 +65,13 @@ An ordered, reusable seven-day workout plan. Each day from Monday through
 Sunday can have an optional name and contain multiple ordered exercises with
 type-appropriate targets. Weekly templates do not have notes. Exactly one
 template is active when templates exist. The current weekday is selected by
-default, and the user can select any other unfinished day directly. An empty or
-ad-hoc "open workout" cannot be started. Finishing a workout marks its template
-day complete for the current ISO week on this device. Completed days are greyed
-out until Monday at local midnight. Cancelling a workout leaves that day
-available. The workout receives a snapshot that remains valid if the weekly
-template later changes.
+default, and the user can select any other unfinished day directly. A completed
+day remains greyed out and can be selected again after confirmation to repeat
+its workout. An empty or ad-hoc "open workout" cannot be started. Finishing a
+workout marks its template day complete for the current ISO week on this device.
+Completed days stay marked until Monday at local midnight. Cancelling a workout
+leaves that day available. The workout receives a snapshot that remains valid
+if the weekly template later changes.
 
 Today shows the number of local calendar days the active template has been in
 use. Editing an active template does not reset the count; activating a different

@@ -355,19 +355,25 @@ export function App() {
     );
   }
 
-  function start(template: WorkoutTemplate, dayOfWeek: DayOfWeek) {
+  function start(
+    template: WorkoutTemplate,
+    dayOfWeek: DayOfWeek,
+    repeatCompleted = false,
+  ) {
     if (activeWorkoutRef.current) return;
     if (!weekProgressReady) return;
-    if (weekProgress.completedDays.includes(dayOfWeek)) return;
+    if (weekProgress.completedDays.includes(dayOfWeek) && !repeatCompleted)
+      return;
     const workout = createWorkout(template, dayOfWeek, history);
     activeWorkoutRef.current = workout;
     setActiveWorkout(workout);
     persistWorkout(workout);
   }
 
-  function selectWorkoutDay(dayOfWeek: DayOfWeek) {
+  function selectWorkoutDay(dayOfWeek: DayOfWeek, allowCompleted = false) {
     if (!weekProgressReady) return;
-    if (weekProgress.completedDays.includes(dayOfWeek)) return;
+    if (weekProgress.completedDays.includes(dayOfWeek) && !allowCompleted)
+      return;
     setDaySelection({ dateKey: localDateKey, day: dayOfWeek });
   }
 

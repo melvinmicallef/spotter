@@ -1985,13 +1985,15 @@ small {
   color: var(--text);
   background: var(--accent-soft);
 }
-.week-day-option.completed,
-.week-day-option.completed:disabled {
+.week-day-option.completed {
   border-color: var(--border);
   color: var(--text-muted);
   background: var(--surface-soft);
-  cursor: not-allowed;
+  cursor: pointer;
   opacity: 0.58;
+}
+.week-day-option.completed:disabled {
+  cursor: not-allowed;
 }
 .week-day-option .week-day-done {
   font-size: 0.58rem;
