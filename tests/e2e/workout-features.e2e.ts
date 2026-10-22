@@ -280,6 +280,11 @@ test('records typed sets, previous values, and an audible interval timer', async
 
   await page.getByRole('link', { name: 'Workout' }).click();
   await page.getByRole('button', { name: "Start today's workout" }).click();
+  await expect(page.locator('link[rel="icon"]')).toHaveAttribute(
+    'href',
+    '/spotter.svg',
+  );
+  expect((await request.get('/spotter.svg')).ok()).toBe(true);
   await expect(
     page.getByText(`${todayName} (Strength + intervals)`, { exact: true }),
   ).toBeVisible();
@@ -293,6 +298,42 @@ test('records typed sets, previous values, and an audible interval timer', async
   const cardioCard = page
     .locator('article.workout-card')
     .filter({ hasText: cardioName });
+  const strengthGridScroll = strengthCard.locator(
+    '.strength-workout-grid-scroll',
+  );
+  const gridLayout = await strengthGridScroll.evaluate((scroll) => {
+    const grid = scroll.firstElementChild;
+    if (!grid) throw new Error('Set grid is missing');
+    return {
+      scrollBorder: getComputedStyle(scroll).borderTopWidth,
+      scrollWidth: scroll.getBoundingClientRect().width,
+      gridWidth: grid.getBoundingClientRect().width,
+    };
+  });
+  expect(gridLayout.scrollBorder).toBe('0px');
+  expect(gridLayout.gridWidth).toBeLessThan(gridLayout.scrollWidth);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  const mobileWorkoutHeader = page.locator(
+    '.workout-active-page > .section-heading',
+  );
+  const mobileHeaderBounds = await mobileWorkoutHeader.boundingBox();
+  const mobileFinishBounds = await page
+    .getByRole('button', { name: 'Finish' })
+    .boundingBox();
+  expect(mobileHeaderBounds).not.toBeNull();
+  expect(mobileFinishBounds).not.toBeNull();
+  expect(mobileHeaderBounds!.x + mobileHeaderBounds!.width).toBeLessThanOrEqual(
+    390,
+  );
+  expect(mobileFinishBounds!.x + mobileFinishBounds!.width).toBeLessThanOrEqual(
+    390,
+  );
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(390);
+  await page.setViewportSize({ width: 1280, height: 720 });
+
   await expect(cardioCard.locator('.target-summary')).not.toContainText('km');
   await expect(
     cardioCard.getByLabel(`${cardioName} prep time seconds`),

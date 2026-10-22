@@ -272,7 +272,7 @@ export function WorkoutView({
   }
 
   return (
-    <section className="page-section">
+    <section className="page-section workout-active-page">
       <div className="section-heading">
         <div>
           <span className="eyebrow">IN PROGRESS</span>

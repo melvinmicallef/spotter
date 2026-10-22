@@ -8,15 +8,24 @@ Mobile viewport: 390 × 844 CSS px
 
 ## Summary
 
-Three confirmed user-interface issues were found. No data loss or server-side
-failures were reproduced. The user's existing database was not used for test
-workouts; the test database and uploaded media were isolated under the ignored
-`apps/server/data/qa-persistence-20261022` directory, verified across a server
-restart, and removed afterward.
+Three confirmed user-interface issues were found and fixed. No data loss or
+server-side failures were reproduced. The user's existing database was not used
+for test workouts; the test database and uploaded media were isolated under the
+ignored `apps/server/data/qa-persistence-20261022` directory, verified across a
+server restart, and removed afterward.
 
 ## Confirmed bugs
 
+All three findings below were fixed locally after the QA pass. The fixes were
+verified with the automated check and browser test suites, plus targeted
+Playwright checks at mobile and desktop viewports. See the final fix commit in
+Git history for the implementation.
+
 ### B-001 — [P2] Workout header actions overflow on a narrow mobile screen
+
+**Status:** Fixed. On narrow screens, the active workout title and wrapped
+action buttons now fit the viewport. A Playwright regression check verifies
+the Finish button and document width at 390 px.
 
 **Area:** Active workout, mobile layout  
 **Reproducibility:** Every time at a 390 px viewport
@@ -41,6 +50,9 @@ the page acquires unwanted horizontal overflow.
 
 ### B-002 — [P3] The browser requests a missing favicon
 
+**Status:** Fixed. `apps/web/index.html` now points to the existing Spotter SVG
+icon. Playwright verifies the declaration and that the icon is served.
+
 **Area:** Browser tab icon / console  
 **Reproducibility:** Every fresh Chrome page load
 
@@ -60,6 +72,10 @@ of its existing Spotter icons.
 load emits a console error. PWA installation icons continue to work.
 
 ### B-003 — [P3] The strength set grid leaves an empty bordered tail
+
+**Status:** Fixed. The border now wraps the content-sized grid instead of the
+full-width scroll area. Playwright verifies the grid ends before the available
+desktop scroll area and that the scroll area has no border.
 
 **Area:** Active workout, strength and calisthenics set grid  
 **Reproducibility:** Every strength workout on desktop
@@ -174,5 +190,3 @@ workout remained present.
   available for a device-level install or keyboard test.
 - Interval beep behavior was covered by the automated browser timer test with a
   synthetic audio context; no physical speaker was used.
-- No app code was changed during this QA pass. The findings above are recorded
-  for follow-up.
