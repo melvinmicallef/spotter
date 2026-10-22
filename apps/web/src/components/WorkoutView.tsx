@@ -4,6 +4,7 @@ import type {
   DayOfWeek,
   Exercise,
   Workout,
+  WorkoutExercise,
   WorkoutSet,
   WorkoutTemplate,
 } from '@spotter/shared';
@@ -79,7 +80,8 @@ export function WorkoutView({
     (exercise) => exercise.id === exerciseDetailsId,
   );
   const previousSetsByExercise = useMemo(() => {
-    const previousSets = new Map<string, WorkoutSet[]>();
+    const entriesById = new Map<string, WorkoutExercise[]>();
+    const entriesByName = new Map<string, WorkoutExercise[]>();
     const sortedWorkouts = [...previousWorkouts]
       .filter((item) => item.status === 'completed')
       .sort((left, right) => right.startedAt.localeCompare(left.startedAt));
@@ -87,20 +89,30 @@ export function WorkoutView({
     for (const previousWorkout of sortedWorkouts) {
       for (const previousExercise of previousWorkout.exercises) {
         if (
-          previousExercise.exerciseId &&
-          !previousSets.has(previousExercise.exerciseId)
-        ) {
-          previousSets.set(
-            previousExercise.exerciseId,
-            [...previousExercise.sets].sort(
-              (left, right) => left.position - right.position,
-            ),
-          );
-        }
+          previousExercise.exerciseType !== 'strength' &&
+          previousExercise.exerciseType !== 'calisthenics'
+        )
+          continue;
+
+        const idKey = previousExercise.exerciseId
+          ? exerciseIdKey(
+              previousExercise.exerciseId,
+              previousExercise.exerciseType,
+            )
+          : null;
+        const nameKey = exerciseNameKey(
+          previousExercise.exerciseName,
+          previousExercise.exerciseType,
+        );
+        if (idKey) addExerciseHistory(entriesById, idKey, previousExercise);
+        addExerciseHistory(entriesByName, nameKey, previousExercise);
       }
     }
 
-    return previousSets;
+    return {
+      byId: latestRecordedSets(entriesById),
+      byName: latestRecordedSets(entriesByName),
+    };
   }, [previousWorkouts]);
   const scheduledDayName = activeTemplate?.dayNames?.find(
     (dayName) => dayName.dayOfWeek === scheduledDay,
@@ -353,18 +365,20 @@ export function WorkoutView({
                 ) : entry.exerciseType === 'calisthenics' ? (
                   <CalisthenicsSets
                     entry={entry}
-                    previousSets={
-                      previousSetsByExercise.get(entry.exerciseId ?? '') ?? []
-                    }
+                    previousSets={findPreviousSets(
+                      previousSetsByExercise,
+                      entry,
+                    )}
                     onChange={onChange}
                     actions={actions}
                   />
                 ) : (
                   <StrengthSets
                     entry={entry}
-                    previousSets={
-                      previousSetsByExercise.get(entry.exerciseId ?? '') ?? []
-                    }
+                    previousSets={findPreviousSets(
+                      previousSetsByExercise,
+                      entry,
+                    )}
                     weightUnit={weightUnit}
                     onChange={onChange}
                     actions={actions}
@@ -405,9 +419,8 @@ export function WorkoutView({
           contextLabel="workout"
           exercises={exercises}
           getAddedCount={(exerciseId) =>
-            workout.exercises.filter(
-              (entry) => entry.exerciseId === exerciseId,
-            ).length
+            workout.exercises.filter((entry) => entry.exerciseId === exerciseId)
+              .length
           }
           onAdd={(exercise) =>
             onChange((current) => actions.addExercise(current, exercise))
@@ -1210,4 +1223,67 @@ function displayWeight(
   displayUnit: WeightUnit,
 ) {
   return convertWeight(weight, recordedUnit, displayUnit) ?? '';
+}
+
+type PreviousSetsIndex = {
+  byId: Map<string, WorkoutSet[]>;
+  byName: Map<string, WorkoutSet[]>;
+};
+
+function addExerciseHistory(
+  index: Map<string, WorkoutExercise[]>,
+  key: string,
+  exercise: WorkoutExercise,
+) {
+  const entries = index.get(key);
+  if (entries) entries.push(exercise);
+  else index.set(key, [exercise]);
+}
+
+function latestRecordedSets(
+  index: Map<string, WorkoutExercise[]>,
+): Map<string, WorkoutSet[]> {
+  const result = new Map<string, WorkoutSet[]>();
+  for (const [key, entries] of index) {
+    const latestWithValues = entries.find((entry) =>
+      entry.sets.some(
+        (set) =>
+          set.reps != null ||
+          (entry.exerciseType === 'strength' && set.weight != null),
+      ),
+    );
+    if (latestWithValues) {
+      result.set(
+        key,
+        [...latestWithValues.sets].sort(
+          (left, right) => left.position - right.position,
+        ),
+      );
+    }
+  }
+  return result;
+}
+
+function findPreviousSets(
+  index: PreviousSetsIndex,
+  exercise: WorkoutExercise,
+): WorkoutSet[] {
+  const byId = exercise.exerciseId
+    ? index.byId.get(exerciseIdKey(exercise.exerciseId, exercise.exerciseType))
+    : undefined;
+  return (
+    byId ??
+    index.byName.get(
+      exerciseNameKey(exercise.exerciseName, exercise.exerciseType),
+    ) ??
+    []
+  );
+}
+
+function exerciseIdKey(id: string, type: Exercise['exerciseType']) {
+  return `${type}:${id}`;
+}
+
+function exerciseNameKey(name: string, type: Exercise['exerciseType']) {
+  return `${type}:${name.trim().toLocaleLowerCase()}`;
 }

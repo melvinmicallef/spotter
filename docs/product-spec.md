@@ -210,10 +210,13 @@ A user can:
 - add, edit, and remove sets;
 - display strength weights and repetitions in a compact grid, with controls to
   add or remove each exercise's sets;
-- show the most recent completed workout's strength repetitions and weight as
-  placeholders by set position, without pre-filling today's values. Only sets
-  present in today's workout are shown; new sets beyond the previous workout
-  stay blank, and previous extra sets are omitted;
+- show the most recent completed workout entry with recorded strength
+  repetitions or weight as placeholders by set position, regardless of the
+  template used. Exercise ID is the primary match, with an exact name and type
+  match as a fallback for legacy or duplicated catalogue entries. Today's
+  values remain empty; only sets present in today's workout are shown, so new
+  sets beyond the previous workout stay blank and previous extra sets are
+  omitted;
 - record repetitions and weight for strength exercises;
 - record repetitions without weight for calisthenics exercises;
 - record cardio duration as minutes and seconds, or run the configured
