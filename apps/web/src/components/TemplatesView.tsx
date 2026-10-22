@@ -69,7 +69,7 @@ export function TemplatesView(props: TemplatesViewProps) {
             value={name}
             onChange={(event) => setName(event.target.value)}
           />
-          <button type="submit">Create weekly template</button>
+          <button type="submit">Create template</button>
         </form>
         <div className="stack">
           {props.templates.map((template) => (

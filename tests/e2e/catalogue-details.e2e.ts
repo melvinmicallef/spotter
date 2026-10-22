@@ -156,7 +156,7 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
 
   await page.getByRole('link', { name: 'Templates' }).click();
   await page.getByLabel('New weekly template name').fill(planName);
-  await page.getByRole('button', { name: 'Create weekly template' }).click();
+  await page.getByRole('button', { name: 'Create template' }).click();
   const template = page.locator('.template-card').filter({
     has: page.getByLabel(`${planName} name`),
   });
