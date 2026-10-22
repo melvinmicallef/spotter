@@ -62,16 +62,21 @@ preference when unset) before React and the stylesheet render, avoiding an
 incorrect-theme flash. Theme changes also update the browser theme-color
 metadata.
 
-The catalogue has separate muscle and exercise views. Muscles are focused
-reference records. Exercises use a compact image/title/target-muscle list; a
-selected exercise opens a detail page with separate edit and delete actions.
+The catalogue has separate muscle and exercise views. The muscle view renders a
+read-only built-in hierarchy sourced from the ExRx directory: only leaf records
+are selectable, while group and subgroup headings are navigation metadata.
+Exercises use a compact image/title/target-muscle list; a selected exercise
+opens a detail page with separate edit and delete actions.
 Exercises own their strength/cardio type, muscle roles, separate preparation
 and execution instructions, and uploaded image. The version-five SQLite and
 IndexedDB migrations retain legacy single-field instructions as execution text.
 The exercise editor assigns muscles incrementally rather than rendering the
 entire catalogue. Duplicate assignments are excluded, multiple secondary
 muscles are supported, and assigned-muscle payloads and UI rows order primary
-roles before secondary roles.
+roles before secondary roles. An exercise can also store a manually entered,
+validated HTTP/HTTPS reference URL. That URL is copied through template read
+models into the workout-exercise snapshot, so it remains visible during an
+active workout and in locally persisted workout data.
 
 ### IndexedDB stores
 
@@ -167,9 +172,6 @@ Suggested endpoint groups are:
 GET    /api/health
 GET    /api/version
 GET    /api/muscles
-POST   /api/muscles
-PATCH  /api/muscles/:id
-DELETE /api/muscles/:id
 GET    /api/exercises
 POST   /api/exercises
 PATCH  /api/exercises/:id
@@ -221,6 +223,10 @@ schema_migrations
 Foreign keys are enabled for every connection. Transactions protect ordered
 changes and synchronization batches. Migrations run before the HTTP server
 reports readiness.
+
+The server seeds 45 stable built-in leaf muscles at startup. Muscle rows retain
+their ExRx group, optional subgroup, source URL, and display order. The API
+exposes them read-only; there are no muscle mutation routes.
 
 Historical workout rows store snapshots of mutable labels, exercise type,
 template day, and targets needed for display. Foreign-key behavior must not

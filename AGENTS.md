@@ -33,7 +33,8 @@ it whenever an implementation decision changes the documented behavior.
   workout synchronization.
 - Starting, updating, resuming, and finishing a workout must work offline after
   the application and required reference data have been loaded.
-- Creating or editing templates, exercises, and muscles is online-only.
+- Creating or editing templates and exercises is online-only. Muscles are a
+  built-in, read-only hierarchy.
 - Produce one production Docker image. Express serves both `/api/*` and the
   compiled PWA.
 - Store production database state under the mounted `/data` path.

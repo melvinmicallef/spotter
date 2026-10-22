@@ -53,13 +53,13 @@ healthy API response, and load the PWA shell.
   startup.
 - Initial tables for muscles, exercises, and exercise-to-muscle relationships.
 - Shared request and response schemas.
-- Online API and UI for creating, listing, editing, and deleting muscles and
-  exercises, using separate muscle and exercise pages.
+- A read-only built-in hierarchical muscle catalogue plus online exercise CRUD,
+  using separate muscle and exercise pages.
 - Explicit strength/cardio exercise types with type-appropriate fields.
 - A compact exercise list and dedicated detail/editor flow, role-aware primary
   and secondary muscle associations, separate preparation/execution
-  instructions, incremental muscle assignment with primary-first ordering, and
-  validated GIF/PNG/JPEG images.
+  instructions, incremental leaf-muscle assignment with primary-first ordering,
+  optional workout-visible reference links, and validated GIF/PNG/JPEG images.
 - Dependency-safe deletion behavior that preserves future workout history.
 - API integration tests using an isolated temporary database.
 
@@ -72,9 +72,10 @@ healthy API response, and load the PWA shell.
 
 ### Exit gate
 
-Catalogue records can be managed end to end while online, invalid requests have
-stable errors, migrations work on a new database, and automated tests prove
-foreign-key and deletion behavior.
+Exercises can be managed end to end while online, built-in muscles can be
+browsed and assigned but not mutated, invalid requests have stable errors,
+migrations work on a new database, and automated tests prove foreign-key and
+deletion behavior.
 
 ## Milestone 2: Weekly workout templates (implemented)
 

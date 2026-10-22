@@ -11,7 +11,8 @@ The first planned development release is `0.1.0`.
 ## Product principles
 
 - Workout logging must remain usable when the device loses connectivity.
-- Exercises, muscles, and workout templates are managed only while online.
+- Exercises and workout templates are managed only while online. Muscles are a
+  built-in, read-only hierarchy sourced from the ExRx directory.
 - Strength and cardio exercises use different planning and recording fields.
 - Exactly one weekly template is active when templates exist. Workouts start
   only from today's scheduled day; ad-hoc open workouts are not part of the
@@ -51,7 +52,7 @@ data to log a workout without a network connection. While offline, a user can:
 - record notes and completion state; and
 - finish a workout.
 
-Creating or editing exercises, muscles, and templates requires a connection.
+Creating or editing exercises and templates requires a connection.
 The interface will disable those actions while offline and explain that they
 will become available after reconnecting.
 
@@ -87,7 +88,8 @@ The following decisions are settled for the initial implementation:
 - IndexedDB local workout state and synchronization outbox;
 - offline workout tracking after the application and reference data have been
   loaded at least once;
-- online-only creation and editing of templates, exercises, and muscles;
+- online-only creation and editing of templates and exercises, with a built-in
+  read-only muscle hierarchy;
 - one production Docker image serving the PWA and API;
 - one persistent `/data` volume for SQLite;
 - GitHub Container Registry at `ghcr.io/melvinmicallef/spotter`;
@@ -144,8 +146,9 @@ The separate muscle and exercise catalogues, weekly templates, workout
 lifecycle, IndexedDB persistence, idempotent synchronization, PWA shell, and
 production container are implemented.
 The exercise catalogue supports a compact list/detail workflow, primary and
-secondary muscle roles, separate preparation and execution instructions, and
-validated GIF, PNG, or JPEG demonstrations.
+secondary muscle roles, separate preparation and execution instructions,
+optional HTTP/HTTPS reference links that remain available in workout snapshots,
+and validated GIF, PNG, or JPEG demonstrations.
 Workout, exercise-entry, set, and template-entry notes are editable, and
 history expands to show the preserved exercise and set snapshots.
 

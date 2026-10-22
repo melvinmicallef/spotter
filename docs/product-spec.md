@@ -19,8 +19,8 @@ be synchronized.
 - Preserve an in-progress workout through refreshes, browser restarts, and
   network loss.
 - Synchronize offline workout activity safely after reconnecting.
-- Allow exercises, muscles, and reusable workout templates to be maintained
-  through an online interface.
+- Allow exercises and reusable workout templates to be maintained through an
+  online interface, using a built-in muscle catalogue.
 - Support a straightforward self-hosted deployment with one Docker image and a
   persistent SQLite database.
 
@@ -42,14 +42,16 @@ proxy until that product work is completed.
 
 ### Muscle
 
-A named body area used to classify exercises. A muscle can be linked to many
-exercises, optionally with a relationship such as primary or secondary.
+A selectable leaf in the built-in ExRx muscle hierarchy, used to classify
+exercises. Parent group and subgroup labels organize the catalogue but cannot be
+assigned. A leaf muscle can be linked to many exercises as primary or secondary.
 
 ### Exercise
 
 A movement that can be placed in a template or workout. Its initial fields are
 a stable ID, name, type, optional preparation instructions, optional execution
-instructions, and associated muscles. Every exercise is either:
+instructions, optional HTTP/HTTPS reference link, and associated muscles. Every
+exercise is either:
 
 - **strength**, recorded as sets with repetitions and optional weight; or
 - **cardio**, recorded as efforts with duration and optional distance.
@@ -90,19 +92,26 @@ color-scheme preference.
 
 While online, a user can:
 
-- create, view, edit, and delete muscles;
 - create, view, edit, and delete exercises;
 - choose whether an exercise is strength or cardio;
 - record preparation and execution instructions separately;
 - add target muscles one at a time as primary or secondary, prevent duplicate
   assignments, allow multiple secondary muscles, and display primary muscles
   first;
-- attach or replace a GIF, PNG, or JPEG demonstration; and
+- attach or replace a GIF, PNG, or JPEG demonstration;
+- add or change an optional exercise reference link; and
 - receive a clear validation or dependency error when a destructive change
   would invalidate existing data.
 
-Catalogue mutations are unavailable offline. Previously synchronized catalogue
-records may still be used as read-only workout references.
+Exercise mutations are unavailable offline. The muscle directory is always
+read-only. Previously synchronized catalogue records may still be used as
+read-only workout references.
+
+The built-in muscle directory contains only selectable leaf entries from the
+ExRx Exercise & Muscle Directory. Top-level areas such as Neck, Shoulders, and
+Back, plus intermediate labels such as Deltoid and Trapezius, are retained as
+non-selectable hierarchy. Leaf names, hierarchy, stable IDs, and source links
+are supplied by the application rather than entered by the user.
 
 Exercises are shown in a compact list with their image, title, and target
 muscles. Selecting one opens a read-only details page with explicit edit and
@@ -113,7 +122,9 @@ MiB, stored under the persistent `/data` path, and removed when their exercise
 is deleted or the media is explicitly replaced. The client warms a dedicated
 application cache after synchronizing reference data so uploaded demonstrations
 remain available with the cached exercise catalogue offline. Website import is
-not supported.
+not supported. A manually entered exercise reference URL is copied into the
+workout snapshot and shown during the workout; following that external link
+still requires connectivity unless the destination is independently cached.
 
 ### Template management
 
@@ -216,7 +227,8 @@ The initial conflict policy is deliberately narrow:
 The first usable release is complete when:
 
 1. the PWA can be installed and reopened;
-2. exercises, muscles, and templates can be managed while online;
+2. exercises and templates can be managed while online, and the built-in muscle
+   hierarchy can be browsed and assigned;
 3. a workout can be started online, continued without a connection, and
    completed offline;
 4. refreshing or closing the browser does not lose that workout;

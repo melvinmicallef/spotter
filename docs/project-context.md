@@ -29,9 +29,10 @@ Spotter is a self-hosted workout tracker designed primarily for phone use at
 the gym. It is an installable React and TypeScript PWA backed by an Express and
 TypeScript API with SQLite persistence. Workout logging is local-first: after
 the application and reference data have been loaded, a user can continue an
-active workout without connectivity and synchronize it later. Catalogue and
-planning changes—muscles, exercises, and workout templates—are intentionally
-online-only. The complete application ships as one Docker image.
+active workout without connectivity and synchronize it later. Exercise and
+workout-template changes are intentionally online-only. The muscle catalogue is
+a built-in, read-only hierarchy. The complete application ships as one Docker
+image.
 
 ## Settled decisions
 
@@ -47,7 +48,8 @@ baseline.
 | Offline database       | IndexedDB                                                                                            |
 | Offline writes         | Active workout tracking, including starting, resuming, recording, and finishing                      |
 | Offline reference data | Cached read-only muscles, exercises, and templates needed to log a workout                           |
-| Online-only writes     | Creating, editing, reordering, or deleting muscles, exercises, and templates                         |
+| Online-only writes     | Creating, editing, reordering, or deleting exercises and templates                                   |
+| Muscle catalogue       | Built-in ExRx leaf muscles grouped under non-selectable parent headings                              |
 | Synchronization        | Durable outbox, client-generated IDs, idempotent server application, automatic retry after reconnect |
 | Production topology    | One Docker image and one application process                                                         |
 | HTTP serving           | Express serves both `/api/*` and the compiled PWA                                                    |
@@ -166,7 +168,9 @@ introduced without replacing the workout model or synchronization core.
   deployment without built-in authentication.
 - Exercise demonstrations are validated GIF, PNG, or JPEG uploads of at most
   five MiB, stored below `/data/media`, and prefetched into a dedicated offline
-  application cache. Website import is not part of the product.
+  application cache. Website import is not part of the product. Exercises may
+  instead store an optional validated HTTP/HTTPS reference link, which is
+  copied into template and workout snapshots for use during a workout.
 
 These remain revisable while Spotter is in the `0.x` development line.
 
