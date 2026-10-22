@@ -115,14 +115,14 @@ active workout and in locally persisted workout data.
 The initial client database should expose repositories rather than raw storage
 calls throughout the UI. Proposed logical stores are:
 
-| Store       | Contents                                      |
-| ----------- | --------------------------------------------- |
-| `workouts`  | Active and locally retained workout sessions  |
-| `outbox`    | Ordered, retryable synchronization operations |
-| `exercises` | Read-only cached exercise catalogue           |
-| `muscles`   | Read-only cached muscle catalogue             |
-| `templates` | Read-only cached template snapshots           |
-| `metadata`  | Sync cursor and device-local ISO-week swaps   |
+| Store       | Contents                                             |
+| ----------- | ---------------------------------------------------- |
+| `workouts`  | Active and locally retained workout sessions         |
+| `outbox`    | Ordered, retryable synchronization operations        |
+| `exercises` | Read-only cached exercise catalogue                  |
+| `muscles`   | Read-only cached muscle catalogue                    |
+| `templates` | Read-only cached template snapshots                  |
+| `metadata`  | Sync cursor and device-local completed ISO-week days |
 
 IndexedDB schema upgrades must be versioned and tested with data from the
 previous supported version.
@@ -175,16 +175,15 @@ Template entries use ISO weekday numbers (`1` Monday through `7` Sunday) plus a
 position that is unique within that day. A weekly template can contain multiple
 entries on every day and one optional display name for each weekday. SQLite
 marks exactly one template active when any exist.
-Creating a workout requires today's populated schedule in that active template;
-the session stores the chosen template day and snapshots only that day's
-entries. Legacy open-workout rows remain readable after migration, but the
-client cannot create new ones.
-
-The user may pairwise-swap today's assigned template day with another weekday
-for the current ISO week. This permutation is stored in IndexedDB metadata,
-keyed by active template and ISO week. It survives reloads and offline use but
-does not mutate the reusable server template and naturally expires at the next
-week key.
+The current weekday is selected by default, and the user can select any
+unfinished weekday directly. A new workout snapshots the selected day and its
+entries; legacy open-workout rows remain readable, but the client cannot create
+new ones. Finishing a workout atomically saves its completed state and marks the
+template day complete in IndexedDB metadata, keyed by template and ISO week.
+The day remains unavailable through reloads and offline use until the local
+week changes at Monday midnight. Cancelling a workout removes its local state
+and queues an idempotent delete operation so a previously synchronized draft
+is also removed without consuming the day.
 
 Each template day opens the same client-side exercise picker over the cached
 exercise reference data. The picker filters locally by case-insensitive name or
@@ -436,14 +435,17 @@ details? } }` envelope. The first migration establishes catalogue, template,
 workout, outbox-idempotency, metadata, and migration tables.
 
 The client uses `idb` over a versioned IndexedDB schema. A transaction stores
-each local workout snapshot together with its outbox operation. The client
-serializes outbox drains, retries transient failures with bounded exponential
-backoff, and retains rejected operations for user-visible retry. Reference data
-uses the server's monotonically increasing revision cursor.
+each local workout snapshot together with its outbox operation; finishing also
+stores its weekly completion marker in that transaction. Cancelling removes
+pending upserts for the workout and queues an ordered delete tombstone. The
+client serializes outbox drains, retries transient failures with bounded
+exponential backoff, and retains rejected operations for user-visible retry.
+Reference data uses the server's monotonically increasing revision cursor.
 
 The current `0.2.0` implementation uses one active workout per device, one
-active weekly ISO-day template, today-only starts with device-local current-week
-day swaps, strength repetitions plus explicit `kg`/`lb` weight, calisthenics
+active weekly ISO-day template, starts from any unfinished day with today
+selected by default, per-device current-week completion markers, strength
+repetitions plus explicit `kg`/`lb` weight, calisthenics
 repetitions without weight, and cardio duration or interval timers plus explicit
 `km`/`mi` distance. Metric is the device-local default. Settings converts active
 entry and template target displays while preserving recorded units in completed

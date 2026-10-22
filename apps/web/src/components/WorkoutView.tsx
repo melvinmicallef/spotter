@@ -22,13 +22,14 @@ interface WorkoutViewProps {
   exercises: Exercise[];
   activeTemplate?: WorkoutTemplate;
   today: DayOfWeek;
-  scheduledDay: DayOfWeek;
-  weekKey: string;
+  selectedDay: DayOfWeek;
+  completedDays: DayOfWeek[];
+  weekProgressReady: boolean;
   weightUnit: WeightUnit;
   distanceUnit: DistanceUnit;
   onStart: (template: WorkoutTemplate, dayOfWeek: DayOfWeek) => void;
-  onSwapToday: (dayOfWeek: DayOfWeek) => void;
-  onResetWeek: () => void;
+  onSelectDay: (dayOfWeek: DayOfWeek) => void;
+  onCancelWorkout: () => void;
   onShowStretching: () => void;
   onChange: (update: (workout: Workout) => Workout) => void;
   actions: {
@@ -62,13 +63,14 @@ export function WorkoutView({
   exercises,
   activeTemplate,
   today,
-  scheduledDay,
-  weekKey,
+  selectedDay,
+  completedDays,
+  weekProgressReady,
   weightUnit,
   distanceUnit,
   onStart,
-  onSwapToday,
-  onResetWeek,
+  onSelectDay,
+  onCancelWorkout,
   onShowStretching,
   onChange,
   actions,
@@ -78,6 +80,7 @@ export function WorkoutView({
   );
   const [exercisePickerOpen, setExercisePickerOpen] = useState(false);
   const [finishWarningOpen, setFinishWarningOpen] = useState(false);
+  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const exerciseDetails = exercises.find(
     (exercise) => exercise.id === exerciseDetailsId,
   );
@@ -116,20 +119,28 @@ export function WorkoutView({
       byName: latestRecordedSets(entriesByName),
     };
   }, [previousWorkouts]);
-  const scheduledDayName = activeTemplate?.dayNames?.find(
-    (dayName) => dayName.dayOfWeek === scheduledDay,
-  )?.name;
   if (!workout) {
     const scheduledExercises =
       activeTemplate?.exercises.filter(
-        (exercise) => exercise.dayOfWeek === scheduledDay,
+        (exercise) => exercise.dayOfWeek === selectedDay,
       ) ?? [];
+    const selectedDayName = activeTemplate?.dayNames?.find(
+      (dayName) => dayName.dayOfWeek === selectedDay,
+    )?.name;
+    const selectedDayTitle =
+      scheduledExercises.length === 0
+        ? 'Rest'
+        : selectedDayName?.trim() || 'Workout';
+    const selectedDayCompleted = completedDays.includes(selectedDay);
     return (
       <section className="page-section">
         <div className="section-heading">
           <div>
-            <span className="eyebrow">TODAY · {weekdayName(today)}</span>
-            <h2>Today&apos;s workout</h2>
+            <span className="eyebrow">THIS WEEK · {weekdayName(today)}</span>
+            <h2>
+              {weekdayName(selectedDay)}{' '}
+              <span className="day-heading-title">({selectedDayTitle})</span>
+            </h2>
           </div>
           <button
             className="secondary"
@@ -146,22 +157,49 @@ export function WorkoutView({
           </p>
         ) : (
           <article className="card today-workout-card">
-            <div>
+            <div
+              className="week-day-picker"
+              role="group"
+              aria-label="Choose a workout day"
+            >
+              {WEEKDAYS.map((day) => {
+                const dayExercises = activeTemplate.exercises.filter(
+                  (exercise) => exercise.dayOfWeek === day.value,
+                );
+                const dayName = activeTemplate.dayNames?.find(
+                  (item) => item.dayOfWeek === day.value,
+                )?.name;
+                const dayTitle =
+                  dayExercises.length === 0
+                    ? 'Rest'
+                    : dayName?.trim() || 'Workout';
+                const isCompleted = completedDays.includes(day.value);
+                const isSelected = selectedDay === day.value;
+                return (
+                  <button
+                    className={`week-day-option${isSelected ? ' selected' : ''}${isCompleted ? ' completed' : ''}`}
+                    type="button"
+                    key={day.value}
+                    aria-pressed={isSelected}
+                    disabled={isCompleted || !weekProgressReady}
+                    onClick={() => onSelectDay(day.value)}
+                  >
+                    <span>{day.label}</span>
+                    <small>({dayTitle})</small>
+                    {isCompleted && (
+                      <small className="week-day-done">Done</small>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="today-workout-summary">
               <span className="active-badge">Active plan</span>
               <h3>{activeTemplate.name}</h3>
-              {scheduledDayName && (
-                <p className="target-summary">{scheduledDayName}</p>
-              )}
-              {scheduledDay !== today && (
-                <p className="notice compact-notice">
-                  Using {weekdayName(scheduledDay)}&apos;s workout today for{' '}
-                  {weekKey}.
-                </p>
-              )}
               <p>
                 {scheduledExercises.length === 0
-                  ? `${weekdayName(scheduledDay)} is a rest day.`
-                  : `${scheduledExercises.length} exercise${scheduledExercises.length === 1 ? '' : 's'} scheduled from ${weekdayName(scheduledDay)}.`}
+                  ? `${weekdayName(selectedDay)} is a rest day.`
+                  : `${scheduledExercises.length} exercise${scheduledExercises.length === 1 ? '' : 's'} scheduled for ${weekdayName(selectedDay)}.`}
               </p>
               {scheduledExercises.length > 0 && (
                 <ol className="scheduled-exercise-list">
@@ -173,39 +211,17 @@ export function WorkoutView({
             </div>
             <button
               type="button"
-              disabled={scheduledExercises.length === 0}
-              onClick={() => onStart(activeTemplate, scheduledDay)}
+              disabled={
+                scheduledExercises.length === 0 ||
+                selectedDayCompleted ||
+                !weekProgressReady
+              }
+              onClick={() => onStart(activeTemplate, selectedDay)}
             >
-              Start today&apos;s workout
+              {selectedDay === today
+                ? "Start today's workout"
+                : `Start ${weekdayName(selectedDay)}'s workout`}
             </button>
-            <div className="week-swap-panel">
-              <strong>Swap today for this week</strong>
-              <p>
-                Choose another day&apos;s plan. The reusable template will not
-                be changed.
-              </p>
-              <div className="day-swap-actions">
-                {WEEKDAYS.filter((day) => day.value !== today).map((day) => (
-                  <button
-                    className="secondary"
-                    type="button"
-                    key={day.value}
-                    onClick={() => onSwapToday(day.value)}
-                  >
-                    {day.label}
-                  </button>
-                ))}
-              </div>
-              {scheduledDay !== today && (
-                <button
-                  className="secondary danger-text"
-                  type="button"
-                  onClick={onResetWeek}
-                >
-                  Reset this week&apos;s swaps
-                </button>
-              )}
-            </div>
           </article>
         )}
       </section>
@@ -218,8 +234,11 @@ export function WorkoutView({
         <div>
           <span className="eyebrow">IN PROGRESS</span>
           <h2>{workout.name}</h2>
-          {workout.templateDayName && (
-            <p className="target-summary">{workout.templateDayName}</p>
+          {workout.templateDay != null && (
+            <p className="target-summary">
+              {weekdayName(workout.templateDay)} (
+              {workout.templateDayName?.trim() || 'Workout'})
+            </p>
           )}
         </div>
         <div className="inline-actions">
@@ -229,6 +248,13 @@ export function WorkoutView({
             onClick={onShowStretching}
           >
             Show stretching
+          </button>
+          <button
+            className="secondary danger-text"
+            type="button"
+            onClick={() => setCancelConfirmOpen(true)}
+          >
+            Cancel workout
           </button>
           <button
             className="danger"
@@ -454,6 +480,21 @@ export function WorkoutView({
           onConfirm={() => {
             setFinishWarningOpen(false);
             onChange(actions.finish);
+          }}
+        />
+      )}
+      {cancelConfirmOpen && (
+        <ConfirmDialog
+          eyebrow="CANCEL WORKOUT"
+          title="Cancel this workout?"
+          message="This workout and its progress will be deleted. The selected day will remain available this week."
+          confirmLabel="Cancel workout"
+          cancelLabel="Keep working"
+          closeLabel="Keep working"
+          onCancel={() => setCancelConfirmOpen(false)}
+          onConfirm={() => {
+            setCancelConfirmOpen(false);
+            onCancelWorkout();
           }}
         />
       )}

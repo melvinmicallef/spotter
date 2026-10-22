@@ -69,10 +69,10 @@ connectivity.
 1. The user loads or installs Spotter while online.
 2. The client synchronizes the muscle catalogue, typed exercise catalogue, and
    weekly workout templates, exactly one of which is active when any exist.
-3. The user starts today's populated day from the cached active template. For
-   soreness or recovery, today's plan can be swapped with another weekday for
-   the current ISO week on that device. Open or empty workouts cannot be
-   created.
+3. The current weekday is selected by default. The user can select any other
+   unfinished day directly from the cached active weekly template. Finished
+   days stay unavailable until local Monday midnight; cancelling a workout
+   leaves its day available. Open or empty workouts cannot be created.
 4. Every workout change is committed to IndexedDB before the UI considers it
    saved.
 5. The user may lose connectivity, refresh the page, close the PWA, reopen it,
@@ -167,12 +167,15 @@ introduced without replacing the workout model or synchronization core.
   share one transaction; synchronization is serialized and idempotent.
 - The current `0.2.0` product contract includes one active workout per device,
   strength/calisthenics/cardio types, ISO-weekday templates with optional named
-  days, device-local Metric/Imperial units, duration and interval cardio,
-  previous-set hints, collapsible completed exercises, a shared stretching
-  poster, and history detail pages with online set-value editing. History edits
-  cannot change exercise entries or their order. Strength exercise details show
-  dated Epley estimated one-rep max and training-volume charts. The deployment
-  remains trusted and single-user without built-in authentication.
+  days, any unfinished day selectable with today as the default, device-local
+  completed-day markers that reset Monday midnight, confirmed workout
+  cancellation that does not consume a day, device-local Metric/Imperial units,
+  duration and interval cardio, previous-set hints, collapsible completed
+  exercises, a shared stretching poster, and history detail pages with online
+  set-value editing. History edits cannot change exercise entries or their
+  order. Strength exercise details show dated Epley estimated one-rep max and
+  training-volume charts. The deployment remains trusted and single-user
+  without built-in authentication.
 - Exercise demonstrations are validated GIF, PNG, or JPEG uploads of at most
   five MiB, stored below `/data/media`, and prefetched into a dedicated offline
   application cache. Website import is not part of the product. Exercises may

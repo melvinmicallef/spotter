@@ -87,4 +87,6 @@ state that the older image understands the newer schema.
   before editing, and completed-history edits are unavailable offline.
 - There is no built-in account, authentication, export, or retention policy.
 - Catalogue and template changes require connectivity.
-- Weekly day swaps are device-local and apply only to the current ISO week.
+- Finished template days are tracked on the device for the current ISO week
+  and reset at local Monday midnight. Cancelling a workout queues a delete
+  operation so a synchronized in-progress snapshot is removed after reconnect.

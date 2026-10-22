@@ -19,7 +19,10 @@ describe('local workout repository', () => {
 
     expect(await localRepository.activeWorkout()).toEqual(workout);
     expect(await localRepository.outbox()).toEqual([operation]);
-    expect(operation.workout.id).toBe(workout.id);
+    expect(operation).toMatchObject({
+      kind: 'upsert_workout',
+      workout: { id: workout.id },
+    });
   });
 
   it('orders rapid writes by a durable sequence rather than timestamp ties', async () => {
@@ -32,7 +35,9 @@ describe('local workout repository', () => {
 
     expect(firstOperation.sequence).toBeLessThan(secondOperation.sequence);
     expect(
-      (await localRepository.outbox()).map((entry) => entry.workout.notes),
+      (await localRepository.outbox()).map((entry) =>
+        entry.kind === 'upsert_workout' ? entry.workout.notes : null,
+      ),
     ).toEqual([null, 'second edit']);
     expect((await localRepository.activeWorkout())?.notes).toBe('second edit');
   });
@@ -60,21 +65,47 @@ describe('local workout repository', () => {
     expect((await localRepository.references()).muscles[0]?.name).toBe('Back');
   });
 
-  it('persists schedule swaps per active template and ISO week', async () => {
+  it('persists completed days per active template and ISO week', async () => {
     const templateId = crypto.randomUUID();
-    await localRepository.saveWeekSchedule(templateId, '2026-W43', {
-      1: 5,
-      5: 1,
+    await localRepository.saveWeekProgress(templateId, '2026-W43', {
+      completedDays: [1, 5],
     });
     await localRepository.resetConnectionForTests();
 
-    expect(await localRepository.weekSchedule(templateId, '2026-W43')).toEqual({
-      1: 5,
-      5: 1,
+    expect(await localRepository.weekProgress(templateId, '2026-W43')).toEqual({
+      completedDays: [1, 5],
     });
-    expect(await localRepository.weekSchedule(templateId, '2026-W44')).toEqual(
-      {},
-    );
+    expect(await localRepository.weekProgress(templateId, '2026-W44')).toEqual({
+      completedDays: [],
+    });
+  });
+
+  it('marks a template day complete atomically with the finished workout', async () => {
+    const workout = exampleWorkout();
+    workout.templateId = crypto.randomUUID();
+    workout.templateDay = 3;
+    workout.status = 'completed';
+    workout.completedAt = new Date().toISOString();
+    await localRepository.saveWorkout(workout, '2026-W43');
+
+    expect(
+      await localRepository.weekProgress(workout.templateId, '2026-W43'),
+    ).toEqual({ completedDays: [3] });
+    expect(
+      await localRepository.weekProgress(workout.templateId, '2026-W44'),
+    ).toEqual({ completedDays: [] });
+  });
+
+  it('deletes a cancelled workout and leaves an ordered server tombstone', async () => {
+    const workout = exampleWorkout();
+    await localRepository.saveWorkout(workout);
+    await localRepository.cancelWorkout(workout.id);
+
+    expect(await localRepository.activeWorkout()).toBeUndefined();
+    expect(await localRepository.workouts()).toEqual([]);
+    expect(await localRepository.outbox()).toMatchObject([
+      { kind: 'delete_workout', workoutId: workout.id },
+    ]);
   });
 
   it('persists session, exercise, and set notes for offline reload', async () => {
@@ -271,7 +302,10 @@ describe('local workout repository', () => {
         targetDistance: null,
       },
     );
-    expect((await localRepository.outbox())[0]?.workout.templateDay).toBeNull();
+    const operation = (await localRepository.outbox())[0];
+    expect(operation?.kind).toBe('upsert_workout');
+    if (operation?.kind === 'upsert_workout')
+      expect(operation.workout.templateDay).toBeNull();
   });
 
   it('upgrades a version-three cache with exactly one active template', async () => {

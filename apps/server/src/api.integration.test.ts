@@ -184,6 +184,59 @@ describe('catalogue, templates, and synchronization API', () => {
     expect(history.body[0].exercises[0].sets).toHaveLength(1);
   });
 
+  it('removes a cancelled in-progress workout through an idempotent sync tombstone', async () => {
+    const now = new Date().toISOString();
+    const workout: Workout = {
+      id: randomUUID(),
+      templateId: null,
+      templateDay: null,
+      templateDayName: null,
+      name: 'Cancelled session',
+      status: 'in_progress',
+      startedAt: now,
+      completedAt: null,
+      notes: null,
+      updatedAt: now,
+      exercises: [],
+    };
+    const upsertOperationId = randomUUID();
+    await request(app)
+      .post('/api/sync')
+      .send({
+        operations: [
+          {
+            operationId: upsertOperationId,
+            kind: 'upsert_workout',
+            createdAt: now,
+            workout,
+          },
+        ],
+      })
+      .expect(200);
+    const deletion = {
+      operations: [
+        {
+          operationId: randomUUID(),
+          kind: 'delete_workout',
+          createdAt: now,
+          workoutId: workout.id,
+        },
+      ],
+    };
+
+    const cancelled = await request(app)
+      .post('/api/sync')
+      .send(deletion)
+      .expect(200);
+    expect(cancelled.body.results[0].status).toBe('applied');
+    const replayed = await request(app)
+      .post('/api/sync')
+      .send(deletion)
+      .expect(200);
+    expect(replayed.body.results[0].status).toBe('duplicate');
+    await request(app).get('/api/workouts').expect(200, []);
+  });
+
   it('stores weekly template ordering and typed cardio workout snapshots', async () => {
     const strengthId = randomUUID();
     const cardioId = randomUUID();
@@ -378,7 +431,11 @@ describe('catalogue, templates, and synchronization API', () => {
   it('keeps exactly one active weekly template', async () => {
     const first = await request(app)
       .post('/api/templates')
-      .send({ name: 'First plan', notes: null, exercises: [] })
+      .send({
+        name: 'First plan',
+        notes: 'Legacy weekly notes',
+        exercises: [],
+      })
       .expect(201);
     expect(first.body.isActive).toBe(true);
 
@@ -412,9 +469,10 @@ describe('catalogue, templates, and synchronization API', () => {
     ).toBe(second.body.id);
 
     const duplicate = await request(app)
-      .post(`/api/templates/${second.body.id}/duplicate`)
+      .post(`/api/templates/${first.body.id}/duplicate`)
       .expect(201);
     expect(duplicate.body.isActive).toBe(false);
+    expect(duplicate.body.notes).toBeNull();
 
     await request(app).delete(`/api/templates/${second.body.id}`).expect(204);
     const afterDelete = await request(app).get('/api/templates').expect(200);

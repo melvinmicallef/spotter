@@ -1185,12 +1185,6 @@ small {
 .template-details-actions {
   margin: 14px 0 20px;
 }
-.template-details-notes {
-  margin-bottom: 20px;
-  color: var(--text-secondary);
-  line-height: 1.6;
-  white-space: pre-wrap;
-}
 .template-detail-entry {
   display: flex;
   flex-direction: column;
@@ -1807,7 +1801,7 @@ small {
   width: 100%;
 }
 .workout-add-exercise {
-  margin-top: 18px;
+  margin-top: 0;
 }
 .history-stats {
   display: flex;
@@ -1856,32 +1850,73 @@ small {
   color: var(--text);
   font-size: 1.45rem;
 }
-.compact-notice {
-  margin: 12px 0;
-}
 .scheduled-exercise-list {
   display: grid;
   gap: 6px;
   padding-left: 24px;
   color: var(--text-secondary);
 }
-.week-swap-panel {
-  padding-top: 18px;
-  border-top: 1px solid var(--border);
-}
-.week-swap-panel p {
-  margin: 5px 0 12px;
+.day-heading-title {
   color: var(--text-muted);
+  font-size: 0.58em;
+  font-weight: 650;
+  white-space: nowrap;
 }
-.day-swap-actions {
+.week-day-picker {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+.week-day-option {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 10px;
+  min-width: 0;
+  min-height: 70px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 8px 4px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text-secondary);
+  background: var(--surface-deep);
+  font-size: 0.75rem;
+  font-weight: 750;
+  line-height: 1.2;
 }
-.day-swap-actions button {
-  padding: 8px 10px;
-  font-size: 0.82rem;
+.week-day-option small {
+  overflow-wrap: anywhere;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-align: center;
+}
+.week-day-option.selected {
+  border-color: var(--accent);
+  color: var(--text);
+  background: var(--accent-soft);
+}
+.week-day-option.completed,
+.week-day-option.completed:disabled {
+  border-color: var(--border);
+  color: var(--text-muted);
+  background: var(--surface-soft);
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+.week-day-option .week-day-done {
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.today-workout-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.today-workout-summary p {
+  margin: 0;
 }
 .bottom-nav {
   position: fixed;
@@ -1960,6 +1995,9 @@ small {
   }
 }
 @media (max-width: 540px) {
+  .week-day-picker {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
   .workout-card.workout-strength-card {
     grid-template-columns: minmax(112px, 0.9fr) minmax(0, 1.1fr);
     gap: 8px;

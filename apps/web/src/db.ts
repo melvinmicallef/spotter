@@ -9,13 +9,18 @@ import type {
   WorkoutTemplate,
 } from '@spotter/shared';
 
-import { parseWeekSchedule, type WeekSchedule } from './schedule.js';
+import {
+  completeWeekDay,
+  parseWeekProgress,
+  weekProgressMetadataKey,
+  type WeekProgress,
+} from './schedule.js';
 
-export interface OutboxRecord extends SyncOperation {
+export type OutboxRecord = SyncOperation & {
   sequence: number;
   attempts: number;
   failure: OutboxFailure | null;
-}
+};
 
 export interface OutboxFailure {
   classification: 'rejected' | 'transient';
@@ -103,10 +108,7 @@ function database() {
 
         const outboxStore = transaction.objectStore('outbox');
         for (const operation of await outboxStore.getAll()) {
-          await outboxStore.put({
-            ...operation,
-            workout: normalizeWorkout(operation.workout),
-          });
+          await outboxStore.put(normalizeOutboxRecord(operation));
         }
       }
       if (oldVersion < 4) {
@@ -157,10 +159,7 @@ function database() {
         }
         const outboxStore = transaction.objectStore('outbox');
         for (const operation of await outboxStore.getAll()) {
-          await outboxStore.put({
-            ...operation,
-            workout: normalizeWorkout(operation.workout),
-          });
+          await outboxStore.put(normalizeOutboxRecord(operation));
         }
       }
       if (oldVersion < 7) {
@@ -170,10 +169,7 @@ function database() {
         }
         const outboxStore = transaction.objectStore('outbox');
         for (const operation of await outboxStore.getAll()) {
-          await outboxStore.put({
-            ...operation,
-            workout: normalizeWorkout(operation.workout),
-          });
+          await outboxStore.put(normalizeOutboxRecord(operation));
         }
       }
     },
@@ -182,7 +178,10 @@ function database() {
 }
 
 export const localRepository = {
-  async saveWorkout(workout: Workout): Promise<OutboxRecord> {
+  async saveWorkout(
+    workout: Workout,
+    completionWeekKey?: string,
+  ): Promise<OutboxRecord> {
     const db = await database();
     const transaction = db.transaction(
       ['workouts', 'outbox', 'metadata'],
@@ -201,6 +200,26 @@ export const localRepository = {
       attempts: 0,
       failure: null,
     };
+    if (
+      completionWeekKey &&
+      workout.status === 'completed' &&
+      workout.templateId &&
+      workout.templateDay != null
+    ) {
+      const progressKey = weekProgressMetadataKey(
+        workout.templateId,
+        completionWeekKey,
+      );
+      const currentProgress = await metadata.get(progressKey);
+      const nextProgress = completeWeekDay(
+        parseWeekProgress(currentProgress?.value),
+        workout.templateDay,
+      );
+      await metadata.put({
+        key: progressKey,
+        value: JSON.stringify(nextProgress),
+      });
+    }
     await Promise.all([
       transaction.objectStore('workouts').put(workout),
       transaction.objectStore('outbox').put(operation),
@@ -230,10 +249,49 @@ export const localRepository = {
     await Promise.all([
       transaction.objectStore('workouts').delete(id),
       ...operations
-        .filter((operation) => operation.workout.id === id)
+        .filter((operation) =>
+          operation.kind === 'upsert_workout'
+            ? operation.workout.id === id
+            : operation.workoutId === id,
+        )
         .map((operation) => outbox.delete(operation.operationId)),
     ]);
     await transaction.done;
+  },
+
+  async cancelWorkout(id: string): Promise<void> {
+    const db = await database();
+    const transaction = db.transaction(
+      ['workouts', 'outbox', 'metadata'],
+      'readwrite',
+    );
+    const outbox = transaction.objectStore('outbox');
+    const metadata = transaction.objectStore('metadata');
+    const operations = await outbox.getAll();
+    const counter = await metadata.get('nextOutboxSequence');
+    const sequence =
+      typeof counter?.value === 'number' ? counter.value : Date.now();
+    const operation: OutboxRecord = {
+      operationId: crypto.randomUUID(),
+      kind: 'delete_workout',
+      createdAt: new Date().toISOString(),
+      workoutId: id,
+      sequence,
+      attempts: 0,
+      failure: null,
+    };
+    await Promise.all([
+      transaction.objectStore('workouts').delete(id),
+      ...operations
+        .filter(
+          (candidate) =>
+            candidate.kind === 'upsert_workout' && candidate.workout.id === id,
+        )
+        .map((candidate) => outbox.delete(candidate.operationId)),
+      outbox.put(operation),
+      metadata.put({ key: 'nextOutboxSequence', value: sequence + 1 }),
+      transaction.done,
+    ]);
   },
 
   async outbox(limit = 50): Promise<OutboxRecord[]> {
@@ -307,27 +365,27 @@ export const localRepository = {
     };
   },
 
-  async weekSchedule(
+  async weekProgress(
     templateId: string,
     weekKey: string,
-  ): Promise<WeekSchedule> {
+  ): Promise<WeekProgress> {
     const record = await (
       await database()
-    ).get('metadata', scheduleMetadataKey(templateId, weekKey));
-    return parseWeekSchedule(record?.value);
+    ).get('metadata', weekProgressMetadataKey(templateId, weekKey));
+    return parseWeekProgress(record?.value);
   },
 
-  async saveWeekSchedule(
+  async saveWeekProgress(
     templateId: string,
     weekKey: string,
-    schedule: WeekSchedule,
+    progress: WeekProgress,
   ): Promise<void> {
-    const key = scheduleMetadataKey(templateId, weekKey);
+    const key = weekProgressMetadataKey(templateId, weekKey);
     await (
       await database()
     ).put('metadata', {
       key,
-      value: JSON.stringify(schedule),
+      value: JSON.stringify(progress),
     });
   },
 
@@ -383,10 +441,6 @@ function normalizeTemplate(
   };
 }
 
-function scheduleMetadataKey(templateId: string, weekKey: string): string {
-  return `weekSchedule:${templateId}:${weekKey}`;
-}
-
 function normalizeWorkout(workout: Workout): Workout {
   return {
     ...workout,
@@ -413,6 +467,12 @@ function normalizeWorkout(workout: Workout): Workout {
       })),
     })),
   };
+}
+
+function normalizeOutboxRecord(operation: OutboxRecord): OutboxRecord {
+  return operation.kind === 'upsert_workout'
+    ? { ...operation, workout: normalizeWorkout(operation.workout) }
+    : operation;
 }
 
 function normalizeMuscle(muscle: Muscle): Muscle {

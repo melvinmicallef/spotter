@@ -88,7 +88,7 @@ deletion behavior.
 - Online API and UI to create, rename, duplicate, edit, reorder, and delete
   templates.
 - Multiple exercises on each ISO weekday.
-- Exercise-level template notes and type-appropriate initial targets.
+- Type-appropriate initial targets and optional weekday titles.
 - Template read model suitable for caching and workout snapshot creation.
 - Tests for ordering, duplication, validation, and deletion dependencies.
 
@@ -103,8 +103,12 @@ snapshot for any populated day.
 ### Deliverables
 
 - Workout session, workout exercise, and workout set persistence.
-- Start a workout only from today's populated day in the active weekly
-  template, with a device-local current-ISO-week day swap.
+- Start from any unfinished day in the active weekly template, with today
+  selected by default and direct weekday selection.
+- Mark a template day complete on workout finish and keep it greyed out for the
+  rest of the local ISO week; reset at Monday midnight.
+- Cancel a workout after confirmation without consuming the day, including
+  deleting any synchronized in-progress snapshot through an outbox tombstone.
 - Resume an in-progress workout.
 - Add, remove, and reorder workout exercises.
 - Mark and collapse completed exercises, with an option to reopen them.

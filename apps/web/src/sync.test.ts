@@ -40,6 +40,42 @@ describe('outbox synchronization', () => {
     expect(await localRepository.outbox()).toHaveLength(0);
   });
 
+  it('synchronizes workout cancellation tombstones', async () => {
+    const workout = exampleWorkout();
+    await localRepository.saveWorkout(workout);
+    await localRepository.cancelWorkout(workout.id);
+    const cancellation = (await localRepository.outbox())[0];
+    expect(cancellation?.kind).toBe('delete_workout');
+    if (cancellation?.kind !== 'delete_workout') return;
+
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          results: [
+            { operationId: cancellation.operationId, status: 'applied' },
+          ],
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    expect(await drainOutbox()).toMatchObject({ pending: 0, error: null });
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
+      body: JSON.stringify({
+        operations: [
+          {
+            operationId: cancellation.operationId,
+            kind: 'delete_workout',
+            createdAt: cancellation.createdAt,
+            workoutId: workout.id,
+          },
+        ],
+      }),
+    });
+  });
+
   it('keeps rejected operations with a visible error', async () => {
     const operation = await localRepository.saveWorkout(exampleWorkout());
     vi.stubGlobal(

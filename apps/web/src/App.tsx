@@ -21,12 +21,7 @@ import { TemplatesView } from './components/TemplatesView.js';
 import { WorkoutView } from './components/WorkoutView.js';
 import { localRepository } from './db.js';
 import { pathForView, viewFromPath, type View } from './routes.js';
-import {
-  isoWeekKey,
-  scheduledTemplateDay,
-  swapWeekDays,
-  type WeekSchedule,
-} from './schedule.js';
+import { isoWeekKey, nextAvailableDay, type WeekProgress } from './schedule.js';
 import { drainOutbox, refreshReferences } from './sync.js';
 import { applyTheme, initialTheme } from './theme.js';
 import type { Theme } from './theme.js';
@@ -51,6 +46,7 @@ import {
 } from './workout.js';
 
 const STRETCHING_POSTER_STORAGE_KEY = 'spotter-stretching-poster';
+const EMPTY_WEEK_PROGRESS: WeekProgress = { completedDays: [] };
 
 export function App() {
   const [pathname, setPathname] = useState(() => window.location.pathname);
@@ -70,7 +66,16 @@ export function App() {
   const [muscles, setMuscles] = useState<Muscle[]>([]);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [templates, setTemplates] = useState<WorkoutTemplate[]>([]);
-  const [weekSchedule, setWeekSchedule] = useState<WeekSchedule>({});
+  const [weekProgressRecord, setWeekProgressRecord] = useState<{
+    templateId: string;
+    weekKey: string;
+    progress: WeekProgress;
+  }>();
+  const [calendarNow, setCalendarNow] = useState(() => new Date());
+  const [daySelection, setDaySelection] = useState<{
+    dateKey: string;
+    day: DayOfWeek;
+  }>();
   const [pending, setPending] = useState(0);
   const [syncing, setSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
@@ -80,15 +85,33 @@ export function App() {
   const [ready, setReady] = useState(false);
   const activeWorkoutRef = useRef<Workout | undefined>(undefined);
   const saveQueueRef = useRef(Promise.resolve());
-  const today = todayDayOfWeek();
-  const currentWeekKey = isoWeekKey();
+  const today = todayDayOfWeek(calendarNow);
+  const currentWeekKey = isoWeekKey(calendarNow);
+  const localDateKey = `${calendarNow.getFullYear()}-${calendarNow.getMonth()}-${calendarNow.getDate()}`;
+  const selectedDay =
+    daySelection?.dateKey === localDateKey ? daySelection.day : today;
   const activeTemplate = useMemo(
     () => templates.find((template) => template.isActive),
     [templates],
   );
-  const scheduledDay = scheduledTemplateDay(today, weekSchedule);
-
+  const weekProgressReady =
+    !activeTemplate ||
+    (weekProgressRecord?.templateId === activeTemplate.id &&
+      weekProgressRecord.weekKey === currentWeekKey);
+  const weekProgress =
+    weekProgressReady && weekProgressRecord
+      ? weekProgressRecord.progress
+      : EMPTY_WEEK_PROGRESS;
   useEffect(() => applyTheme(theme), [theme]);
+  useEffect(() => {
+    const nextMidnight = new Date();
+    nextMidnight.setHours(24, 0, 0, 25);
+    const timeout = window.setTimeout(
+      () => setCalendarNow(new Date()),
+      Math.max(1, nextMidnight.getTime() - Date.now()),
+    );
+    return () => window.clearTimeout(timeout);
+  }, [calendarNow]);
   useEffect(() => {
     try {
       if (stretchingPoster) {
@@ -115,17 +138,17 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    if (!activeTemplate) {
-      // This state mirrors the currently selected template's IndexedDB record.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setWeekSchedule({});
-      return;
-    }
+    if (!activeTemplate) return;
     let cancelled = false;
     void localRepository
-      .weekSchedule(activeTemplate.id, currentWeekKey)
-      .then((schedule) => {
-        if (!cancelled) setWeekSchedule(schedule);
+      .weekProgress(activeTemplate.id, currentWeekKey)
+      .then((progress) => {
+        if (!cancelled)
+          setWeekProgressRecord({
+            templateId: activeTemplate.id,
+            weekKey: currentWeekKey,
+            progress,
+          });
       });
     return () => {
       cancelled = true;
@@ -139,12 +162,24 @@ export function App() {
       localRepository.references(),
       localRepository.outbox(Number.MAX_SAFE_INTEGER),
     ]);
+    const activeCachedTemplate = references.templates.find(
+      (template) => template.isActive,
+    );
+    const weekKey = isoWeekKey();
+    const progress = activeCachedTemplate
+      ? await localRepository.weekProgress(activeCachedTemplate.id, weekKey)
+      : EMPTY_WEEK_PROGRESS;
     setActiveWorkout(active);
     activeWorkoutRef.current = active;
     setLocalWorkouts(workouts);
     setMuscles(references.muscles.filter((muscle) => muscle.isBuiltin));
     setExercises(references.exercises);
     setTemplates(references.templates);
+    setWeekProgressRecord(
+      activeCachedTemplate
+        ? { templateId: activeCachedTemplate.id, weekKey, progress }
+        : undefined,
+    );
     setPending(outbox.length);
   }, []);
 
@@ -166,9 +201,21 @@ export function App() {
         api.workouts(),
         api.settings(),
       ]);
+      const activeServerTemplate = references.templates.find(
+        (template) => template.isActive,
+      );
+      const weekKey = isoWeekKey();
+      const progress = activeServerTemplate
+        ? await localRepository.weekProgress(activeServerTemplate.id, weekKey)
+        : EMPTY_WEEK_PROGRESS;
       setMuscles(references.muscles.filter((muscle) => muscle.isBuiltin));
       setExercises(references.exercises);
       setTemplates(references.templates);
+      setWeekProgressRecord(
+        activeServerTemplate
+          ? { templateId: activeServerTemplate.id, weekKey, progress }
+          : undefined,
+      );
       setServerWorkouts(workouts);
       setStretchingPoster(settings.stretchingPoster);
       setOnline(true);
@@ -211,14 +258,37 @@ export function App() {
     return () => window.clearTimeout(timeout);
   }, [pending, retryAfterMs, syncNow]);
 
-  function persistWorkout(workout: Workout) {
+  function persistWorkout(workout: Workout, consumesTemplateDay = false) {
+    const completionWeekKey = consumesTemplateDay
+      ? isoWeekKey(new Date(workout.startedAt))
+      : undefined;
     saveQueueRef.current = saveQueueRef.current
       .then(async () => {
-        await localRepository.saveWorkout(workout);
+        await localRepository.saveWorkout(workout, completionWeekKey);
         setLocalWorkouts(await localRepository.workouts());
         setPending(
           (await localRepository.outbox(Number.MAX_SAFE_INTEGER)).length,
         );
+        if (
+          completionWeekKey === currentWeekKey &&
+          workout.templateId === activeTemplate?.id
+        ) {
+          const progress = await localRepository.weekProgress(
+            workout.templateId,
+            completionWeekKey,
+          );
+          setWeekProgressRecord({
+            templateId: workout.templateId,
+            weekKey: completionWeekKey,
+            progress,
+          });
+          if (workout.templateDay === selectedDay) {
+            setDaySelection({
+              dateKey: localDateKey,
+              day: nextAvailableDay(today, progress.completedDays),
+            });
+          }
+        }
         if (navigator.onLine) void syncNow();
       })
       .catch((error: unknown) => {
@@ -264,51 +334,67 @@ export function App() {
     const next = update(current);
     activeWorkoutRef.current = next.status === 'in_progress' ? next : undefined;
     setActiveWorkout(activeWorkoutRef.current);
-    persistWorkout(next);
+    persistWorkout(
+      next,
+      current.status === 'in_progress' && next.status === 'completed',
+    );
   }
 
   function start(template: WorkoutTemplate, dayOfWeek: DayOfWeek) {
     if (activeWorkoutRef.current) return;
+    if (!weekProgressReady) return;
+    if (weekProgress.completedDays.includes(dayOfWeek)) return;
     const workout = createWorkout(template, dayOfWeek);
     activeWorkoutRef.current = workout;
     setActiveWorkout(workout);
     persistWorkout(workout);
   }
 
-  function swapToday(dayOfWeek: DayOfWeek) {
-    if (!activeTemplate) return;
-    const next = swapWeekDays(weekSchedule, today, dayOfWeek);
-    setWeekSchedule(next);
-    void localRepository
-      .saveWeekSchedule(activeTemplate.id, currentWeekKey, next)
-      .catch((error: unknown) =>
-        setMessage(
-          error instanceof Error
-            ? `The weekly swap could not be saved: ${error.message}`
-            : 'The weekly swap could not be saved',
-        ),
-      );
+  function selectWorkoutDay(dayOfWeek: DayOfWeek) {
+    if (!weekProgressReady) return;
+    if (weekProgress.completedDays.includes(dayOfWeek)) return;
+    setDaySelection({ dateKey: localDateKey, day: dayOfWeek });
   }
 
-  function resetWeekSchedule() {
-    if (!activeTemplate) return;
-    setWeekSchedule({});
-    void localRepository
-      .saveWeekSchedule(activeTemplate.id, currentWeekKey, {})
-      .catch((error: unknown) =>
-        setMessage(
-          error instanceof Error
-            ? `The weekly swap could not be reset: ${error.message}`
-            : 'The weekly swap could not be reset',
-        ),
+  async function cancelActiveWorkout() {
+    const current = activeWorkoutRef.current;
+    if (!current) return;
+    try {
+      await saveQueueRef.current;
+      await localRepository.cancelWorkout(current.id);
+      activeWorkoutRef.current = undefined;
+      setActiveWorkout(undefined);
+      setLocalWorkouts(await localRepository.workouts());
+      const outbox = await localRepository.outbox(Number.MAX_SAFE_INTEGER);
+      setPending(outbox.length);
+      setMessage('Workout cancelled. You can still use this day this week.');
+      if (navigator.onLine) void syncNow();
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? `Unable to cancel workout: ${error.message}`
+          : 'Unable to cancel workout',
       );
+    }
   }
 
   const refreshOnlineReferences = useCallback(async () => {
     const references = await refreshReferences();
+    const activeServerTemplate = references.templates.find(
+      (template) => template.isActive,
+    );
+    const weekKey = isoWeekKey();
+    const progress = activeServerTemplate
+      ? await localRepository.weekProgress(activeServerTemplate.id, weekKey)
+      : EMPTY_WEEK_PROGRESS;
     setMuscles(references.muscles.filter((muscle) => muscle.isBuiltin));
     setExercises(references.exercises);
     setTemplates(references.templates);
+    setWeekProgressRecord(
+      activeServerTemplate
+        ? { templateId: activeServerTemplate.id, weekKey, progress }
+        : undefined,
+    );
   }, []);
 
   async function deleteHistoryWorkout(workout: Workout) {
@@ -453,13 +539,14 @@ export function App() {
             exercises={exercises}
             activeTemplate={activeTemplate}
             today={today}
-            scheduledDay={scheduledDay}
-            weekKey={currentWeekKey}
+            selectedDay={selectedDay}
+            completedDays={weekProgress.completedDays}
+            weekProgressReady={weekProgressReady}
             weightUnit={weightUnit}
             distanceUnit={distanceUnit}
             onStart={start}
-            onSwapToday={swapToday}
-            onResetWeek={resetWeekSchedule}
+            onSelectDay={selectWorkoutDay}
+            onCancelWorkout={() => void cancelActiveWorkout()}
             onShowStretching={() => navigate('stretching')}
             onChange={mutateWorkout}
             actions={{

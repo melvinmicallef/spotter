@@ -65,12 +65,21 @@ async function drain(): Promise<SyncState> {
   while (records.length > 0) {
     try {
       const response = await api.sync({
-        operations: [records[0]!].map((record) => ({
-          operationId: record.operationId,
-          kind: record.kind,
-          createdAt: record.createdAt,
-          workout: record.workout,
-        })),
+        operations: [records[0]!].map((record) =>
+          record.kind === 'upsert_workout'
+            ? {
+                operationId: record.operationId,
+                kind: record.kind,
+                createdAt: record.createdAt,
+                workout: record.workout,
+              }
+            : {
+                operationId: record.operationId,
+                kind: record.kind,
+                createdAt: record.createdAt,
+                workoutId: record.workoutId,
+              },
+        ),
       });
       for (const result of response.results) {
         if (result.status === 'applied' || result.status === 'duplicate') {

@@ -63,13 +63,14 @@ associated muscles. Every exercise is either:
 
 An ordered, reusable seven-day workout plan. Each day from Monday through
 Sunday can have an optional name and contain multiple ordered exercises with
-type-appropriate targets. The template can have notes that apply to the full
-plan. Exactly one template is active when templates exist. A workout is
-started only from today's populated schedule in that active template; an empty
-or ad-hoc "open workout" cannot be started. The user may swap today's assigned
-day with another weekday for the current ISO week on the current device. The
-workout receives a snapshot that remains valid if the weekly template later
-changes.
+type-appropriate targets. Weekly templates do not have notes. Exactly one
+template is active when templates exist. The current weekday is selected by
+default, and the user can select any other unfinished day directly. An empty or
+ad-hoc "open workout" cannot be started. Finishing a workout marks its template
+day complete for the current ISO week on this device. Completed days are greyed
+out until Monday at local midnight. Cancelling a workout leaves that day
+available. The workout receives a snapshot that remains valid if the weekly
+template later changes.
 
 ### Workout session
 
@@ -186,8 +187,7 @@ While online, a user can:
 - choose duration or interval mode for each cardio entry and configure its
   interval stages.
 
-Template exercises do not have individual notes. A template may still have
-notes that apply to the overall weekly plan.
+Template exercises do not have notes, and weekly templates do not have notes.
 
 Template mutations are unavailable offline. A cached template can be used to
 start a workout if all data required for its workout snapshot is available.
@@ -200,9 +200,12 @@ Deleting a weekly template requires explicit confirmation.
 
 A user can:
 
-- start only today's populated workout in the active weekly template;
-- swap today's assigned template day with another weekday for the current ISO
-  week without changing the template;
+- start the populated workout for any unfinished weekday in the active weekly
+  template, with the current weekday selected by default;
+- see each weekday's optional title or its Rest label and select a day directly;
+- finish a workout to mark that template day complete for the current ISO week;
+- cancel a workout after confirmation, deleting its progress without marking
+  the template day complete;
 - resume the current in-progress workout;
 - add, remove, and reorder workout exercises;
 - mark individual exercises complete to collapse them and reopen them when
@@ -252,9 +255,10 @@ IndexedDB stores:
 - the active workout and its entries;
 - workout changes waiting to be synchronized;
 - the read-only exercise, muscle, and template data required for workout
-  tracking; and
-- synchronization metadata such as stable IDs and server revision markers; and
-- the current device's active-template day swaps, keyed by ISO week.
+  tracking;
+- synchronization metadata such as stable IDs and server revision markers;
+- completed days for the active template, keyed by ISO week; and
+- cancellation tombstones for workouts that may already have synchronized.
 
 Every offline-created entity uses a client-generated UUID. Synchronization is
 idempotent: retrying an acknowledged operation must not create another session,
@@ -356,9 +360,11 @@ The first usable release is complete when:
 - Weekly templates use ISO weekdays (`1` = Monday through `7` = Sunday) and
   allow multiple ordered exercises on each day.
 - Exactly one weekly template is active when any templates exist. Ad-hoc open
-  workouts are unavailable; every new workout is a snapshot of today's
-  scheduled day in that active template, after applying any current-week
-  device-local swap.
+  workouts are unavailable; each new workout is a snapshot of the selected
+  unfinished weekday in that active template. The current weekday is selected
+  by default. Finished days are stored per device and ISO week, then reset when
+  the local week changes at Monday midnight. Cancelling a workout does not
+  consume its day.
 - Strength efforts record repetitions and optional weight in explicit `kg` or
   `lb` units derived from the device's Metric or Imperial Settings preference.
 - Cardio efforts record duration and optional distance in explicit `km` or

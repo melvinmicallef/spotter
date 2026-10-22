@@ -19,6 +19,10 @@ test('records typed sets, previous values, and an audible interval timer', async
   const suffix = crypto.randomUUID().slice(0, 8);
   const today = (new Date().getDay() || 7) as DayOfWeek;
   const todayName = WEEKDAYS[today - 1]!;
+  const secondDay = ((today % 7) + 1) as DayOfWeek;
+  const secondDayName = WEEKDAYS[secondDay - 1]!;
+  const thirdDay = ((secondDay % 7) + 1) as DayOfWeek;
+  const thirdDayName = WEEKDAYS[thirdDay - 1]!;
   const strengthName = `Progress press ${suffix}`;
   const calisthenicsName = `Bodyweight squat ${suffix}`;
   const cardioName = `Sprint intervals ${suffix}`;
@@ -68,7 +72,11 @@ test('records typed sets, previous values, and an audible interval timer', async
       name: templateName,
       isActive: true,
       notes: null,
-      dayNames: [{ dayOfWeek: today, name: 'Strength + intervals' }],
+      dayNames: [
+        { dayOfWeek: today, name: 'Strength + intervals' },
+        { dayOfWeek: secondDay, name: 'Set history 2' },
+        { dayOfWeek: thirdDay, name: 'Set history 3' },
+      ],
       exercises: [
         {
           exerciseId: strength.id,
@@ -98,6 +106,37 @@ test('records typed sets, previous values, and an audible interval timer', async
           targetReps: null,
           targetDurationSeconds: null,
           cardioMode: 'duration',
+          targetDistance: null,
+          targetDistanceUnit: 'km',
+        },
+        {
+          exerciseId: strength.id,
+          dayOfWeek: secondDay,
+          notes: null,
+          targetSets: 2,
+          targetReps: 10,
+          targetDurationSeconds: null,
+          targetDistance: null,
+          targetDistanceUnit: 'km',
+        },
+        {
+          exerciseId: cardio.id,
+          dayOfWeek: secondDay,
+          notes: null,
+          targetSets: null,
+          targetReps: null,
+          targetDurationSeconds: null,
+          cardioMode: 'duration',
+          targetDistance: null,
+          targetDistanceUnit: 'km',
+        },
+        {
+          exerciseId: strength.id,
+          dayOfWeek: thirdDay,
+          notes: null,
+          targetSets: 2,
+          targetReps: 10,
+          targetDurationSeconds: null,
           targetDistance: null,
           targetDistanceUnit: 'km',
         },
@@ -228,7 +267,7 @@ test('records typed sets, previous values, and an audible interval timer', async
   await page.getByRole('link', { name: 'Workout' }).click();
   await page.getByRole('button', { name: "Start today's workout" }).click();
   await expect(
-    page.getByText('Strength + intervals', { exact: true }),
+    page.getByText(`${todayName} (Strength + intervals)`, { exact: true }),
   ).toBeVisible();
 
   const strengthCard = page
@@ -366,7 +405,9 @@ test('records typed sets, previous values, and an audible interval timer', async
   await page.getByRole('link', { name: 'Settings' }).click();
   await page.getByLabel('Measurement system').selectOption('imperial');
   await page.getByRole('link', { name: 'Workout' }).click();
-  await page.getByRole('button', { name: "Start today's workout" }).click();
+  await page
+    .getByRole('button', { name: `Start ${secondDayName}'s workout` })
+    .click();
   const secondStrength = page
     .locator('article.workout-card')
     .filter({ hasText: strengthName });
@@ -400,7 +441,9 @@ test('records typed sets, previous values, and an audible interval timer', async
   await secondCardio.getByLabel(`${cardioName} distance`).fill('3.1');
   await finishIncompleteWorkout(page);
 
-  await page.getByRole('button', { name: "Start today's workout" }).click();
+  await page
+    .getByRole('button', { name: `Start ${thirdDayName}'s workout` })
+    .click();
   const thirdStrength = page
     .locator('article.workout-card')
     .filter({ hasText: strengthName });

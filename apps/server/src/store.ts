@@ -329,7 +329,7 @@ export class SpotterStore {
     return this.createTemplate({
       name: this.availableTemplateCopyName(source.name),
       isActive: false,
-      notes: source.notes,
+      notes: null,
       dayNames: source.dayNames ?? [],
       exercises: source.exercises.map((exercise) => ({
         exerciseId: exercise.exerciseId,
@@ -562,7 +562,13 @@ export class SpotterStore {
           operationId: operation.operationId,
           status: 'duplicate' as const,
         };
-      this.upsertWorkout(operation.workout);
+      if (operation.kind === 'upsert_workout') {
+        this.upsertWorkout(operation.workout);
+      } else {
+        this.database
+          .prepare('DELETE FROM workout_sessions WHERE id = ?')
+          .run(operation.workoutId);
+      }
       this.database
         .prepare(
           'INSERT INTO processed_operations (operation_id, processed_at) VALUES (?, ?)',

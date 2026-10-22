@@ -1,6 +1,8 @@
 import type { DayOfWeek } from '@spotter/shared';
 
-export type WeekSchedule = Partial<Record<DayOfWeek, DayOfWeek>>;
+export interface WeekProgress {
+  completedDays: DayOfWeek[];
+}
 
 export function isoWeekKey(date = new Date()): string {
   const current = new Date(
@@ -16,51 +18,52 @@ export function isoWeekKey(date = new Date()): string {
   return `${isoYear}-W${String(week).padStart(2, '0')}`;
 }
 
-export function scheduledTemplateDay(
-  actualDay: DayOfWeek,
-  schedule: WeekSchedule,
+export function completeWeekDay(
+  progress: WeekProgress,
+  day: DayOfWeek,
+): WeekProgress {
+  return progress.completedDays.includes(day)
+    ? progress
+    : { completedDays: [...progress.completedDays, day].sort() };
+}
+
+export function nextAvailableDay(
+  startDay: DayOfWeek,
+  completedDays: DayOfWeek[],
 ): DayOfWeek {
-  return schedule[actualDay] ?? actualDay;
-}
-
-export function swapWeekDays(
-  schedule: WeekSchedule,
-  first: DayOfWeek,
-  second: DayOfWeek,
-): WeekSchedule {
-  if (first === second) return schedule;
-  const next: WeekSchedule = {
-    ...schedule,
-    [first]: scheduledTemplateDay(second, schedule),
-    [second]: scheduledTemplateDay(first, schedule),
-  };
-  for (const day of [first, second]) {
-    if (next[day] === day) delete next[day];
+  for (let offset = 0; offset < 7; offset += 1) {
+    const day = (((startDay - 1 + offset) % 7) + 1) as DayOfWeek;
+    if (!completedDays.includes(day)) return day;
   }
-  return next;
+  return startDay;
 }
 
-export function parseWeekSchedule(
+export function parseWeekProgress(
   value: string | number | undefined,
-): WeekSchedule {
-  if (typeof value !== 'string') return {};
+): WeekProgress {
+  if (typeof value !== 'string') return { completedDays: [] };
   try {
     const candidate: unknown = JSON.parse(value);
     if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate))
-      return {};
-    const schedule: WeekSchedule = {};
-    for (let day = 1; day <= 7; day += 1) {
-      const source = (candidate as Record<string, unknown>)[String(day)];
-      if (
-        typeof source === 'number' &&
-        Number.isInteger(source) &&
-        source >= 1 &&
-        source <= 7
-      )
-        schedule[day as DayOfWeek] = source as DayOfWeek;
-    }
-    return schedule;
+      return { completedDays: [] };
+    const days = (candidate as Record<string, unknown>).completedDays;
+    if (!Array.isArray(days)) return { completedDays: [] };
+    const completedDays = [...new Set(days)].filter(
+      (day): day is DayOfWeek =>
+        typeof day === 'number' &&
+        Number.isInteger(day) &&
+        day >= 1 &&
+        day <= 7,
+    );
+    return { completedDays: completedDays.sort() };
   } catch {
-    return {};
+    return { completedDays: [] };
   }
+}
+
+export function weekProgressMetadataKey(
+  templateId: string,
+  weekKey: string,
+): string {
+  return `weekProgress:${templateId}:${weekKey}`;
 }

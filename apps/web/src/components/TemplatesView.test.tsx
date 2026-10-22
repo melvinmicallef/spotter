@@ -37,7 +37,7 @@ describe('template library screens', () => {
     expect(html).not.toContain('Save weekly template');
   });
 
-  it('shows edit and delete actions on the read-only details page', () => {
+  it('shows edit and delete actions without weekly template notes', () => {
     const html = renderToStaticMarkup(
       <TemplatesView {...baseProps} routePath={`/templates/${template.id}`} />,
     );
@@ -45,7 +45,8 @@ describe('template library screens', () => {
     expect(html).toContain('<h2>Four day split</h2>');
     expect(html).toContain('aria-label="Edit Four day split"');
     expect(html).toContain('aria-label="Delete Four day split"');
-    expect(html).toContain('Alternate upper and lower days.');
+    expect(html).not.toContain('Alternate upper and lower days.');
+    expect(html).not.toContain('Weekly template notes');
     expect(html).not.toContain('Template name');
   });
 

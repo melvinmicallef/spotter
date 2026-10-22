@@ -29,7 +29,7 @@ export function createWorkout(
     status: 'in_progress',
     startedAt: now,
     completedAt: null,
-    notes: template.notes,
+    notes: null,
     updatedAt: now,
     exercises: entries.map((entry, position) => ({
       id: crypto.randomUUID(),

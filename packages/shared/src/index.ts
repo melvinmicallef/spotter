@@ -542,12 +542,24 @@ export const completedWorkoutEditSchema = z
   })
   .strict();
 
-export const syncOperationSchema = z.object({
-  operationId: uuidSchema,
-  kind: z.literal('upsert_workout'),
-  createdAt: isoDateTimeSchema,
-  workout: workoutSchema,
-});
+export const syncOperationSchema = z.discriminatedUnion('kind', [
+  z
+    .object({
+      operationId: uuidSchema,
+      kind: z.literal('upsert_workout'),
+      createdAt: isoDateTimeSchema,
+      workout: workoutSchema,
+    })
+    .strict(),
+  z
+    .object({
+      operationId: uuidSchema,
+      kind: z.literal('delete_workout'),
+      createdAt: isoDateTimeSchema,
+      workoutId: uuidSchema,
+    })
+    .strict(),
+]);
 
 export const syncBatchSchema = z.object({
   operations: z.array(syncOperationSchema).min(1).max(50),

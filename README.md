@@ -17,11 +17,13 @@ Spotter is a vibe-coded app built with OpenAI Codex.
   built-in, read-only hierarchy sourced from the ExRx directory.
 - Strength, calisthenics, and cardio exercises use different planning and
   recording fields.
-- Exactly one weekly template is active when templates exist. Workouts start
-  only from today's scheduled day; ad-hoc open workouts are not part of the
-  product.
-- Today's schedule can be swapped with another day for the current ISO week on
-  the current device without changing the reusable template.
+- Exactly one weekly template is active when templates exist. The current
+  weekday is selected by default, and any unfinished weekday can be selected
+  directly without changing the reusable template. Ad-hoc open workouts are
+  not part of the product.
+- Finishing a workout marks its template day complete for the current ISO week
+  on this device. Completed days are greyed out until Monday at local midnight;
+  cancelling a workout leaves its day available.
 - A light/dark appearance switch on the Settings page is retained on the current device.
 - A device-local Metric or Imperial preference derives weight and distance
   units; Metric is the default for new installations.
@@ -52,8 +54,8 @@ updates do not replace user data.
 The installed application will cache enough read-only exercise and template
 data to log a workout without a network connection. While offline, a user can:
 
-- start today's workout from the cached active weekly template, including a
-  device-local current-week day swap, or resume an in-progress workout;
+- start any unfinished day from the cached active weekly template, with today's
+  day selected by default, or resume an in-progress workout;
 - record sets, repetitions, and weight for strength exercises;
 - record sets and repetitions without weight for calisthenics exercises;
 - record duration and distance for cardio exercises, using either a simple
@@ -64,7 +66,7 @@ data to log a workout without a network connection. While offline, a user can:
   available to resume;
 - record completion state; and
 - finish a workout, with a warning and a choice to continue when exercises are
-  still incomplete.
+  still incomplete; or cancel it after confirmation without using up that day.
 
 Creating or editing exercises and templates requires a connection.
 The interface will disable those actions while offline and explain that they
@@ -160,8 +162,9 @@ lifecycle, IndexedDB persistence, idempotent synchronization, PWA shell, and
 production container are implemented. The exercise catalogue supports primary
 and secondary muscle roles, preparation and execution instructions, optional
 comments and reference links, and validated GIF, PNG, or JPEG demonstrations.
-Workout entry uses compact, type-specific fields. Template-wide notes and
-optional names for each weekday are supported. History shows exercise names,
+Workout entry uses compact, type-specific fields. Optional names for each
+weekday are supported, and template-wide notes are no longer part of the
+template editor. History shows exercise names,
 opens completed-workout details, and supports online set-value and set-count
 edits without changing a workout's exercise list. Strength exercise details
 include Epley estimated one-rep max and training-volume graphs by workout date.

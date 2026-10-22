@@ -326,9 +326,6 @@ function TemplateDetails({
           Duplicate
         </button>
       </div>
-      {template.notes && (
-        <p className="template-details-notes">{template.notes}</p>
-      )}
       <div className="week-grid template-details-week">
         {WEEKDAYS.map((day) => {
           const entries = template.exercises.filter(
@@ -459,6 +456,7 @@ function TemplateEditor({
             onSubmit({
               ...draft,
               name: draft.name.trim(),
+              notes: null,
               dayNames: (draft.dayNames ?? [])
                 .map((dayName) => ({
                   ...dayName,
@@ -478,17 +476,6 @@ function TemplateEditor({
               }
             />
           </label>
-          <label className="field">
-            Notes (optional)
-            <textarea
-              placeholder="Weekly template notes"
-              value={draft.notes ?? ''}
-              onChange={(event) =>
-                setDraft({ ...draft, notes: event.target.value || null })
-              }
-            />
-          </label>
-
           <div className="week-grid">
             {WEEKDAYS.map((day) => {
               const entries = draft.exercises
@@ -869,7 +856,7 @@ function toInput(template: WorkoutTemplate): WorkoutTemplateInput {
   return {
     name: template.name,
     isActive: template.isActive,
-    notes: template.notes,
+    notes: null,
     dayNames: template.dayNames ?? [],
     exercises: template.exercises.map((entry) => ({
       id: entry.id,

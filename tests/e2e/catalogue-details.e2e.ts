@@ -254,7 +254,9 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
     page.getByRole('button', { name: "Start today's workout" }),
   ).toBeEnabled();
   await page.getByRole('button', { name: "Start today's workout" }).click();
-  await expect(page.getByText('Chest & Back', { exact: true })).toBeVisible();
+  await expect(
+    page.getByText(`${today} (Chest & Back)`, { exact: true }),
+  ).toBeVisible();
   await page.getByRole('button', { name: `How to do ${strengthName}` }).click();
   const exerciseGuide = page.getByRole('dialog', { name: strengthName });
   await expect(exerciseGuide).toContainText('Pause at the bottom');

@@ -100,31 +100,6 @@ async function cachedExerciseNames(page: Page) {
   });
 }
 
-async function persistedWeekSchedule(page: Page) {
-  return page.evaluate<string | undefined>(async () => {
-    const request = indexedDB.open('spotter');
-    const database = await new Promise<IDBDatabase>((resolve, reject) => {
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
-    const records = database
-      .transaction('metadata', 'readonly')
-      .objectStore('metadata')
-      .getAll();
-    const result = await new Promise<Array<{ key: string; value: unknown }>>(
-      (resolve, reject) => {
-        records.onsuccess = () => resolve(records.result);
-        records.onerror = () => reject(records.error);
-      },
-    );
-    database.close();
-    const schedule = result.find((record) =>
-      record.key.startsWith('weekSchedule:'),
-    );
-    return typeof schedule?.value === 'string' ? schedule.value : undefined;
-  });
-}
-
 test('installs its shell and synchronizes one offline workout after reload', async ({
   context,
   page,
@@ -235,15 +210,28 @@ test('installs its shell and synchronizes one offline workout after reload', asy
     .toBe(true);
   await expect.poll(() => cachedExerciseNames(page)).toContain(exerciseName);
 
-  await page.getByRole('button', { name: `${otherDayName} (1)` }).click();
+  await page.getByRole('button', { name: `${otherDayName} (Workout)` }).click();
   await expect(
-    page.getByText(`Using ${otherDayName}'s workout today`),
+    page.getByRole('heading', { name: `${otherDayName} (Workout)` }),
   ).toBeVisible();
-  await expect.poll(() => persistedWeekSchedule(page)).toContain(`${otherDay}`);
   await page.reload();
   await expect(
-    page.getByText(`Using ${otherDayName}'s workout today`),
+    page.getByRole('heading', { name: `${weekdayNames[today]} (Workout)` }),
   ).toBeVisible();
+  await page.getByRole('button', { name: `${otherDayName} (Workout)` }).click();
+
+  await page
+    .getByRole('button', { name: `Start ${otherDayName}'s workout` })
+    .click();
+  await page.getByRole('button', { name: 'Cancel workout' }).click();
+  const cancelDialog = page.getByRole('alertdialog');
+  await expect(cancelDialog).toContainText(
+    'The selected day will remain available this week.',
+  );
+  await cancelDialog.getByRole('button', { name: 'Cancel workout' }).click();
+  await expect(
+    page.getByRole('button', { name: `Start ${otherDayName}'s workout` }),
+  ).toBeEnabled();
 
   await context.setOffline(true);
   await expect(page.getByRole('status')).toContainText('Offline');
@@ -251,12 +239,9 @@ test('installs its shell and synchronizes one offline workout after reload', asy
   await expect(
     page.getByRole('button', { name: 'Start an open workout' }),
   ).toHaveCount(0);
-  await expect(
-    page.getByRole('button', {
-      name: /^Start (Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)/,
-    }),
-  ).toHaveCount(0);
-  await page.getByRole('button', { name: "Start today's workout" }).click();
+  await page
+    .getByRole('button', { name: `Start ${otherDayName}'s workout` })
+    .click();
   await expect(
     page.getByRole('heading', {
       name: new RegExp(`Offline week .* · ${otherDayName}`),
@@ -290,6 +275,9 @@ test('installs its shell and synchronizes one offline workout after reload', asy
   await expect(page.getByLabel(`${exerciseName} weight set 1`)).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Finish' }).click();
+  await expect(
+    page.getByRole('button', { name: `${otherDayName} (Workout) Done` }),
+  ).toBeDisabled();
   await page.getByRole('link', { name: 'History' }).click();
   const historyRow = page
     .locator('.history-entry')
