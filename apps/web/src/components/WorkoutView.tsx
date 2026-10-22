@@ -12,6 +12,7 @@ import type {
 import { weekdayName, WEEKDAYS } from '../weekdays.js';
 import { convertDistance, convertWeight } from '../measurement-system.js';
 import type { DistanceUnit, WeightUnit } from '../measurement-system.js';
+import { activePlanDays } from '../active-duration.js';
 import { ExerciseDetailsModal } from './CatalogueView.js';
 import { ConfirmDialog } from './ConfirmDialog.js';
 import { ExercisePicker } from './ExercisePicker.js';
@@ -75,12 +76,26 @@ export function WorkoutView({
   onChange,
   actions,
 }: WorkoutViewProps) {
+  const [localToday, setLocalToday] = useState(() => new Date());
   const [exerciseDetailsId, setExerciseDetailsId] = useState<string | null>(
     null,
   );
   const [exercisePickerOpen, setExercisePickerOpen] = useState(false);
   const [finishWarningOpen, setFinishWarningOpen] = useState(false);
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
+  useEffect(() => {
+    const now = new Date();
+    const nextLocalMidnight = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate() + 1,
+    );
+    const timeout = window.setTimeout(
+      () => setLocalToday(new Date()),
+      Math.max(0, nextLocalMidnight.getTime() - now.getTime() + 50),
+    );
+    return () => window.clearTimeout(timeout);
+  }, [localToday]);
   const exerciseDetails = exercises.find(
     (exercise) => exercise.id === exerciseDetailsId,
   );
@@ -120,6 +135,7 @@ export function WorkoutView({
     };
   }, [previousWorkouts]);
   if (!workout) {
+    const activeDays = activePlanDays(activeTemplate?.activeSince, localToday);
     const scheduledExercises =
       activeTemplate?.exercises.filter(
         (exercise) => exercise.dayOfWeek === selectedDay,
@@ -194,7 +210,14 @@ export function WorkoutView({
               })}
             </div>
             <div className="today-workout-summary">
-              <span className="active-badge">Active plan</span>
+              <div className="today-plan-status">
+                <span className="active-badge">Active plan</span>
+                {activeDays !== null && (
+                  <span className="active-plan-duration">
+                    Active for {activeDays} day{activeDays === 1 ? '' : 's'}
+                  </span>
+                )}
+              </div>
               <h3>{activeTemplate.name}</h3>
               <p>
                 {scheduledExercises.length === 0

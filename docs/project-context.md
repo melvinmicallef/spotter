@@ -69,6 +69,7 @@ connectivity.
 1. The user loads or installs Spotter while online.
 2. The client synchronizes the muscle catalogue, typed exercise catalogue, and
    weekly workout templates, exactly one of which is active when any exist.
+   Today shows how many local calendar days the active template has been in use.
 3. The current weekday is selected by default. The user can select any other
    unfinished day directly from the cached active weekly template. Finished
    days stay unavailable until local Monday midnight; cancelling a workout

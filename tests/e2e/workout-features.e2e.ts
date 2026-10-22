@@ -201,6 +201,9 @@ test('records typed sets, previous values, and an audible interval timer', async
   await page.clock.install({ time: new Date() });
   await page.goto('/');
   await expect(page.getByRole('status')).toContainText('Online');
+  await expect(
+    page.locator('.today-workout-card').getByText('Active for 0 days'),
+  ).toBeVisible();
 
   await page.getByRole('link', { name: 'Templates' }).click();
   const templateRow = page

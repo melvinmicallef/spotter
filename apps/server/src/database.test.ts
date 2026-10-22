@@ -215,6 +215,13 @@ describe('database migrations', () => {
       is_active: 1,
     });
     expect(
+      (
+        upgraded
+          .prepare('SELECT active_since FROM workout_templates WHERE id = ?')
+          .get(templateId) as { active_since: string }
+      ).active_since,
+    ).toEqual(expect.any(String));
+    expect(
       upgraded
         .prepare(
           `SELECT day_of_week, position, target_sets, target_reps,

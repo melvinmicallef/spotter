@@ -260,15 +260,25 @@ export class SpotterStore {
         const isActive = input.isActive || !hasActive;
         if (isActive)
           this.database
-            .prepare('UPDATE workout_templates SET is_active = 0')
+            .prepare(
+              'UPDATE workout_templates SET is_active = 0, active_since = NULL',
+            )
             .run();
         this.database
           .prepare(
             `INSERT INTO workout_templates
-             (id, name, is_active, notes, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?)`,
+             (id, name, is_active, active_since, notes, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
           )
-          .run(id, input.name, Number(isActive), input.notes, now, now);
+          .run(
+            id,
+            input.name,
+            Number(isActive),
+            isActive ? now : null,
+            input.notes,
+            now,
+            now,
+          );
         this.replaceTemplateDayNames(id, input.dayNames ?? []);
         this.replaceTemplateExercises(id, input.exercises);
         this.incrementReferenceRevision();
@@ -286,23 +296,36 @@ export class SpotterStore {
     try {
       this.database.transaction(() => {
         const existing = this.database
-          .prepare('SELECT is_active FROM workout_templates WHERE id = ?')
-          .get(id) as { is_active: number } | undefined;
+          .prepare(
+            'SELECT is_active, active_since FROM workout_templates WHERE id = ?',
+          )
+          .get(id) as
+          { is_active: number; active_since: string | null } | undefined;
         if (!existing)
           throw new AppError(404, 'NOT_FOUND', 'Template not found');
         const isActive = input.isActive || Boolean(existing.is_active);
+        const activeSince = isActive
+          ? existing.is_active
+            ? (existing.active_since ?? new Date().toISOString())
+            : new Date().toISOString()
+          : null;
         if (isActive)
           this.database
-            .prepare('UPDATE workout_templates SET is_active = 0 WHERE id <> ?')
+            .prepare(
+              `UPDATE workout_templates
+               SET is_active = 0, active_since = NULL WHERE id <> ?`,
+            )
             .run(id);
         const result = this.database
           .prepare(
-            `UPDATE workout_templates SET name = ?, is_active = ?, notes = ?, updated_at = ?
+            `UPDATE workout_templates
+             SET name = ?, is_active = ?, active_since = ?, notes = ?, updated_at = ?
              WHERE id = ?`,
           )
           .run(
             input.name,
             Number(isActive),
+            activeSince,
             input.notes,
             new Date().toISOString(),
             id,
@@ -361,12 +384,12 @@ export class SpotterStore {
       if (wasActive?.is_active)
         this.database
           .prepare(
-            `UPDATE workout_templates SET is_active = 1
+            `UPDATE workout_templates SET is_active = 1, active_since = ?
              WHERE id = (
                SELECT id FROM workout_templates ORDER BY created_at, id LIMIT 1
              )`,
           )
-          .run();
+          .run(new Date().toISOString());
       this.incrementReferenceRevision();
     })();
   }
@@ -709,6 +732,7 @@ export class SpotterStore {
       id: String(row.id),
       name: String(row.name),
       isActive: Boolean(row.is_active),
+      activeSince: nullableString(row.active_since),
       notes: nullableString(row.notes),
       dayNames,
       exercises,

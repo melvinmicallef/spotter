@@ -21,6 +21,7 @@ Spotter is a vibe-coded app built with OpenAI Codex.
   weekday is selected by default, and any unfinished weekday can be selected
   directly without changing the reusable template. Ad-hoc open workouts are
   not part of the product.
+- Today shows how many local calendar days the active plan has been in use.
 - Finishing a workout marks its template day complete for the current ISO week
   on this device. Completed days are greyed out until Monday at local midnight;
   cancelling a workout leaves its day available.

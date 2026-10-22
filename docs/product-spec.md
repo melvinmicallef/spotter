@@ -72,6 +72,13 @@ out until Monday at local midnight. Cancelling a workout leaves that day
 available. The workout receives a snapshot that remains valid if the weekly
 template later changes.
 
+Today shows the number of local calendar days the active template has been in
+use. Editing an active template does not reset the count; activating a different
+template starts its count, and reactivating a previously used template starts a
+new count. The activation date displays as zero days. For installations
+upgraded before activation timestamps existed, the counter starts when the
+migration runs.
+
 ### Workout session
 
 A dated workout instance with a lifecycle of in progress or completed. It

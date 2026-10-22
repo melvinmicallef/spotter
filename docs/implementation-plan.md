@@ -85,6 +85,8 @@ deletion behavior.
 
 - Weekly template and per-day ordered template-exercise persistence.
 - Exactly one active template when templates exist.
+- Preserve when the active template was activated and show its age in days on
+  Today; editing the active template leaves this timestamp unchanged.
 - Online API and UI to create, rename, duplicate, edit, reorder, and delete
   templates.
 - Multiple exercises on each ISO weekday.

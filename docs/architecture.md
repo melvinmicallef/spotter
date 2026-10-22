@@ -185,6 +185,14 @@ week changes at Monday midnight. Cancelling a workout removes its local state
 and queues an idempotent delete operation so a previously synchronized draft
 is also removed without consuming the day.
 
+Each template stores `active_since` as an ISO UTC timestamp while it is active.
+Activating another template clears the prior timestamp and starts a new one;
+editing the active template preserves it. Deleting the active template starts
+the timestamp for the automatically promoted template. The Today view derives
+an elapsed local-calendar-day count from that timestamp. The migration that
+introduces this field starts the count for an existing active template when the
+upgrade runs because older databases did not record when activation happened.
+
 Each template day opens the same client-side exercise picker over the cached
 exercise reference data. The picker filters locally by case-insensitive name or
 associated muscle and renders uploaded demonstration images from their existing

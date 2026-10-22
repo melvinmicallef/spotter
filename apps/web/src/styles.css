@@ -1915,6 +1915,16 @@ small {
   flex-direction: column;
   gap: 4px;
 }
+.today-plan-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.active-plan-duration {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 650;
+}
 .today-workout-summary p {
   margin: 0;
 }

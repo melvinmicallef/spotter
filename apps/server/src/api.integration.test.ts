@@ -438,12 +438,14 @@ describe('catalogue, templates, and synchronization API', () => {
       })
       .expect(201);
     expect(first.body.isActive).toBe(true);
+    expect(first.body.activeSince).toEqual(expect.any(String));
 
     const second = await request(app)
       .post('/api/templates')
       .send({ name: 'Second plan', notes: null, exercises: [] })
       .expect(201);
     expect(second.body.isActive).toBe(false);
+    expect(second.body.activeSince).toBeNull();
 
     const activated = await request(app)
       .patch(`/api/templates/${second.body.id}`)
@@ -455,6 +457,19 @@ describe('catalogue, templates, and synchronization API', () => {
       })
       .expect(200);
     expect(activated.body.isActive).toBe(true);
+    expect(activated.body.activeSince).toEqual(expect.any(String));
+
+    const activeSince = activated.body.activeSince as string;
+    const editedActive = await request(app)
+      .patch(`/api/templates/${second.body.id}`)
+      .send({
+        name: 'Second plan revised',
+        isActive: true,
+        notes: null,
+        exercises: [],
+      })
+      .expect(200);
+    expect(editedActive.body.activeSince).toBe(activeSince);
 
     const templates = await request(app).get('/api/templates').expect(200);
     expect(
@@ -467,6 +482,11 @@ describe('catalogue, templates, and synchronization API', () => {
         Boolean(template.isActive),
       ).id,
     ).toBe(second.body.id);
+    expect(
+      templates.body.find(
+        (template: { id: string }) => template.id === first.body.id,
+      ).activeSince,
+    ).toBeNull();
 
     const duplicate = await request(app)
       .post(`/api/templates/${first.body.id}/duplicate`)
@@ -481,6 +501,11 @@ describe('catalogue, templates, and synchronization API', () => {
         Boolean(template.isActive),
       ),
     ).toHaveLength(1);
+    expect(
+      afterDelete.body.find(
+        (template: { id: string }) => template.id === first.body.id,
+      ).activeSince,
+    ).toEqual(expect.any(String));
   });
 
   it('returns stable validation errors', async () => {

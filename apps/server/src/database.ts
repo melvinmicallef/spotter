@@ -360,6 +360,19 @@ export const migrations = [
       WHERE key = 'reference_revision';
     `,
   },
+  {
+    version: 13,
+    name: 'template_activation_timestamp',
+    sql: `
+      ALTER TABLE workout_templates ADD COLUMN active_since TEXT;
+      UPDATE workout_templates
+      SET active_since = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+      WHERE is_active = 1;
+      UPDATE app_metadata
+      SET value = CAST(CAST(value AS INTEGER) + 1 AS TEXT)
+      WHERE key = 'reference_revision';
+    `,
+  },
 ] as const;
 
 export type SpotterDatabase = Database.Database;

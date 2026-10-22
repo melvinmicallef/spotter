@@ -208,6 +208,7 @@ export const workoutTemplateSchema = z.object({
   id: uuidSchema,
   name: nameSchema,
   isActive: z.boolean(),
+  activeSince: isoDateTimeSchema.nullable().optional(),
   notes: nullableNoteSchema,
   dayNames: templateDayNamesSchema.optional(),
   exercises: z.array(templateExerciseSchema),
