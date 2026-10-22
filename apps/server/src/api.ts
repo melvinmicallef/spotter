@@ -4,6 +4,8 @@ import { Router, raw } from 'express';
 import { z } from 'zod';
 
 import {
+  appSettingsInputSchema,
+  appSettingsSchema,
   exerciseInputSchema,
   exerciseMediaSchema,
   syncOperationSchema,
@@ -25,6 +27,24 @@ export function createApiRouter(
   options: ApiRouterOptions = {},
 ): Router {
   const router = Router();
+
+  router.get('/settings', (_request, response) =>
+    response.json(appSettingsSchema.parse(store.getSettings())),
+  );
+  router.put('/settings', (request, response) => {
+    const input = appSettingsInputSchema.parse(request.body);
+    const previousPoster = store.getSettings().stretchingPoster;
+    const settings = store.updateSettings(input);
+    if (
+      previousPoster &&
+      previousPoster.id !== settings.stretchingPoster?.id &&
+      !store.mediaIsReferenced(previousPoster.id)
+    ) {
+      const removed = store.deleteMedia(previousPoster.id);
+      options.mediaStorage?.remove(removed.id, removed.mimeType);
+    }
+    response.json(appSettingsSchema.parse(settings));
+  });
 
   router.get('/muscles', (_request, response) =>
     response.json(store.listMuscles()),
@@ -48,7 +68,7 @@ export function createApiRouter(
   });
   router.delete('/exercises/:id', (request, response) => {
     const media = store.deleteExercise(uuidSchema.parse(request.params.id));
-    if (media) {
+    if (media && !store.mediaIsReferenced(media.id)) {
       store.deleteMedia(media.id);
       options.mediaStorage?.remove(media.id, media.mimeType);
     }
@@ -167,6 +187,10 @@ export function createApiRouter(
   );
   router.get('/workouts/:id', (request, response) => {
     response.json(store.getWorkout(uuidSchema.parse(request.params.id)));
+  });
+  router.delete('/workouts/:id', (request, response) => {
+    store.deleteWorkout(uuidSchema.parse(request.params.id));
+    response.status(204).end();
   });
   router.post('/sync', (request, response) => {
     const batch = z

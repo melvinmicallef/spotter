@@ -1,5 +1,11 @@
 export type View =
-  'workout' | 'history' | 'muscles' | 'exercises' | 'templates';
+  | 'workout'
+  | 'history'
+  | 'muscles'
+  | 'exercises'
+  | 'templates'
+  | 'settings'
+  | 'stretching';
 
 export type ExerciseRoute =
   | { kind: 'list' }
@@ -19,6 +25,8 @@ const VIEW_PATHS: Record<View, string> = {
   muscles: '/muscles',
   exercises: '/exercises',
   templates: '/templates',
+  settings: '/settings',
+  stretching: '/stretching',
 };
 
 export function pathForView(view: View): string {

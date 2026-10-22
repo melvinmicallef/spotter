@@ -8,6 +8,8 @@ The project is under active implementation on the `develop` branch. Its npm
 workspace contains the React client, Express server, and shared wire contracts.
 The current development release is `0.1.0`.
 
+Spotter is a vibe-coded app built with OpenAI Codex.
+
 ## Product principles
 
 - Workout logging must remain usable when the device loses connectivity.
@@ -19,9 +21,11 @@ The current development release is `0.1.0`.
   product.
 - Today's schedule can be swapped with another day for the current ISO week on
   the current device without changing the reusable template.
-- A light/dark appearance switch is retained on the current device.
+- A light/dark appearance switch on the Settings page is retained on the current device.
+- A device-local Metric or Imperial preference derives weight and distance
+  units; Metric is the default for new installations.
 - Offline writes must synchronize without creating duplicate workouts or sets.
-- Deployment should be simple: one container and one persistent data volume.
+- Deployment should be simple: one container and one persistent host data directory.
 - Release images are published deliberately from `v*` tags or a manual
   workflow run, not from every commit.
 
@@ -91,7 +95,7 @@ The following decisions are settled for the initial implementation:
 - online-only creation and editing of templates and exercises, with a built-in
   read-only muscle hierarchy;
 - one production Docker image serving the PWA and API;
-- one persistent `/data` volume for SQLite;
+- one persistent host directory mounted at `/data` for SQLite;
 - GitHub Container Registry at `ghcr.io/melvinmicallef/spotter`;
 - image publication only for pushed `v*` tags or manual workflow dispatch;
 - `develop` as the default branch; and
@@ -147,6 +151,7 @@ lifecycle, IndexedDB persistence, idempotent synchronization, PWA shell, and
 production container are implemented.
 The exercise catalogue supports a compact list/detail workflow, primary and
 secondary muscle roles, separate preparation and execution instructions,
+optional exercise comments,
 optional HTTP/HTTPS reference links that remain available in workout snapshots,
 and validated GIF, PNG, or JPEG demonstrations.
 Workout, exercise-entry, set, and template-entry notes are editable, and
@@ -163,16 +168,13 @@ services:
     ports:
       - '3000:3000'
     volumes:
-      - spotter-data:/data
+      - ./data:/data
     restart: unless-stopped
-
-volumes:
-  spotter-data:
 ```
 
-The named `spotter-data` volume stores the SQLite database and uploaded exercise
-images outside the container. To pin upgrades, replace `latest` with a released
-version such as `0.1.0`.
+The `./data` directory next to `compose.yaml` stores the SQLite database and
+uploaded exercise images on the host, outside the container. To pin upgrades,
+replace `latest` with a released version such as `0.1.0`.
 
 Start the instance:
 
@@ -181,7 +183,7 @@ docker compose pull
 docker compose up -d
 ```
 
-Then open `http://localhost:3000`. The named volume mounted at `/data` retains
+Then open `http://localhost:3000`. The host directory mounted at `/data` retains
 `spotter.sqlite`, its WAL files, and uploaded media when the container is
 replaced.
 

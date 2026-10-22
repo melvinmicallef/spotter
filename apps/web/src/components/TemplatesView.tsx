@@ -8,6 +8,9 @@ import type {
 } from '@spotter/shared';
 
 import { api } from '../api.js';
+import { convertDistance } from '../measurement-system.js';
+import type { DistanceUnit } from '../measurement-system.js';
+import { ConfirmDialog } from './ConfirmDialog.js';
 import { pathForTemplate, templateRouteFromPath } from '../routes.js';
 import { WEEKDAYS } from '../weekdays.js';
 
@@ -15,6 +18,7 @@ interface TemplatesViewProps {
   online: boolean;
   exercises: Exercise[];
   templates: WorkoutTemplate[];
+  distanceUnit?: DistanceUnit;
   routePath: string;
   onNavigate: (path: string) => void;
   onRefresh: () => Promise<void>;
@@ -22,6 +26,8 @@ interface TemplatesViewProps {
 }
 
 export function TemplatesView(props: TemplatesViewProps) {
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const distanceUnit = props.distanceUnit ?? 'km';
   const screen = templateRouteFromPath(props.routePath);
   const selectedTemplate =
     'templateId' in screen
@@ -58,10 +64,12 @@ export function TemplatesView(props: TemplatesViewProps) {
         submitLabel="Create template"
         online={props.online}
         exercises={props.exercises}
+        distanceUnit={distanceUnit}
         initial={{
           name: '',
           isActive: false,
           notes: null,
+          dayNames: [],
           exercises: [],
         }}
         notice={offlineNotice}
@@ -91,6 +99,7 @@ export function TemplatesView(props: TemplatesViewProps) {
         submitLabel="Save weekly template"
         online={props.online}
         exercises={props.exercises}
+        distanceUnit={distanceUnit}
         initial={toInput(selectedTemplate)}
         notice={offlineNotice}
         onCancel={() =>
@@ -119,54 +128,60 @@ export function TemplatesView(props: TemplatesViewProps) {
 
   if (screen.kind === 'details' && selectedTemplate) {
     return (
-      <TemplateDetails
-        template={selectedTemplate}
-        exercises={props.exercises}
-        online={props.online}
-        notice={offlineNotice}
-        onBack={() => props.onNavigate(pathForTemplate({ kind: 'list' }))}
-        onEdit={() =>
-          props.onNavigate(
-            pathForTemplate({
-              kind: 'edit',
-              templateId: selectedTemplate.id,
-            }),
-          )
-        }
-        onSetActive={() =>
-          void run(() =>
-            api.updateTemplate(selectedTemplate.id, {
-              ...toInput(selectedTemplate),
-              isActive: true,
-            }),
-          )
-        }
-        onDuplicate={() =>
-          void run(
-            () => api.duplicateTemplate(selectedTemplate.id),
-            (duplicate) =>
-              props.onNavigate(
-                pathForTemplate({
-                  kind: 'details',
-                  templateId: duplicate.id,
-                }),
-              ),
-          )
-        }
-        onDelete={() => {
-          if (
-            !window.confirm(
-              `Delete "${selectedTemplate.name}"? This cannot be undone.`,
+      <>
+        <TemplateDetails
+          template={selectedTemplate}
+          exercises={props.exercises}
+          distanceUnit={distanceUnit}
+          online={props.online}
+          notice={offlineNotice}
+          onBack={() => props.onNavigate(pathForTemplate({ kind: 'list' }))}
+          onEdit={() =>
+            props.onNavigate(
+              pathForTemplate({
+                kind: 'edit',
+                templateId: selectedTemplate.id,
+              }),
             )
-          ) {
-            return;
           }
-          void run(
-            () => api.deleteTemplate(selectedTemplate.id),
-            () => props.onNavigate(pathForTemplate({ kind: 'list' })),
-          );
-        }}
-      />
+          onSetActive={() =>
+            void run(() =>
+              api.updateTemplate(selectedTemplate.id, {
+                ...toInput(selectedTemplate),
+                isActive: true,
+              }),
+            )
+          }
+          onDuplicate={() =>
+            void run(
+              () => api.duplicateTemplate(selectedTemplate.id),
+              (duplicate) =>
+                props.onNavigate(
+                  pathForTemplate({
+                    kind: 'details',
+                    templateId: duplicate.id,
+                  }),
+                ),
+            )
+          }
+          onDelete={() => setDeleteDialogOpen(true)}
+        />
+        {deleteDialogOpen && (
+          <ConfirmDialog
+            title={`Delete ${selectedTemplate.name}?`}
+            message="This cannot be undone."
+            confirmLabel="Delete template"
+            onCancel={() => setDeleteDialogOpen(false)}
+            onConfirm={() => {
+              setDeleteDialogOpen(false);
+              void run(
+                () => api.deleteTemplate(selectedTemplate.id),
+                () => props.onNavigate(pathForTemplate({ kind: 'list' })),
+              );
+            }}
+          />
+        )}
+      </>
     );
   }
 
@@ -231,6 +246,7 @@ export function TemplatesView(props: TemplatesViewProps) {
 function TemplateDetails({
   template,
   exercises,
+  distanceUnit,
   online,
   notice,
   onBack,
@@ -241,6 +257,7 @@ function TemplateDetails({
 }: {
   template: WorkoutTemplate;
   exercises: Exercise[];
+  distanceUnit: DistanceUnit;
   online: boolean;
   notice: ReactNode;
   onBack: () => void;
@@ -315,10 +332,16 @@ function TemplateDetails({
           const entries = template.exercises.filter(
             (entry) => entry.dayOfWeek === day.value,
           );
+          const dayName = template.dayNames?.find(
+            (item) => item.dayOfWeek === day.value,
+          )?.name;
           return (
             <section className="template-day" key={day.value}>
               <header>
-                <h3>{day.label}</h3>
+                <h3>
+                  {day.label}
+                  {dayName && ` · ${dayName}`}
+                </h3>
                 <small>
                   {entries.length} exercise{entries.length === 1 ? '' : 's'}
                 </small>
@@ -333,8 +356,9 @@ function TemplateDetails({
                       <strong>
                         {index + 1}. {exercise?.name ?? entry.exerciseName}
                       </strong>
-                      <small>{templateTargetSummary(entry, exercise)}</small>
-                      {entry.notes && <p>{entry.notes}</p>}
+                      <small>
+                        {templateTargetSummary(entry, exercise, distanceUnit)}
+                      </small>
                     </div>
                   );
                 })}
@@ -355,6 +379,7 @@ function TemplateEditor({
   submitLabel,
   online,
   exercises,
+  distanceUnit,
   initial,
   notice,
   onCancel,
@@ -364,6 +389,7 @@ function TemplateEditor({
   submitLabel: string;
   online: boolean;
   exercises: Exercise[];
+  distanceUnit: DistanceUnit;
   initial: WorkoutTemplateInput;
   notice: ReactNode;
   onCancel: () => void;
@@ -381,6 +407,16 @@ function TemplateEditor({
       exercises: draft.exercises.map((entry, entryIndex) =>
         entryIndex === index ? { ...entry, ...patch } : entry,
       ),
+    });
+  }
+
+  function updateDayName(dayOfWeek: DayOfWeek, name: string) {
+    const otherDays = (draft.dayNames ?? []).filter(
+      (dayName) => dayName.dayOfWeek !== dayOfWeek,
+    );
+    setDraft({
+      ...draft,
+      dayNames: name.trim() ? [...otherDays, { dayOfWeek, name }] : otherDays,
     });
   }
 
@@ -418,7 +454,16 @@ function TemplateEditor({
           onSubmit={(event) => {
             event.preventDefault();
             if (!draft.name.trim()) return;
-            onSubmit({ ...draft, name: draft.name.trim() });
+            onSubmit({
+              ...draft,
+              name: draft.name.trim(),
+              dayNames: (draft.dayNames ?? [])
+                .map((dayName) => ({
+                  ...dayName,
+                  name: dayName.name.trim(),
+                }))
+                .filter((dayName) => dayName.name),
+            });
           }}
         >
           <label className="field">
@@ -455,6 +500,22 @@ function TemplateEditor({
                       {entries.length} exercise{entries.length === 1 ? '' : 's'}
                     </small>
                   </header>
+                  <label className="template-day-name-field">
+                    Day name (optional)
+                    <input
+                      aria-label={`${day.label} workout name`}
+                      maxLength={100}
+                      placeholder="e.g. Legs"
+                      value={
+                        draft.dayNames?.find(
+                          (dayName) => dayName.dayOfWeek === day.value,
+                        )?.name ?? ''
+                      }
+                      onChange={(event) =>
+                        updateDayName(day.value, event.target.value)
+                      }
+                    />
+                  </label>
                   <div className="stack tight">
                     {entries.map(({ entry, index }, dayIndex) => {
                       const exercise = exercises.find(
@@ -532,57 +593,32 @@ function TemplateEditor({
                                 />
                               </label>
                               <label>
-                                Target distance
+                                Target distance ({distanceUnit})
                                 <input
                                   aria-label={`${exercise.name} target distance on ${day.label}`}
                                   type="number"
                                   min="0"
                                   step="0.01"
-                                  value={entry.targetDistance ?? ''}
+                                  value={
+                                    convertDistance(
+                                      entry.targetDistance,
+                                      entry.targetDistanceUnit,
+                                      distanceUnit,
+                                    ) ?? ''
+                                  }
                                   onChange={(event) =>
                                     updateEntry(index, {
                                       targetDistance: event.target.value
                                         ? Number(event.target.value)
                                         : null,
+                                      targetDistanceUnit: distanceUnit,
                                     })
                                   }
                                 />
-                              </label>
-                              <label>
-                                Unit
-                                <select
-                                  aria-label={`${exercise.name} distance unit on ${day.label}`}
-                                  value={entry.targetDistanceUnit}
-                                  onChange={(event) =>
-                                    updateEntry(index, {
-                                      targetDistanceUnit: event.target.value as
-                                        'km' | 'mi',
-                                    })
-                                  }
-                                >
-                                  <option value="km">km</option>
-                                  <option value="mi">mi</option>
-                                </select>
                               </label>
                             </div>
                           ) : (
                             <div className="target-fields">
-                              <label>
-                                Target sets
-                                <input
-                                  aria-label={`${exercise?.name ?? 'Exercise'} target sets on ${day.label}`}
-                                  type="number"
-                                  min="1"
-                                  value={entry.targetSets ?? ''}
-                                  onChange={(event) =>
-                                    updateEntry(index, {
-                                      targetSets: event.target.value
-                                        ? Number(event.target.value)
-                                        : null,
-                                    })
-                                  }
-                                />
-                              </label>
                               <label>
                                 Target reps
                                 <input
@@ -599,18 +635,24 @@ function TemplateEditor({
                                   }
                                 />
                               </label>
+                              <label>
+                                Target sets
+                                <input
+                                  aria-label={`${exercise?.name ?? 'Exercise'} target sets on ${day.label}`}
+                                  type="number"
+                                  min="1"
+                                  value={entry.targetSets ?? ''}
+                                  onChange={(event) =>
+                                    updateEntry(index, {
+                                      targetSets: event.target.value
+                                        ? Number(event.target.value)
+                                        : null,
+                                    })
+                                  }
+                                />
+                              </label>
                             </div>
                           )}
-                          <textarea
-                            aria-label={`${exercise?.name ?? 'Exercise'} template notes on ${day.label}`}
-                            placeholder="Exercise notes"
-                            value={entry.notes ?? ''}
-                            onChange={(event) =>
-                              updateEntry(index, {
-                                notes: event.target.value || null,
-                              })
-                            }
-                          />
                         </div>
                       );
                     })}
@@ -641,7 +683,6 @@ function TemplateEditor({
                     {
                       exerciseId: exercise.id,
                       dayOfWeek: pickerDay,
-                      notes: null,
                       targetSets: null,
                       targetReps: null,
                       targetDurationSeconds: null,
@@ -824,15 +865,17 @@ function ExercisePicker({
 
 function templateSummary(template: WorkoutTemplate): string {
   const exerciseCount = template.exercises.length;
-  const dayCount = new Set(
-    template.exercises.map((exercise) => exercise.dayOfWeek),
-  ).size;
+  const dayCount = new Set([
+    ...template.exercises.map((exercise) => exercise.dayOfWeek),
+    ...(template.dayNames ?? []).map((dayName) => dayName.dayOfWeek),
+  ]).size;
   return `${exerciseCount} exercise${exerciseCount === 1 ? '' : 's'} across ${dayCount} day${dayCount === 1 ? '' : 's'}`;
 }
 
 function templateTargetSummary(
   entry: WorkoutTemplate['exercises'][number],
   exercise: Exercise | undefined,
+  distanceUnit: DistanceUnit,
 ): string {
   const parts: string[] = [];
   if ((exercise?.exerciseType ?? entry.exerciseType) === 'cardio') {
@@ -840,7 +883,9 @@ function templateTargetSummary(
       parts.push(`${entry.targetDurationSeconds / 60} min`);
     }
     if (entry.targetDistance != null) {
-      parts.push(`${entry.targetDistance} ${entry.targetDistanceUnit}`);
+      parts.push(
+        `${convertDistance(entry.targetDistance, entry.targetDistanceUnit, distanceUnit)} ${distanceUnit}`,
+      );
     }
   } else {
     if (entry.targetSets != null) {
@@ -874,11 +919,11 @@ function toInput(template: WorkoutTemplate): WorkoutTemplateInput {
     name: template.name,
     isActive: template.isActive,
     notes: template.notes,
+    dayNames: template.dayNames ?? [],
     exercises: template.exercises.map((entry) => ({
       id: entry.id,
       exerciseId: entry.exerciseId,
       dayOfWeek: entry.dayOfWeek,
-      notes: entry.notes,
       targetSets: entry.targetSets,
       targetReps: entry.targetReps,
       targetDurationSeconds: entry.targetDurationSeconds,

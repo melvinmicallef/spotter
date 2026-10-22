@@ -50,7 +50,9 @@ describe('workout history details', () => {
       ],
     };
 
-    const html = renderToStaticMarkup(<HistoryView workouts={[workout]} />);
+    const html = renderToStaticMarkup(
+      <HistoryView workouts={[workout]} online onDeleteWorkout={() => {}} />,
+    );
     expect(html).toContain('Deleted deadlift');
     expect(html).toContain('100 kg × 5 reps');
     expect(html).toContain('Session note');
@@ -102,7 +104,9 @@ describe('workout history details', () => {
       ],
     };
 
-    const html = renderToStaticMarkup(<HistoryView workouts={[workout]} />);
+    const html = renderToStaticMarkup(
+      <HistoryView workouts={[workout]} online onDeleteWorkout={() => {}} />,
+    );
     expect(html).toContain('30m 45s · 5.2 km');
     expect(html).not.toContain('Bodyweight');
   });

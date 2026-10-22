@@ -58,7 +58,8 @@ healthy API response, and load the PWA shell.
 - Explicit strength/cardio exercise types with type-appropriate fields.
 - A compact exercise list and dedicated detail/editor flow, role-aware primary
   and secondary muscle associations, separate preparation/execution
-  instructions, incremental leaf-muscle assignment with primary-first ordering,
+  instructions, optional comments, incremental leaf-muscle assignment with
+  primary-first ordering,
   optional workout-visible reference links, and validated GIF/PNG/JPEG images.
 - Dependency-safe deletion behavior that preserves future workout history.
 - API integration tests using an isolated temporary database.
@@ -105,9 +106,15 @@ snapshot for any populated day.
   template, with a device-local current-ISO-week day swap.
 - Resume an in-progress workout.
 - Add, remove, and reorder workout exercises.
-- Add, edit, complete, and remove sets.
-- Record strength repetitions/weight or cardio duration/distance, notes, and
-  explicit unit semantics.
+- Add, edit, and remove sets.
+- Display strength weight/repetition values in a compact grid with per-exercise
+  controls to add or remove sets.
+- Record strength repetitions/weight or cardio duration/distance, effort notes,
+  and explicit unit semantics.
+- Open the exercise guide, including its demonstration and instructions, from
+  the active workout in a modal.
+- Upload one persistent stretching poster in Settings and open its uncropped
+  view from Today; cache the media response after it loads for offline viewing.
 - Finish a workout and view history.
 - Historical display remains valid after catalogue or template changes.
 

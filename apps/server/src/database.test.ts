@@ -17,7 +17,7 @@ describe('database migrations', () => {
           .prepare('SELECT COUNT(*) AS count FROM schema_migrations')
           .get() as { count: number }
       ).count,
-    ).toBe(6);
+    ).toBe(8);
     expect(
       database
         .prepare(
@@ -78,7 +78,7 @@ describe('database migrations', () => {
           .prepare('SELECT MAX(version) AS version FROM schema_migrations')
           .get() as { version: number }
       ).version,
-    ).toBe(6);
+    ).toBe(8);
     upgraded.close();
     rmSync(directory, { recursive: true, force: true });
   });

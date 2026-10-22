@@ -258,6 +258,46 @@ export const migrations = [
       WHERE key = 'reference_revision';
     `,
   },
+  {
+    version: 7,
+    name: 'exercise_comments',
+    sql: `
+      ALTER TABLE exercises ADD COLUMN comments TEXT;
+      UPDATE app_metadata
+      SET value = CAST(CAST(value AS INTEGER) + 1 AS TEXT)
+      WHERE key = 'reference_revision';
+    `,
+  },
+  {
+    version: 8,
+    name: 'named_template_days',
+    sql: `
+      CREATE TABLE template_day_names (
+        template_id TEXT NOT NULL
+          REFERENCES workout_templates(id) ON DELETE CASCADE,
+        day_of_week INTEGER NOT NULL CHECK (day_of_week BETWEEN 1 AND 7),
+        name TEXT NOT NULL
+          CHECK (length(trim(name)) BETWEEN 1 AND 100),
+        PRIMARY KEY (template_id, day_of_week)
+      );
+
+      ALTER TABLE workout_sessions ADD COLUMN template_day_name TEXT
+        CHECK (template_day_name IS NULL OR
+          length(trim(template_day_name)) BETWEEN 1 AND 100);
+    `,
+  },
+  {
+    version: 9,
+    name: 'stretching_poster_setting',
+    sql: `
+      CREATE TABLE app_settings (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        stretching_poster_id TEXT
+          REFERENCES exercise_images(id) ON DELETE SET NULL
+      );
+      INSERT INTO app_settings (id, stretching_poster_id) VALUES (1, NULL);
+    `,
+  },
 ] as const;
 
 export type SpotterDatabase = Database.Database;

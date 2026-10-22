@@ -63,11 +63,12 @@ incorrect-theme flash. Theme changes also update the browser theme-color
 metadata.
 
 Each primary view has a stable client-side route: `/workout`, `/history`,
-`/muscles`, `/exercises`, and `/templates`. Navigation writes browser history,
-back/forward navigation restores the corresponding view, and Express plus the
-service-worker navigation fallback both return the PWA shell for a direct load
-or refresh on those paths. Exercise creation, details, and editing also have
-stable nested routes: `/exercises/new`, `/exercises/:id`, and
+`/muscles`, `/exercises`, `/templates`, `/settings`, and `/stretching`.
+Navigation writes browser history, back/forward navigation restores the
+corresponding view, and Express plus the service-worker navigation fallback
+both return the PWA shell for a direct load or refresh on those paths. The
+Today view links to the stretching poster page. Exercise creation, details,
+and editing also have stable nested routes: `/exercises/new`, `/exercises/:id`, and
 `/exercises/:id/edit`. Weekly templates follow the same list/detail/editor
 pattern at `/templates/new`, `/templates/:id`, and `/templates/:id/edit`.
 
@@ -79,8 +80,18 @@ opens a detail page with separate edit and delete actions. Deletion requires an
 explicit confirmation before the online request is sent. Muscle source links
 open ExRx in a new browser tab so the catalogue remains available.
 Exercises own their strength/cardio type, muscle roles, separate preparation
-and execution instructions, and uploaded image. The version-five SQLite and
-IndexedDB migrations retain legacy single-field instructions as execution text.
+and execution instructions, optional comments, and uploaded image. The
+version-five SQLite migration and client cache normalization retain legacy
+single-field instructions as execution text; version seven adds the exercise
+comments field and advances the reference revision to refresh cached exercises.
+Version eight adds optional weekday names to templates and snapshots the chosen
+name into newly started workouts.
+Version nine adds a server-managed application setting for the single
+stretching-poster image. The image is shared across devices and is stored using
+the existing media storage path; a device caches its media response after it
+loads so the poster can be viewed offline. The presentation and measurement
+system preferences remain device-local.
+
 The exercise editor assigns muscles incrementally rather than rendering the
 entire catalogue. Duplicate assignments are excluded, multiple secondary
 muscles are supported, and assigned-muscle payloads and UI rows order primary
@@ -128,14 +139,18 @@ operation from replacing a newer workout.
 
 `exercises.exercise_type` is either `strength` or `cardio` and is copied into
 each workout-exercise snapshot. Strength efforts use repetitions, weight, and
-`kg`/`lb`; cardio efforts use duration seconds, distance, and `km`/`mi`. The
-persistence model retains nullable columns for both measurement families so
+`kg`/`lb`; a device-local Metric/Imperial Settings preference controls weight
+entry and display, with active values converted for display and each saved
+value retaining its recorded unit. Cardio efforts use duration seconds,
+distance, and `km`/`mi` derived from that same preference.
+The persistence model retains nullable columns for both measurement families so
 migrations and historical reads remain straightforward, while the client shows
 and writes only the fields valid for the snapshot type.
 
 Template entries use ISO weekday numbers (`1` Monday through `7` Sunday) plus a
 position that is unique within that day. A weekly template can contain multiple
-entries on every day. SQLite marks exactly one template active when any exist.
+entries on every day and one optional display name for each weekday. SQLite
+marks exactly one template active when any exist.
 Creating a workout requires today's populated schedule in that active template;
 the session stores the chosen template day and snapshots only that day's
 entries. Legacy open-workout rows remain readable after migration, but the
@@ -163,12 +178,13 @@ Exercise images are uploaded as raw `image/gif`, `image/png`, or `image/jpeg`
 bodies to a bounded endpoint. The server validates the five-MiB size limit,
 declared MIME type, and matching file signature, stores immutable UUID-named
 files with a format-specific extension beneath `MEDIA_PATH` (`/data/media` in
-the container), and keeps metadata and exercise ownership in SQLite. An image
-record belongs to at most one exercise. Deleting an exercise or replacing its
-image removes both metadata and the file. The PWA prefetches referenced uploaded
-images into a dedicated Workbox/Cache API cache; IndexedDB remains the source of
-truth for exercise metadata and workout state. Website extraction is not
-exposed by the API or client.
+the container), and keeps metadata and references in SQLite. An image can be
+referenced by an exercise or by the single stretching-poster setting. Deleting
+an exercise or replacing a reference removes media metadata and the file only
+when no exercise or setting still references it. The PWA prefetches referenced
+uploaded images into a dedicated Workbox/Cache API cache; IndexedDB remains the
+source of truth for exercise metadata and workout state. Website extraction is
+not exposed by the API or client.
 
 ## Server application
 
@@ -186,6 +202,8 @@ Suggested endpoint groups are:
 ```text
 GET    /api/health
 GET    /api/version
+GET    /api/settings
+PUT    /api/settings
 GET    /api/muscles
 GET    /api/exercises
 POST   /api/exercises
@@ -200,6 +218,7 @@ PATCH  /api/templates/:id
 DELETE /api/templates/:id
 GET    /api/workouts
 GET    /api/workouts/:id
+DELETE /api/workouts/:id
 POST   /api/sync
 ```
 
@@ -228,6 +247,8 @@ exercises
 exercise_muscles
 workout_templates
 template_exercises
+template_day_names
+app_settings
 workout_sessions
 workout_exercises
 workout_sets
@@ -244,8 +265,8 @@ their ExRx group, optional subgroup, source URL, and display order. The API
 exposes them read-only; there are no muscle mutation routes.
 
 Historical workout rows store snapshots of mutable labels, exercise type,
-template day, and targets needed for display. Foreign-key behavior must not
-allow a catalogue deletion to erase workout history.
+template day and its optional name, and targets needed for display. Foreign-key
+behavior must not allow a catalogue deletion to erase workout history.
 
 The production database path is configured through an environment variable and
 defaults to `/data/spotter.sqlite`. The container documentation must call out
@@ -395,6 +416,9 @@ uses the server's monotonically increasing revision cursor.
 Version `0.1.0` uses one active workout per device, one active weekly ISO-day
 template, today-only starts with device-local current-week day swaps, strength
 repetitions plus explicit `kg`/`lb` weight, cardio duration plus explicit
-`km`/`mi` distance, and read-only completed workouts. It targets a trusted
-single-user deployment without built-in authentication; the API layer remains
-the boundary for adding actor and ownership context later.
+`km`/`mi` distance, a device-local Metric/Imperial preference (Metric by
+default), and read-only completed workouts. The preference derives entry units
+and converts active workout and template target displays while preserving
+recorded units in completed history. It targets a trusted single-user
+deployment without built-in authentication; the API layer remains the boundary
+for adding actor and ownership context later.

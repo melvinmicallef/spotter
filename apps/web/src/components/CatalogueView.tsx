@@ -1,8 +1,9 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import type { Exercise, ExerciseInput, Muscle } from '@spotter/shared';
 
 import { api } from '../api.js';
+import { ConfirmDialog } from './ConfirmDialog.js';
 import { exerciseRouteFromPath, pathForExercise } from '../routes.js';
 
 interface ExercisesViewProps {
@@ -16,6 +17,7 @@ interface ExercisesViewProps {
 }
 
 export function ExercisesView(props: ExercisesViewProps) {
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const screen = exerciseRouteFromPath(props.routePath);
   const selectedExercise =
     'exerciseId' in screen
@@ -147,33 +149,38 @@ export function ExercisesView(props: ExercisesViewProps) {
 
   if (screen.kind === 'details' && selectedExercise) {
     return (
-      <ExerciseDetails
-        exercise={selectedExercise}
-        online={props.online}
-        notice={offlineNotice}
-        onBack={() => props.onNavigate(pathForExercise({ kind: 'list' }))}
-        onEdit={() =>
-          props.onNavigate(
-            pathForExercise({
-              kind: 'edit',
-              exerciseId: selectedExercise.id,
-            }),
-          )
-        }
-        onDelete={() => {
-          if (
-            !window.confirm(
-              `Delete "${selectedExercise.name}"? This cannot be undone.`,
+      <>
+        <ExerciseDetails
+          exercise={selectedExercise}
+          online={props.online}
+          notice={offlineNotice}
+          onBack={() => props.onNavigate(pathForExercise({ kind: 'list' }))}
+          onEdit={() =>
+            props.onNavigate(
+              pathForExercise({
+                kind: 'edit',
+                exerciseId: selectedExercise.id,
+              }),
             )
-          ) {
-            return;
           }
-          void run(
-            () => api.deleteExercise(selectedExercise.id),
-            () => props.onNavigate(pathForExercise({ kind: 'list' })),
-          );
-        }}
-      />
+          onDelete={() => setDeleteDialogOpen(true)}
+        />
+        {deleteDialogOpen && (
+          <ConfirmDialog
+            title={`Delete ${selectedExercise.name}?`}
+            message="This cannot be undone."
+            confirmLabel="Delete exercise"
+            onCancel={() => setDeleteDialogOpen(false)}
+            onConfirm={() => {
+              setDeleteDialogOpen(false);
+              void run(
+                () => api.deleteExercise(selectedExercise.id),
+                () => props.onNavigate(pathForExercise({ kind: 'list' })),
+              );
+            }}
+          />
+        )}
+      </>
     );
   }
 
@@ -246,12 +253,6 @@ function ExerciseDetails({
   onEdit: () => void;
   onDelete: () => void;
 }) {
-  const primary = exercise.muscles.filter(
-    (muscle) => muscle.role === 'primary',
-  );
-  const secondary = exercise.muscles.filter(
-    (muscle) => muscle.role === 'secondary',
-  );
   return (
     <section className="page-section exercise-details-page">
       <button
@@ -262,58 +263,135 @@ function ExerciseDetails({
         ← Exercises
       </button>
       {notice}
-      <div className="exercise-details-hero">
-        <ExerciseImage exercise={exercise} />
-        <div className="exercise-details-copy">
-          <div className="exercise-details-heading">
-            <div>
-              <span className="eyebrow">{exercise.exerciseType}</span>
-              <h2>{exercise.name}</h2>
-            </div>
-            <div className="exercise-detail-actions">
-              <button
-                className="icon-button exercise-action-button"
-                type="button"
-                aria-label={`Edit ${exercise.name}`}
-                disabled={!online}
-                onClick={onEdit}
-              >
-                <PencilIcon />
-              </button>
-              <button
-                className="icon-button exercise-action-button danger-text"
-                type="button"
-                aria-label={`Delete ${exercise.name}`}
-                disabled={!online}
-                onClick={onDelete}
-              >
-                <TrashIcon />
-              </button>
-            </div>
-          </div>
-          <div className="exercise-instruction-section">
-            <h3>Preparation</h3>
-            <p>{exercise.preparation || 'No preparation added.'}</p>
-          </div>
-          <div className="exercise-instruction-section">
-            <h3>Execution</h3>
-            <p>{exercise.execution || 'No execution instructions added.'}</p>
-          </div>
-          {exercise.referenceUrl && (
-            <a
-              className="exercise-reference-link"
-              href={exercise.referenceUrl}
-              target="_blank"
-              rel="noreferrer"
+      <ExerciseInfo
+        exercise={exercise}
+        actions={
+          <div className="exercise-detail-actions">
+            <button
+              className="icon-button exercise-action-button"
+              type="button"
+              aria-label={`Edit ${exercise.name}`}
+              disabled={!online}
+              onClick={onEdit}
             >
-              Open exercise reference ↗
-            </a>
-          )}
-          <MuscleGroup label="Primary muscles" muscles={primary} />
-          <MuscleGroup label="Secondary muscles" muscles={secondary} />
-        </div>
-      </div>
+              <PencilIcon />
+            </button>
+            <button
+              className="icon-button exercise-action-button danger-text"
+              type="button"
+              aria-label={`Delete ${exercise.name}`}
+              disabled={!online}
+              onClick={onDelete}
+            >
+              <TrashIcon />
+            </button>
+          </div>
+        }
+      />
     </section>
+  );
+}
+
+export function ExerciseDetailsModal({
+  exercise,
+  onClose,
+}: {
+  exercise: Exercise;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') onClose();
+    }
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [onClose]);
+
+  return (
+    <div
+      className="modal-backdrop"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <section
+        className="exercise-details-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="exercise-details-modal-title"
+      >
+        <header className="exercise-details-modal-header">
+          <span className="eyebrow">EXERCISE GUIDE</span>
+          <button
+            className="icon-button exercise-details-modal-close"
+            type="button"
+            aria-label="Close exercise details"
+            onClick={onClose}
+          >
+            ×
+          </button>
+        </header>
+        <ExerciseInfo
+          exercise={exercise}
+          titleId="exercise-details-modal-title"
+        />
+      </section>
+    </div>
+  );
+}
+
+function ExerciseInfo({
+  exercise,
+  actions,
+  titleId,
+}: {
+  exercise: Exercise;
+  actions?: ReactNode;
+  titleId?: string;
+}) {
+  const primary = exercise.muscles.filter(
+    (muscle) => muscle.role === 'primary',
+  );
+  const secondary = exercise.muscles.filter(
+    (muscle) => muscle.role === 'secondary',
+  );
+  return (
+    <div className="exercise-details-hero">
+      <ExerciseImage exercise={exercise} />
+      <div className="exercise-details-copy">
+        <div className="exercise-details-heading">
+          <div>
+            <ExerciseTypeIcon exerciseType={exercise.exerciseType} />
+            <h2 id={titleId}>{exercise.name}</h2>
+          </div>
+          {actions}
+        </div>
+        <div className="exercise-instruction-section">
+          <h3>Preparation</h3>
+          <p>{exercise.preparation || 'No preparation added.'}</p>
+        </div>
+        <div className="exercise-instruction-section">
+          <h3>Execution</h3>
+          <p>{exercise.execution || 'No execution instructions added.'}</p>
+        </div>
+        <div className="exercise-instruction-section">
+          <h3>Comments</h3>
+          <p>{exercise.comments || 'No comments added.'}</p>
+        </div>
+        {exercise.referenceUrl && (
+          <a
+            className="exercise-reference-link"
+            href={exercise.referenceUrl}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Open exercise reference ↗
+          </a>
+        )}
+        <MuscleGroup label="Primary muscles" muscles={primary} />
+        <MuscleGroup label="Secondary muscles" muscles={secondary} />
+      </div>
+    </div>
   );
 }
 
@@ -346,6 +424,7 @@ function ExerciseEditorPage({
   >(exercise?.exerciseType ?? 'strength');
   const [preparation, setPreparation] = useState(exercise?.preparation ?? '');
   const [execution, setExecution] = useState(exercise?.execution ?? '');
+  const [comments, setComments] = useState(exercise?.comments ?? '');
   const [referenceUrl, setReferenceUrl] = useState(
     exercise?.referenceUrl ?? '',
   );
@@ -355,7 +434,28 @@ function ExerciseEditorPage({
     ),
   );
   const [imageFile, setImageFile] = useState<File>();
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string>();
   const [removeImage, setRemoveImage] = useState(false);
+  const [imageDragActive, setImageDragActive] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(
+    () => () => {
+      if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
+    },
+    [imagePreviewUrl],
+  );
+
+  const handleImageFile = (file?: File) => {
+    if (!file) return;
+    const validationError = validateExerciseImage(file);
+    if (validationError) {
+      onError(validationError);
+      return;
+    }
+    setImageFile(file);
+    setImagePreviewUrl(URL.createObjectURL(file));
+  };
 
   return (
     <section className="page-section exercise-editor-page">
@@ -381,6 +481,7 @@ function ExerciseEditorPage({
                 exerciseType,
                 preparation: preparation.trim() || null,
                 execution: execution.trim() || null,
+                comments: comments.trim() || null,
                 referenceUrl: referenceUrl.trim() || null,
                 muscles: exerciseMuscleLinks(selectedMuscles),
               },
@@ -428,6 +529,14 @@ function ExerciseEditorPage({
             />
           </label>
           <label className="field">
+            Comments
+            <textarea
+              placeholder="Additional exercise comments (optional)"
+              value={comments}
+              onChange={(event) => setComments(event.target.value)}
+            />
+          </label>
+          <label className="field">
             Reference website (optional)
             <input
               type="url"
@@ -444,42 +553,90 @@ function ExerciseEditorPage({
               onChange={setSelectedMuscles}
             />
           </div>
-          {exercise?.media && !removeImage && !imageFile && (
-            <ExerciseImage exercise={exercise} />
-          )}
-          <label className="field">
-            {exercise?.media ? 'Replace exercise image' : 'Exercise image'}
+          <div className="field">
+            <span>Exercise image</span>
             <input
+              ref={imageInputRef}
+              className="sr-only"
               type="file"
               accept="image/gif,image/png,image/jpeg,.gif,.png,.jpg,.jpeg"
+              aria-label="Choose an exercise image"
               onChange={(event) => {
-                const file = event.target.files?.[0];
-                const validationError = validateExerciseImage(file);
-                if (validationError) {
-                  event.target.value = '';
-                  setImageFile(undefined);
-                  onError(validationError);
-                  return;
-                }
-                setImageFile(file);
-                if (file) setRemoveImage(false);
+                handleImageFile(event.target.files?.[0]);
+                event.target.value = '';
               }}
             />
-            <small>GIF, PNG, or JPEG. Maximum 5 MB.</small>
-          </label>
-          {exercise?.media && (
-            <label className="check-label">
-              <input
-                type="checkbox"
-                checked={removeImage}
-                onChange={(event) => {
-                  setRemoveImage(event.target.checked);
-                  if (event.target.checked) setImageFile(undefined);
-                }}
-              />
-              Remove current image
-            </label>
-          )}
+            {(imageFile || (exercise?.media && !removeImage)) && (
+              <div className="exercise-image-preview">
+                {imageFile ? (
+                  imagePreviewUrl ? (
+                    <img
+                      className="exercise-detail-image"
+                      src={imagePreviewUrl}
+                      alt={`${name || 'Exercise'} image preview`}
+                    />
+                  ) : (
+                    <div className="exercise-image-preview-loading" />
+                  )
+                ) : exercise ? (
+                  <ExerciseImage exercise={exercise} />
+                ) : (
+                  <div
+                    className="exercise-image-preview-loading"
+                    aria-hidden="true"
+                  />
+                )}
+                <button
+                  className="exercise-image-remove"
+                  type="button"
+                  aria-label="Remove exercise image"
+                  onClick={() => {
+                    if (!imageFile && exercise?.media) setRemoveImage(true);
+                    setImageFile(undefined);
+                    setImagePreviewUrl(undefined);
+                  }}
+                >
+                  <CrossIcon />
+                </button>
+              </div>
+            )}
+            <button
+              className={`exercise-image-dropzone${
+                imageDragActive ? ' is-dragging' : ''
+              }`}
+              type="button"
+              onClick={() => imageInputRef.current?.click()}
+              onDragOver={(event) => {
+                event.preventDefault();
+                setImageDragActive(true);
+              }}
+              onDragLeave={() => setImageDragActive(false)}
+              onDrop={(event) => {
+                event.preventDefault();
+                setImageDragActive(false);
+                handleImageFile(event.dataTransfer.files[0]);
+              }}
+            >
+              <span>
+                {imageFile || (exercise?.media && !removeImage)
+                  ? 'Drop an image here or click to replace it'
+                  : 'Drop an image here or click to choose a file'}
+              </span>
+              <small>GIF, PNG, or JPEG · Maximum 5 MB</small>
+            </button>
+            {removeImage && !imageFile && (
+              <p className="exercise-image-removal-notice" role="status">
+                Image will be removed when you save.{' '}
+                <button
+                  className="text-button"
+                  type="button"
+                  onClick={() => setRemoveImage(false)}
+                >
+                  Undo
+                </button>
+              </p>
+            )}
+          </div>
           <div className="inline-actions exercise-editor-actions">
             <button className="secondary" type="button" onClick={onCancel}>
               Cancel
@@ -551,10 +708,68 @@ function PencilIcon() {
   );
 }
 
+function ExerciseTypeIcon({
+  exerciseType,
+}: {
+  exerciseType: Exercise['exerciseType'];
+}) {
+  if (exerciseType === 'strength') {
+    return (
+      <svg
+        className="exercise-type-icon"
+        viewBox="0 0 48 48"
+        role="img"
+        aria-label="Strength exercise"
+      >
+        <path
+          d="M12 24h24M7 18v12M12 14v20M36 14v20M41 18v12"
+          fill="none"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="4"
+        />
+      </svg>
+    );
+  }
+
+  return (
+    <svg
+      className="exercise-type-icon"
+      viewBox="0 0 48 48"
+      role="img"
+      aria-label="Cardio exercise"
+    >
+      <circle cx="30" cy="7" r="4" fill="currentColor" />
+      <g
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="4"
+      >
+        <path d="m27 14-6 10" />
+        <path d="m26 15-6 2-5-3" />
+        <path d="m28 15 6-3 5 3" />
+        <path d="m21 24-7 6-5-1-4 5" />
+        <path d="m21 24 8 5 7-1 7 5" />
+      </g>
+    </svg>
+  );
+}
+
 function TrashIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <path d="M8 3h8l1 2h4v2H3V5h4l1-2Zm-2 6h12l-1 12H7L6 9Zm3 2v8h2v-8H9Zm4 0v8h2v-8h-2Z" />
+    </svg>
+  );
+}
+
+function CrossIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="m6 6 12 12M18 6 6 18" />
     </svg>
   );
 }
@@ -564,6 +779,7 @@ interface ExerciseDraft {
   exerciseType: ExerciseInput['exerciseType'];
   preparation: string | null;
   execution: string | null;
+  comments: string | null;
   referenceUrl: string | null;
   muscles: ExerciseInput['muscles'];
 }

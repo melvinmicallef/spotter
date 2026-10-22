@@ -1,4 +1,6 @@
 import {
+  appSettingsInputSchema,
+  appSettingsSchema,
   apiErrorSchema,
   exerciseSchema,
   exerciseMediaSchema,
@@ -8,6 +10,8 @@ import {
   workoutTemplateSchema,
 } from '@spotter/shared';
 import type {
+  AppSettings,
+  AppSettingsInput,
   Exercise,
   ExerciseInput,
   ExerciseMedia,
@@ -57,6 +61,17 @@ async function request(path: string, init?: RequestInit): Promise<unknown> {
 }
 
 export const api = {
+  async settings(): Promise<AppSettings> {
+    return appSettingsSchema.parse(await request('/settings'));
+  },
+  async updateSettings(input: AppSettingsInput): Promise<AppSettings> {
+    return appSettingsSchema.parse(
+      await request('/settings', {
+        method: 'PUT',
+        body: JSON.stringify(appSettingsInputSchema.parse(input)),
+      }),
+    );
+  },
   async reference(cursor?: number): Promise<ReferenceData> {
     return referenceDataSchema.parse(
       await request(`/reference${cursor == null ? '' : `?cursor=${cursor}`}`),
@@ -64,6 +79,9 @@ export const api = {
   },
   async workouts(): Promise<Workout[]> {
     return workoutSchema.array().parse(await request('/workouts'));
+  },
+  async deleteWorkout(id: string): Promise<void> {
+    await request(`/workouts/${id}`, { method: 'DELETE' });
   },
   async sync(batch: SyncBatch): Promise<SyncResponse> {
     return syncResponseSchema.parse(

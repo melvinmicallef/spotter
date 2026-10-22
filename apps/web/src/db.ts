@@ -209,6 +209,20 @@ export const localRepository = {
     return (await database()).getAll('workouts');
   },
 
+  async deleteWorkout(id: string): Promise<void> {
+    const db = await database();
+    const transaction = db.transaction(['workouts', 'outbox'], 'readwrite');
+    const outbox = transaction.objectStore('outbox');
+    const operations = await outbox.getAll();
+    await Promise.all([
+      transaction.objectStore('workouts').delete(id),
+      ...operations
+        .filter((operation) => operation.workout.id === id)
+        .map((operation) => outbox.delete(operation.operationId)),
+    ]);
+    await transaction.done;
+  },
+
   async outbox(limit = 50): Promise<OutboxRecord[]> {
     const records = await (
       await database()
@@ -320,6 +334,7 @@ function normalizeExercise(exercise: Exercise): Exercise {
     exerciseType: exercise.exerciseType ?? 'strength',
     preparation: exercise.preparation ?? null,
     execution: exercise.execution ?? legacyInstructions ?? null,
+    comments: exercise.comments ?? null,
     referenceUrl: exercise.referenceUrl ?? exercise.source?.url ?? null,
   };
   delete (normalized as typeof normalized & { instructions?: unknown })
@@ -335,6 +350,7 @@ function normalizeTemplate(
   return {
     ...template,
     isActive: template.isActive ?? false,
+    dayNames: template.dayNames ?? [],
     exercises: template.exercises.map((entry) => ({
       ...entry,
       exerciseType:
@@ -357,6 +373,7 @@ function normalizeWorkout(workout: Workout): Workout {
   return {
     ...workout,
     templateDay: workout.templateDay ?? null,
+    templateDayName: workout.templateDayName ?? null,
     exercises: workout.exercises.map((exercise) => ({
       ...exercise,
       exerciseType: exercise.exerciseType ?? 'strength',

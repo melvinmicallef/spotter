@@ -3,17 +3,21 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
   DayOfWeek,
   Exercise,
+  ExerciseMedia,
   Muscle,
   Workout,
   WorkoutTemplate,
 } from '@spotter/shared';
+import { exerciseMediaSchema } from '@spotter/shared';
 
 import { api } from './api.js';
 import { ExercisesView } from './components/CatalogueView.js';
 import { HistoryView } from './components/HistoryView.js';
 import { MusclesView } from './components/MusclesView.js';
 import { PwaUpdate } from './components/PwaUpdate.js';
+import { SettingsView } from './components/SettingsView.js';
 import { StatusBar } from './components/StatusBar.js';
+import { StretchingView } from './components/StretchingView.js';
 import { TemplatesView } from './components/TemplatesView.js';
 import { WorkoutView } from './components/WorkoutView.js';
 import { localRepository } from './db.js';
@@ -27,6 +31,13 @@ import {
 import { drainOutbox, refreshReferences } from './sync.js';
 import { applyTheme, initialTheme } from './theme.js';
 import type { Theme } from './theme.js';
+import {
+  applyMeasurementSystem,
+  distanceUnitFor,
+  initialMeasurementSystem,
+  weightUnitFor,
+} from './measurement-system.js';
+import type { MeasurementSystem } from './measurement-system.js';
 import { todayDayOfWeek } from './weekdays.js';
 import {
   addExercise,
@@ -36,15 +47,22 @@ import {
   moveExercise,
   removeExercise,
   removeSet,
-  updateExerciseNotes,
   updateSet,
-  updateWorkoutNotes,
 } from './workout.js';
+
+const STRETCHING_POSTER_STORAGE_KEY = 'spotter-stretching-poster';
 
 export function App() {
   const [pathname, setPathname] = useState(() => window.location.pathname);
   const view = viewFromPath(pathname);
   const [theme, setTheme] = useState<Theme>(initialTheme);
+  const [measurementSystem, setMeasurementSystem] = useState<MeasurementSystem>(
+    initialMeasurementSystem,
+  );
+  const [stretchingPoster, setStretchingPoster] =
+    useState<ExerciseMedia | null>(initialStretchingPoster);
+  const weightUnit = weightUnitFor(measurementSystem);
+  const distanceUnit = distanceUnitFor(measurementSystem);
   const [online, setOnline] = useState(() => navigator.onLine);
   const [activeWorkout, setActiveWorkout] = useState<Workout>();
   const [localWorkouts, setLocalWorkouts] = useState<Workout[]>([]);
@@ -54,6 +72,7 @@ export function App() {
   const [templates, setTemplates] = useState<WorkoutTemplate[]>([]);
   const [weekSchedule, setWeekSchedule] = useState<WeekSchedule>({});
   const [pending, setPending] = useState(0);
+  const [syncing, setSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [syncErrorDetails, setSyncErrorDetails] = useState<unknown>();
   const [retryAfterMs, setRetryAfterMs] = useState<number | null>(null);
@@ -70,6 +89,24 @@ export function App() {
   const scheduledDay = scheduledTemplateDay(today, weekSchedule);
 
   useEffect(() => applyTheme(theme), [theme]);
+  useEffect(() => {
+    try {
+      if (stretchingPoster) {
+        window.localStorage.setItem(
+          STRETCHING_POSTER_STORAGE_KEY,
+          JSON.stringify(stretchingPoster),
+        );
+      } else {
+        window.localStorage.removeItem(STRETCHING_POSTER_STORAGE_KEY);
+      }
+    } catch {
+      // Local cache is optional; the server remains the source of truth.
+    }
+  }, [stretchingPoster]);
+  useEffect(
+    () => applyMeasurementSystem(measurementSystem),
+    [measurementSystem],
+  );
 
   useEffect(() => {
     const restorePath = () => setPathname(window.location.pathname);
@@ -113,24 +150,27 @@ export function App() {
 
   const syncNow = useCallback(async () => {
     if (!navigator.onLine) return;
-    const result = await drainOutbox();
-    setPending(result.pending);
-    setSyncError(
-      result.failures[0]
-        ? `${result.failures[0].code}: ${result.failures[0].message}`
-        : result.error,
-    );
-    setSyncErrorDetails(result.failures[0]?.details);
-    setRetryAfterMs(result.retryAfterMs);
+    setSyncing(true);
     try {
-      const [references, workouts] = await Promise.all([
+      const result = await drainOutbox();
+      setPending(result.pending);
+      setSyncError(
+        result.failures[0]
+          ? `${result.failures[0].code}: ${result.failures[0].message}`
+          : result.error,
+      );
+      setSyncErrorDetails(result.failures[0]?.details);
+      setRetryAfterMs(result.retryAfterMs);
+      const [references, workouts, settings] = await Promise.all([
         refreshReferences(),
         api.workouts(),
+        api.settings(),
       ]);
       setMuscles(references.muscles.filter((muscle) => muscle.isBuiltin));
       setExercises(references.exercises);
       setTemplates(references.templates);
       setServerWorkouts(workouts);
+      setStretchingPoster(settings.stretchingPoster);
       setOnline(true);
     } catch (error) {
       setOnline(false);
@@ -141,6 +181,8 @@ export function App() {
           : 'Unable to refresh server data',
       );
       setSyncErrorDetails(undefined);
+    } finally {
+      setSyncing(false);
     }
   }, []);
 
@@ -199,6 +241,23 @@ export function App() {
     navigatePath(pathForView(nextView));
   }
 
+  async function changeStretchingPoster(file: File | null) {
+    if (!navigator.onLine)
+      throw new Error('Connect to the server to change the stretching poster.');
+
+    let uploaded: ExerciseMedia | undefined;
+    try {
+      if (file) uploaded = await api.uploadImage(file);
+      const settings = await api.updateSettings({
+        stretchingPosterId: uploaded?.id ?? null,
+      });
+      setStretchingPoster(settings.stretchingPoster);
+    } catch (error) {
+      if (uploaded) await api.deleteMedia(uploaded.id).catch(() => {});
+      throw error;
+    }
+  }
+
   function mutateWorkout(update: (workout: Workout) => Workout) {
     const current = activeWorkoutRef.current;
     if (!current) return;
@@ -252,9 +311,48 @@ export function App() {
     setTemplates(references.templates);
   }, []);
 
+  async function deleteHistoryWorkout(workout: Workout) {
+    if (!navigator.onLine) {
+      setMessage('Connect to the server before deleting a history item.');
+      return;
+    }
+
+    try {
+      const syncResult = await drainOutbox();
+      setPending(syncResult.pending);
+      if (syncResult.pending > 0 || syncResult.failures.length > 0) {
+        throw new Error(
+          syncResult.error ??
+            'Pending workout changes must sync before deleting history.',
+        );
+      }
+
+      await api.deleteWorkout(workout.id);
+      await localRepository.deleteWorkout(workout.id);
+      setLocalWorkouts((current) =>
+        current.filter((item) => item.id !== workout.id),
+      );
+      setServerWorkouts((current) =>
+        current.filter((item) => item.id !== workout.id),
+      );
+      setPending(
+        (await localRepository.outbox(Number.MAX_SAFE_INTEGER)).length,
+      );
+      setMessage('History item deleted.');
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? `Unable to delete history item: ${error.message}`
+          : 'Unable to delete history item',
+      );
+    }
+  }
+
   const history = useMemo(() => {
     const merged = new Map(
-      serverWorkouts.map((workout) => [workout.id, workout]),
+      serverWorkouts
+        .filter((workout) => workout.status === 'completed')
+        .map((workout) => [workout.id, workout]),
     );
     for (const workout of localWorkouts) {
       if (workout.status === 'completed') merged.set(workout.id, workout);
@@ -285,20 +383,10 @@ export function App() {
           <span>Spotter</span>
         </button>
         <div className="header-actions">
-          <button
-            className="theme-toggle"
-            type="button"
-            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-            onClick={() =>
-              setTheme((current) => (current === 'dark' ? 'light' : 'dark'))
-            }
-          >
-            <span aria-hidden="true">{theme === 'dark' ? '☀' : '☾'}</span>
-            {theme === 'dark' ? 'Light' : 'Dark'}
-          </button>
           <StatusBar
             online={online}
             pending={pending}
+            syncing={syncing}
             syncError={syncError}
             syncErrorDetails={syncErrorDetails}
             onRetry={() => void syncNow()}
@@ -329,9 +417,12 @@ export function App() {
             today={today}
             scheduledDay={scheduledDay}
             weekKey={currentWeekKey}
+            weightUnit={weightUnit}
+            distanceUnit={distanceUnit}
             onStart={start}
             onSwapToday={swapToday}
             onResetWeek={resetWeekSchedule}
+            onShowStretching={() => navigate('stretching')}
             onChange={mutateWorkout}
             actions={{
               addExercise,
@@ -340,13 +431,17 @@ export function App() {
               addSet,
               removeSet,
               updateSet,
-              updateWorkoutNotes,
-              updateExerciseNotes,
               finish: finishWorkout,
             }}
           />
         )}
-        {view === 'history' && <HistoryView workouts={history} />}
+        {view === 'history' && (
+          <HistoryView
+            workouts={history}
+            online={online}
+            onDeleteWorkout={deleteHistoryWorkout}
+          />
+        )}
         {view === 'muscles' && <MusclesView muscles={muscles} />}
         {view === 'exercises' && (
           <ExercisesView
@@ -364,10 +459,31 @@ export function App() {
             online={online}
             exercises={exercises}
             templates={templates}
+            distanceUnit={distanceUnit}
             routePath={pathname}
             onNavigate={navigatePath}
             onRefresh={refreshOnlineReferences}
             onError={setMessage}
+          />
+        )}
+        {view === 'settings' && (
+          <SettingsView
+            online={online}
+            theme={theme}
+            measurementSystem={measurementSystem}
+            stretchingPoster={stretchingPoster}
+            onToggleTheme={() =>
+              setTheme((current) => (current === 'dark' ? 'light' : 'dark'))
+            }
+            onChangeMeasurementSystem={setMeasurementSystem}
+            onChangeStretchingPoster={changeStretchingPoster}
+          />
+        )}
+        {view === 'stretching' && (
+          <StretchingView
+            poster={stretchingPoster}
+            onBack={() => navigate('workout')}
+            onOpenSettings={() => navigate('settings')}
           />
         )}
       </main>
@@ -408,6 +524,13 @@ export function App() {
           href={pathForView('templates')}
           onClick={() => navigate('templates')}
         />
+        <NavButton
+          active={view === 'settings'}
+          label="Settings"
+          icon="⚙"
+          href={pathForView('settings')}
+          onClick={() => navigate('settings')}
+        />
       </nav>
       <PwaUpdate />
     </div>
@@ -441,4 +564,13 @@ function NavButton({
       {label}
     </a>
   );
+}
+
+function initialStretchingPoster(): ExerciseMedia | null {
+  try {
+    const cached = window.localStorage.getItem(STRETCHING_POSTER_STORAGE_KEY);
+    return cached ? exerciseMediaSchema.parse(JSON.parse(cached)) : null;
+  } catch {
+    return null;
+  }
 }

@@ -54,6 +54,19 @@ export const muscleRoleSchema = z.enum(['primary', 'secondary']);
 export const exerciseTypeSchema = z.enum(['strength', 'cardio']);
 export const distanceUnitSchema = z.enum(['km', 'mi']);
 export const dayOfWeekSchema = z.number().int().min(1).max(7);
+export const templateDayNameSchema = z.object({
+  dayOfWeek: dayOfWeekSchema,
+  name: nameSchema,
+});
+export const templateDayNamesSchema = z
+  .array(templateDayNameSchema)
+  .max(7)
+  .refine(
+    (dayNames) =>
+      new Set(dayNames.map((dayName) => dayName.dayOfWeek)).size ===
+      dayNames.length,
+    'A template can only have one name per day',
+  );
 
 export const exerciseMuscleSchema = z.object({
   id: uuidSchema,
@@ -77,6 +90,14 @@ export const exerciseMediaSchema = z.object({
   createdAt: isoDateTimeSchema,
 });
 
+export const appSettingsSchema = z.object({
+  stretchingPoster: exerciseMediaSchema.nullable(),
+});
+
+export const appSettingsInputSchema = z.object({
+  stretchingPosterId: uuidSchema.nullable(),
+});
+
 export const exerciseSourceSchema = z.object({
   url: httpUrlSchema,
   title: z.string().trim().max(300).nullable(),
@@ -94,6 +115,7 @@ export const exerciseSchema = z.object({
   exerciseType: exerciseTypeSchema.default('strength'),
   preparation: nullableNoteSchema,
   execution: nullableNoteSchema,
+  comments: nullableNoteSchema,
   referenceUrl: httpUrlSchema.nullable().default(null),
   muscles: z.array(exerciseMuscleSchema),
   media: exerciseMediaSchema.nullable(),
@@ -108,6 +130,7 @@ export const exerciseInputSchema = z.object({
   exerciseType: exerciseTypeSchema.default('strength'),
   preparation: nullableNoteSchema,
   execution: nullableNoteSchema,
+  comments: nullableNoteSchema,
   referenceUrl: httpUrlSchema.nullable().default(null),
   mediaId: uuidSchema.nullable().default(null),
   source: exerciseSourceInputSchema.nullable().default(null),
@@ -131,7 +154,6 @@ export const templateExerciseSchema = z
     referenceUrl: httpUrlSchema.nullable().default(null),
     dayOfWeek: dayOfWeekSchema.default(1),
     position: z.number().int().nonnegative(),
-    notes: nullableNoteSchema,
     targetSets: z.number().int().positive().max(99).nullable(),
     targetReps: z.number().int().positive().max(999).nullable(),
     targetDurationSeconds: z
@@ -153,6 +175,7 @@ export const workoutTemplateSchema = z.object({
   name: nameSchema,
   isActive: z.boolean(),
   notes: nullableNoteSchema,
+  dayNames: templateDayNamesSchema.optional(),
   exercises: z.array(templateExerciseSchema),
   createdAt: isoDateTimeSchema,
   updatedAt: isoDateTimeSchema,
@@ -163,13 +186,14 @@ export const workoutTemplateInputSchema = z.object({
   name: nameSchema,
   isActive: z.boolean().default(false),
   notes: nullableNoteSchema,
+  dayNames: templateDayNamesSchema.optional(),
   exercises: z
     .array(
       z.object({
         id: uuidSchema.optional(),
         exerciseId: uuidSchema,
         dayOfWeek: dayOfWeekSchema.default(1),
-        notes: nullableNoteSchema,
+        notes: nullableNoteSchema.optional(),
         targetSets: z
           .number()
           .int()
@@ -310,6 +334,7 @@ export const workoutSchema = z.object({
   id: uuidSchema,
   templateId: uuidSchema.nullable(),
   templateDay: dayOfWeekSchema.nullable().default(null),
+  templateDayName: nameSchema.nullable().optional(),
   name: nameSchema,
   status: workoutStatusSchema,
   startedAt: isoDateTimeSchema,
@@ -356,6 +381,8 @@ export type ExerciseType = z.infer<typeof exerciseTypeSchema>;
 export type DistanceUnit = z.infer<typeof distanceUnitSchema>;
 export type DayOfWeek = z.infer<typeof dayOfWeekSchema>;
 export type ExerciseMedia = z.infer<typeof exerciseMediaSchema>;
+export type AppSettings = z.infer<typeof appSettingsSchema>;
+export type AppSettingsInput = z.infer<typeof appSettingsInputSchema>;
 export type ExerciseSource = z.infer<typeof exerciseSourceSchema>;
 export type WorkoutTemplate = z.infer<typeof workoutTemplateSchema>;
 export type WorkoutTemplateInput = z.infer<typeof workoutTemplateInputSchema>;

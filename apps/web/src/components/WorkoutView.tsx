@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 import type {
   DayOfWeek,
   Exercise,
@@ -7,6 +9,9 @@ import type {
 } from '@spotter/shared';
 
 import { weekdayName, WEEKDAYS } from '../weekdays.js';
+import { convertDistance, convertWeight } from '../measurement-system.js';
+import type { DistanceUnit, WeightUnit } from '../measurement-system.js';
+import { ExerciseDetailsModal } from './CatalogueView.js';
 
 interface WorkoutViewProps {
   workout?: Workout;
@@ -15,9 +20,12 @@ interface WorkoutViewProps {
   today: DayOfWeek;
   scheduledDay: DayOfWeek;
   weekKey: string;
+  weightUnit: WeightUnit;
+  distanceUnit: DistanceUnit;
   onStart: (template: WorkoutTemplate, dayOfWeek: DayOfWeek) => void;
   onSwapToday: (dayOfWeek: DayOfWeek) => void;
   onResetWeek: () => void;
+  onShowStretching: () => void;
   onChange: (update: (workout: Workout) => Workout) => void;
   actions: {
     addExercise: (workout: Workout, exercise: Exercise) => Workout;
@@ -35,12 +43,6 @@ interface WorkoutViewProps {
       setId: string,
       patch: Partial<WorkoutSet>,
     ) => Workout;
-    updateWorkoutNotes: (workout: Workout, notes: string | null) => Workout;
-    updateExerciseNotes: (
-      workout: Workout,
-      exerciseId: string,
-      notes: string | null,
-    ) => Workout;
     finish: (workout: Workout) => Workout;
   };
 }
@@ -52,12 +54,24 @@ export function WorkoutView({
   today,
   scheduledDay,
   weekKey,
+  weightUnit,
+  distanceUnit,
   onStart,
   onSwapToday,
   onResetWeek,
+  onShowStretching,
   onChange,
   actions,
 }: WorkoutViewProps) {
+  const [exerciseDetailsId, setExerciseDetailsId] = useState<string | null>(
+    null,
+  );
+  const exerciseDetails = exercises.find(
+    (exercise) => exercise.id === exerciseDetailsId,
+  );
+  const scheduledDayName = activeTemplate?.dayNames?.find(
+    (dayName) => dayName.dayOfWeek === scheduledDay,
+  )?.name;
   if (!workout) {
     const scheduledExercises =
       activeTemplate?.exercises.filter(
@@ -70,6 +84,13 @@ export function WorkoutView({
             <span className="eyebrow">TODAY · {weekdayName(today)}</span>
             <h2>Today&apos;s workout</h2>
           </div>
+          <button
+            className="secondary"
+            type="button"
+            onClick={onShowStretching}
+          >
+            Show stretching
+          </button>
         </div>
         {!activeTemplate ? (
           <p className="empty-state">
@@ -81,6 +102,9 @@ export function WorkoutView({
             <div>
               <span className="active-badge">Active plan</span>
               <h3>{activeTemplate.name}</h3>
+              {scheduledDayName && (
+                <p className="target-summary">{scheduledDayName}</p>
+              )}
               {scheduledDay !== today && (
                 <p className="notice compact-notice">
                   Using {weekdayName(scheduledDay)}&apos;s workout today for{' '}
@@ -152,27 +176,27 @@ export function WorkoutView({
         <div>
           <span className="eyebrow">IN PROGRESS</span>
           <h2>{workout.name}</h2>
+          {workout.templateDayName && (
+            <p className="target-summary">{workout.templateDayName}</p>
+          )}
         </div>
-        <button
-          className="danger"
-          type="button"
-          onClick={() => onChange(actions.finish)}
-        >
-          Finish
-        </button>
+        <div className="inline-actions">
+          <button
+            className="secondary"
+            type="button"
+            onClick={onShowStretching}
+          >
+            Show stretching
+          </button>
+          <button
+            className="danger"
+            type="button"
+            onClick={() => onChange(actions.finish)}
+          >
+            Finish
+          </button>
+        </div>
       </div>
-
-      <label className="field">
-        Session notes
-        <textarea
-          value={workout.notes ?? ''}
-          placeholder="How did this session feel?"
-          onChange={(event) => {
-            const notes = event.target.value || null;
-            onChange((current) => actions.updateWorkoutNotes(current, notes));
-          }}
-        />
-      </label>
 
       <label className="field compact">
         Add exercise
@@ -197,86 +221,97 @@ export function WorkoutView({
 
       <div className="stack">
         {workout.exercises.map((entry, exerciseIndex) => (
-          <article className="workout-card" key={entry.id}>
-            <header>
-              <div>
-                <span className="exercise-index">{exerciseIndex + 1}</span>
-                <strong>{entry.exerciseName}</strong>
-                <small className="type-badge">{entry.exerciseType}</small>
-                {entry.referenceUrl && (
-                  <a
-                    className="workout-reference-link"
-                    href={entry.referenceUrl}
-                    target="_blank"
-                    rel="noreferrer"
+          <article
+            className={`workout-card${entry.exerciseType === 'strength' ? ' workout-strength-card' : ''}`}
+            key={entry.id}
+          >
+            <div
+              className={
+                entry.exerciseType === 'strength'
+                  ? 'workout-strength-info'
+                  : 'workout-card-main'
+              }
+            >
+              <header>
+                <div>
+                  <span className="exercise-index">{exerciseIndex + 1}</span>
+                  <strong>{entry.exerciseName}</strong>
+                  <small className="type-badge">{entry.exerciseType}</small>
+                  {entry.referenceUrl && (
+                    <a
+                      className="workout-reference-link"
+                      href={entry.referenceUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Reference ↗
+                    </a>
+                  )}
+                </div>
+                <div className="inline-actions">
+                  <button
+                    className="icon-button"
+                    type="button"
+                    aria-label={`Move ${entry.exerciseName} up`}
+                    onClick={() =>
+                      onChange((current) =>
+                        actions.moveExercise(current, exerciseIndex, -1),
+                      )
+                    }
                   >
-                    Reference ↗
-                  </a>
-                )}
-              </div>
-              <div className="inline-actions">
-                <button
-                  className="icon-button"
-                  type="button"
-                  aria-label={`Move ${entry.exerciseName} up`}
-                  onClick={() =>
-                    onChange((current) =>
-                      actions.moveExercise(current, exerciseIndex, -1),
-                    )
-                  }
-                >
-                  ↑
-                </button>
-                <button
-                  className="icon-button"
-                  type="button"
-                  aria-label={`Move ${entry.exerciseName} down`}
-                  onClick={() =>
-                    onChange((current) =>
-                      actions.moveExercise(current, exerciseIndex, 1),
-                    )
-                  }
-                >
-                  ↓
-                </button>
-                <button
-                  className="icon-button danger-text"
-                  type="button"
-                  aria-label={`Remove ${entry.exerciseName}`}
-                  onClick={() =>
-                    onChange((current) =>
-                      actions.removeExercise(current, entry.id),
-                    )
-                  }
-                >
-                  ×
-                </button>
-              </div>
-            </header>
-            <TargetSummary exercise={entry} />
-            <label className="field compact">
-              Exercise notes
-              <textarea
-                value={entry.notes ?? ''}
-                placeholder={`Notes for ${entry.exerciseName}`}
-                onChange={(event) => {
-                  const notes = event.target.value || null;
-                  onChange((current) =>
-                    actions.updateExerciseNotes(current, entry.id, notes),
-                  );
-                }}
-              />
-            </label>
+                    ↑
+                  </button>
+                  <button
+                    className="icon-button"
+                    type="button"
+                    aria-label={`Move ${entry.exerciseName} down`}
+                    onClick={() =>
+                      onChange((current) =>
+                        actions.moveExercise(current, exerciseIndex, 1),
+                      )
+                    }
+                  >
+                    ↓
+                  </button>
+                  <button
+                    className="icon-button danger-text"
+                    type="button"
+                    aria-label={`Remove ${entry.exerciseName}`}
+                    onClick={() =>
+                      onChange((current) =>
+                        actions.removeExercise(current, entry.id),
+                      )
+                    }
+                  >
+                    ×
+                  </button>
+                </div>
+              </header>
+              <TargetSummary exercise={entry} distanceUnit={distanceUnit} />
+              <button
+                className="secondary workout-guide-button"
+                type="button"
+                disabled={
+                  !exercises.some((item) => item.id === entry.exerciseId)
+                }
+                onClick={() => setExerciseDetailsId(entry.exerciseId)}
+                aria-label={`How to do ${entry.exerciseName}`}
+              >
+                How to do it
+              </button>
+            </div>
 
             {entry.exerciseType === 'cardio' ? (
               <CardioEfforts
                 entry={entry}
+                distanceUnit={distanceUnit}
                 onChange={onChange}
                 actions={actions}
               />
             ) : (
               <StrengthSets
                 entry={entry}
+                weightUnit={weightUnit}
                 onChange={onChange}
                 actions={actions}
               />
@@ -284,6 +319,12 @@ export function WorkoutView({
           </article>
         ))}
       </div>
+      {exerciseDetails && (
+        <ExerciseDetailsModal
+          exercise={exerciseDetails}
+          onClose={() => setExerciseDetailsId(null)}
+        />
+      )}
     </section>
   );
 }
@@ -291,7 +332,13 @@ export function WorkoutView({
 type WorkoutEntry = Workout['exercises'][number];
 type WorkoutActions = WorkoutViewProps['actions'];
 
-function TargetSummary({ exercise }: { exercise: WorkoutEntry }) {
+function TargetSummary({
+  exercise,
+  distanceUnit,
+}: {
+  exercise: WorkoutEntry;
+  distanceUnit: DistanceUnit;
+}) {
   if (exercise.exerciseType === 'cardio') {
     const minutes = exercise.targetDurationSeconds
       ? exercise.targetDurationSeconds / 60
@@ -304,7 +351,7 @@ function TargetSummary({ exercise }: { exercise: WorkoutEntry }) {
           minutes == null ? null : `${minutes} min`,
           exercise.targetDistance == null
             ? null
-            : `${exercise.targetDistance} ${exercise.targetDistanceUnit}`,
+            : `${convertDistance(exercise.targetDistance, exercise.targetDistanceUnit, distanceUnit)} ${distanceUnit}`,
         ]
           .filter(Boolean)
           .join(' · ')}
@@ -322,111 +369,119 @@ function TargetSummary({ exercise }: { exercise: WorkoutEntry }) {
 
 function StrengthSets({
   entry,
+  weightUnit,
   onChange,
   actions,
 }: {
   entry: WorkoutEntry;
+  weightUnit: WeightUnit;
   onChange: WorkoutViewProps['onChange'];
   actions: WorkoutActions;
 }) {
   return (
-    <>
-      <div className="set-head">
-        <span>Set</span>
-        <span>kg / lb</span>
-        <span>Reps</span>
-        <span>Done</span>
-        <span />
-      </div>
-      {entry.sets.map((set, setIndex) => (
-        <div className="set-group" key={set.id}>
-          <div className="set-row">
-            <strong>{setIndex + 1}</strong>
-            <div className="number-unit">
-              <input
-                aria-label={`${entry.exerciseName} weight set ${setIndex + 1}`}
-                inputMode="decimal"
-                type="number"
-                min="0"
-                value={set.weight ?? ''}
-                onChange={(event) =>
-                  updateEffort(onChange, actions, entry.id, set.id, {
-                    weight:
-                      event.target.value === ''
-                        ? null
-                        : Number(event.target.value),
-                  })
-                }
-              />
-              <select
-                aria-label={`${entry.exerciseName} weight unit set ${setIndex + 1}`}
-                value={set.weightUnit}
-                onChange={(event) =>
-                  updateEffort(onChange, actions, entry.id, set.id, {
-                    weightUnit: event.target.value as WorkoutSet['weightUnit'],
-                  })
-                }
-              >
-                <option value="kg">kg</option>
-                <option value="lb">lb</option>
-              </select>
+    <div className="workout-strength-sets">
+      <div className="strength-workout-grid-scroll">
+        <div className="strength-workout-grid">
+          {entry.sets.map((set, setIndex) => (
+            <div className="strength-grid-set" key={set.id}>
+              <div className="strength-grid-set-heading">
+                <span>Set {setIndex + 1}</span>
+                <RemoveEffort
+                  label={`Remove ${entry.exerciseName} set ${setIndex + 1}`}
+                  onClick={() =>
+                    onChange((current) =>
+                      actions.removeSet(current, entry.id, set.id),
+                    )
+                  }
+                />
+              </div>
+              <div className="strength-grid-cell strength-grid-weight">
+                <div className="strength-grid-number-unit">
+                  <input
+                    aria-label={`${entry.exerciseName} weight set ${setIndex + 1}`}
+                    placeholder="Wt"
+                    inputMode="decimal"
+                    type="number"
+                    min="0"
+                    value={displayWeight(
+                      set.weight,
+                      set.weightUnit,
+                      weightUnit,
+                    )}
+                    onChange={(event) =>
+                      updateEffort(onChange, actions, entry.id, set.id, {
+                        weight:
+                          event.target.value === ''
+                            ? null
+                            : Number(event.target.value),
+                        weightUnit,
+                      })
+                    }
+                  />
+                  <span className="unit-label">{weightUnit}</span>
+                </div>
+              </div>
+              <div className="strength-grid-cell strength-grid-reps">
+                <input
+                  aria-label={`${entry.exerciseName} repetitions set ${setIndex + 1}`}
+                  placeholder="Reps"
+                  inputMode="numeric"
+                  type="number"
+                  min="0"
+                  value={set.reps ?? ''}
+                  onChange={(event) =>
+                    updateEffort(onChange, actions, entry.id, set.id, {
+                      reps:
+                        event.target.value === ''
+                          ? null
+                          : Number(event.target.value),
+                    })
+                  }
+                />
+              </div>
             </div>
-            <input
-              aria-label={`${entry.exerciseName} repetitions set ${setIndex + 1}`}
-              inputMode="numeric"
-              type="number"
-              min="0"
-              value={set.reps ?? ''}
-              onChange={(event) =>
-                updateEffort(onChange, actions, entry.id, set.id, {
-                  reps:
-                    event.target.value === ''
-                      ? null
-                      : Number(event.target.value),
-                })
-              }
-            />
-            <CompleteControl
-              label={`${entry.exerciseName} set ${setIndex + 1} complete`}
-              checked={set.completed}
-              onChange={(completed) =>
-                updateEffort(onChange, actions, entry.id, set.id, { completed })
-              }
-            />
-            <RemoveEffort
-              label={`Remove ${entry.exerciseName} set ${setIndex + 1}`}
+          ))}
+          <div className="strength-grid-add">
+            <span className="strength-grid-set-heading">Sets</span>
+            <button
+              className="secondary"
+              type="button"
               onClick={() =>
-                onChange((current) =>
-                  actions.removeSet(current, entry.id, set.id),
-                )
+                onChange((current) => actions.addSet(current, entry.id))
+              }
+            >
+              + Add set
+            </button>
+          </div>
+        </div>
+      </div>
+      <details className="workout-effort-notes">
+        <summary>Set notes</summary>
+        <div className="workout-effort-notes-list">
+          {entry.sets.map((set, setIndex) => (
+            <EffortNotes
+              key={set.id}
+              label={`${entry.exerciseName} set ${setIndex + 1} notes`}
+              value={set.notes}
+              onChange={(notes) =>
+                updateEffort(onChange, actions, entry.id, set.id, { notes })
               }
             />
-          </div>
-          <EffortNotes
-            label={`${entry.exerciseName} set ${setIndex + 1} notes`}
-            value={set.notes}
-            onChange={(notes) =>
-              updateEffort(onChange, actions, entry.id, set.id, { notes })
-            }
-          />
+          ))}
         </div>
-      ))}
-      <AddEffort
-        label="+ Add set"
-        entry={entry}
-        onChange={onChange}
-        actions={actions}
-      />
-    </>
+      </details>
+    </div>
   );
 }
 
 function CardioEfforts({
   entry,
+  distanceUnit,
   onChange,
   actions,
 }: {
   entry: WorkoutEntry;
+  distanceUnit: DistanceUnit;
   onChange: WorkoutViewProps['onChange'];
   actions: WorkoutActions;
 }) {
@@ -435,8 +490,7 @@ function CardioEfforts({
       <div className="set-head cardio-head">
         <span>Effort</span>
         <span>Minutes</span>
-        <span>Distance</span>
-        <span>Done</span>
+        <span>Distance ({distanceUnit})</span>
         <span />
       </div>
       {entry.sets.map((effort, effortIndex) => (
@@ -470,39 +524,25 @@ function CardioEfforts({
                 type="number"
                 min="0"
                 step="0.01"
-                value={effort.distance ?? ''}
+                value={
+                  convertDistance(
+                    effort.distance,
+                    effort.distanceUnit,
+                    distanceUnit,
+                  ) ?? ''
+                }
                 onChange={(event) =>
                   updateEffort(onChange, actions, entry.id, effort.id, {
                     distance:
                       event.target.value === ''
                         ? null
                         : Number(event.target.value),
+                    distanceUnit,
                   })
                 }
               />
-              <select
-                aria-label={`${entry.exerciseName} distance unit effort ${effortIndex + 1}`}
-                value={effort.distanceUnit}
-                onChange={(event) =>
-                  updateEffort(onChange, actions, entry.id, effort.id, {
-                    distanceUnit: event.target
-                      .value as WorkoutSet['distanceUnit'],
-                  })
-                }
-              >
-                <option value="km">km</option>
-                <option value="mi">mi</option>
-              </select>
+              <span className="unit-label">{distanceUnit}</span>
             </div>
-            <CompleteControl
-              label={`${entry.exerciseName} effort ${effortIndex + 1} complete`}
-              checked={effort.completed}
-              onChange={(completed) =>
-                updateEffort(onChange, actions, entry.id, effort.id, {
-                  completed,
-                })
-              }
-            />
             <RemoveEffort
               label={`Remove ${entry.exerciseName} effort ${effortIndex + 1}`}
               onClick={() =>
@@ -543,25 +583,6 @@ function updateEffort(
   );
 }
 
-function CompleteControl({
-  label,
-  checked,
-  onChange,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-}) {
-  return (
-    <input
-      aria-label={label}
-      type="checkbox"
-      checked={checked}
-      onChange={(event) => onChange(event.target.checked)}
-    />
-  );
-}
-
 function RemoveEffort({
   label,
   onClick,
@@ -579,6 +600,14 @@ function RemoveEffort({
       ×
     </button>
   );
+}
+
+function displayWeight(
+  weight: number | null,
+  recordedUnit: WorkoutSet['weightUnit'],
+  displayUnit: WeightUnit,
+) {
+  return convertWeight(weight, recordedUnit, displayUnit) ?? '';
 }
 
 function EffortNotes({

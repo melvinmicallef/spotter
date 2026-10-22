@@ -50,8 +50,8 @@ assigned. A leaf muscle can be linked to many exercises as primary or secondary.
 
 A movement that can be placed in a template or workout. Its initial fields are
 a stable ID, name, type, optional preparation instructions, optional execution
-instructions, optional HTTP/HTTPS reference link, and associated muscles. Every
-exercise is either:
+instructions, optional comments, optional HTTP/HTTPS reference link, and
+associated muscles. Every exercise is either:
 
 - **strength**, recorded as sets with repetitions and optional weight; or
 - **cardio**, recorded as efforts with duration and optional distance.
@@ -59,8 +59,9 @@ exercise is either:
 ### Weekly workout template
 
 An ordered, reusable seven-day workout plan. Each day from Monday through
-Sunday can contain multiple ordered exercises with type-appropriate targets and
-notes. Exactly one template is active when templates exist. A workout is
+Sunday can have an optional name and contain multiple ordered exercises with
+type-appropriate targets. The template can have notes that apply to the full
+plan. Exactly one template is active when templates exist. A workout is
 started only from today's populated schedule in that active template; an empty
 or ad-hoc "open workout" cannot be started. The user may swap today's assigned
 day with another weekday for the current ISO week on the current device. The
@@ -70,23 +71,47 @@ changes.
 ### Workout session
 
 A dated workout instance with a lifecycle of in progress or completed. It
-contains ordered exercise entries and their recorded sets.
+contains ordered exercise entries and their recorded sets. When started from a
+template, it snapshots that weekday's optional name so later template edits do
+not change the workout's history.
 
 ### Recorded effort
 
 A strength effort supports repetitions, weight, explicit `kg` or `lb` units,
-notes, and a completion marker. A cardio effort supports duration in seconds,
-distance, explicit `km` or `mi` units, notes, and a completion marker. The UI
-must show only the fields that apply to the exercise type.
+and notes. A cardio effort supports duration in seconds, distance, explicit
+`km` or `mi` units, and notes. The UI must show only the fields that apply to
+the exercise type. Weight and distance entry use the units derived from the
+Metric or Imperial system selected in device Settings. Changing that
+preference converts displayed active-workout and template target values while
+saved efforts and history retain their recorded units.
 
 ## Functional requirements
+
+### Stretching poster
+
+Settings allows the user to upload one GIF, PNG, or JPEG stretching poster up
+to 5 MiB. The poster is stored with the server's persistent application data
+and shared by devices using that deployment. The Today workout page provides a
+Show stretching action that opens a simple, uncropped poster view. Replacing or
+removing the poster requires a connection; the PWA caches the image after it
+has been loaded so it can be viewed offline on that device.
+
+### Measurement system
+
+Settings stores a device-local measurement system. New installations default
+to Metric; Metric uses kilograms and kilometres, while Imperial uses pounds
+and miles. Active workout and template target values are converted for display
+when the preference changes, and newly entered values are recorded in the
+selected unit. Completed workout history retains the units recorded with each
+effort.
 
 ### Appearance
 
 The user can switch between light and dark appearance modes. The selected mode
 is stored locally on the device and is applied before the PWA renders on later
-visits. A device with no saved selection initially follows its operating-system
-color-scheme preference.
+visits. The control is available on the Settings page from the bottom
+navigation. A device with no saved selection initially follows its
+operating-system color-scheme preference.
 
 ### Catalogue management
 
@@ -94,11 +119,14 @@ While online, a user can:
 
 - create, view, edit, and delete exercises;
 - choose whether an exercise is strength or cardio;
-- record preparation and execution instructions separately;
+- record preparation and execution instructions separately, with optional
+  comments displayed below execution;
 - add target muscles one at a time as primary or secondary, prevent duplicate
   assignments, allow multiple secondary muscles, and display primary muscles
   first;
-- attach or replace a GIF, PNG, or JPEG demonstration;
+- attach or replace a GIF, PNG, or JPEG demonstration using click-to-select or
+  drag and drop; removing the displayed image is saved only when the exercise
+  changes are saved;
 - add or change an optional exercise reference link; and
 - receive a clear validation or dependency error when a destructive change
   would invalidate existing data.
@@ -135,8 +163,13 @@ While online, a user can:
 - create, rename, duplicate, edit, delete, and activate a weekly template;
 - add multiple exercises to any day of the week from a visual picker that shows
   demonstration images and filters by exercise name or muscle;
+- assign an optional name to each weekday, such as "Legs" or "Chest & Back";
 - remove and reorder exercises within each day; and
-- configure exercise-level notes and type-appropriate initial targets.
+- configure type-appropriate initial targets, with repetitions shown before
+  sets for strength exercises.
+
+Template exercises do not have individual notes. A template may still have
+notes that apply to the overall weekly plan.
 
 Template mutations are unavailable offline. A cached template can be used to
 start a workout if all data required for its workout snapshot is available.
@@ -154,15 +187,23 @@ A user can:
   week without changing the template;
 - resume the current in-progress workout;
 - add, remove, and reorder workout exercises;
-- add, edit, complete, and remove sets;
+- add, edit, and remove sets;
+- display strength weights and repetitions in a compact grid, with controls to
+  add or remove each exercise's sets;
 - record repetitions and weight for strength exercises;
 - record duration and distance for cardio exercises;
-- record notes;
-- finish a workout; and
-- view synchronized workout history.
+- record notes on individual efforts;
+- open an exercise guide modal with its demonstration, instructions, comments,
+  reference link, and target muscles;
+- finish a workout;
+- view workout history with the local weekday and full date followed by the
+  template name; and
+- delete a completed workout from history after confirming in an in-app dialog.
 
 Starting, updating, and finishing a workout must work offline after the PWA and
 required reference data have been loaded at least once.
+Deleting history is online-only. Pending workout changes must synchronize before
+deletion so an older outbox operation cannot recreate the deleted workout.
 
 ## Offline contract
 
@@ -202,6 +243,8 @@ The initial conflict policy is deliberately narrow:
   device's local timezone.
 - Weight units must be recorded with, or normalized alongside, their values so
   unit changes do not reinterpret history.
+- The Settings page stores the preferred measurement system (Metric or
+  Imperial) on the current device. Metric is the default for new installations.
 - Database migrations must be ordered, repeatable, and applied before the API
   accepts traffic.
 
@@ -259,9 +302,9 @@ The first usable release is complete when:
   scheduled day in that active template, after applying any current-week
   device-local swap.
 - Strength efforts record repetitions and optional weight in explicit `kg` or
-  `lb` units.
+  `lb` units derived from the device's Metric or Imperial Settings preference.
 - Cardio efforts record duration and optional distance in explicit `km` or
-  `mi` units.
+  `mi` units derived from the same preference.
 - Completed workouts are read-only; only an active workout is edited offline.
 - The initial deployment is a trusted single-user installation without built-in
   authentication.

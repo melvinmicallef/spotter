@@ -17,10 +17,14 @@ export function createWorkout(
   const entries = template.exercises.filter(
     (entry) => entry.dayOfWeek === dayOfWeek,
   );
+  const templateDayName =
+    template.dayNames?.find((dayName) => dayName.dayOfWeek === dayOfWeek)
+      ?.name ?? null;
   return {
     id: crypto.randomUUID(),
     templateId: template.id,
     templateDay: dayOfWeek,
+    templateDayName,
     name: `${template.name} · ${weekdayName(dayOfWeek)}`.slice(0, 100),
     status: 'in_progress',
     startedAt: now,
@@ -34,7 +38,7 @@ export function createWorkout(
       exerciseType: entry.exerciseType,
       referenceUrl: entry.referenceUrl,
       position,
-      notes: entry.notes,
+      notes: null,
       targetSets: entry.targetSets,
       targetReps: entry.targetReps,
       targetDurationSeconds: entry.targetDurationSeconds,

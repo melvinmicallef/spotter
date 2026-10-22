@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto';
 
 import type {
+  AppSettings,
+  AppSettingsInput,
   Exercise,
   ExerciseInput,
   ExerciseMedia,
@@ -62,9 +64,9 @@ export class SpotterStore {
         this.database
           .prepare(
             `INSERT INTO exercises
-             (id, name, exercise_type, preparation, execution, image_id, source_url, source_title,
+             (id, name, exercise_type, preparation, execution, comments, image_id, source_url, source_title,
               source_media_url, source_imported_at, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           )
           .run(
             id,
@@ -72,6 +74,7 @@ export class SpotterStore {
             input.exerciseType,
             input.preparation,
             input.execution,
+            input.comments,
             input.mediaId,
             input.referenceUrl ?? input.source?.url ?? null,
             input.source?.title ?? null,
@@ -98,7 +101,7 @@ export class SpotterStore {
         this.assertExerciseTypeChangeIsCompatible(id, input.exerciseType);
         const result = this.database
           .prepare(
-            `UPDATE exercises SET name = ?, exercise_type = ?, preparation = ?, execution = ?, image_id = ?,
+            `UPDATE exercises SET name = ?, exercise_type = ?, preparation = ?, execution = ?, comments = ?, image_id = ?,
              source_url = ?, source_title = ?, source_media_url = ?,
              source_imported_at = ?, updated_at = ? WHERE id = ?`,
           )
@@ -107,6 +110,7 @@ export class SpotterStore {
             input.exerciseType,
             input.preparation,
             input.execution,
+            input.comments,
             input.mediaId,
             input.referenceUrl ?? input.source?.url ?? null,
             input.source?.title ?? null,
@@ -186,8 +190,44 @@ export class SpotterStore {
     return mapMedia(row);
   }
 
+  getSettings(): AppSettings {
+    const row = this.database
+      .prepare('SELECT stretching_poster_id FROM app_settings WHERE id = 1')
+      .get() as Row | undefined;
+    if (!row) throw new Error('Application settings row is missing');
+    const posterId = nullableString(row.stretching_poster_id);
+    return { stretchingPoster: posterId ? this.getMedia(posterId) : null };
+  }
+
+  updateSettings(input: AppSettingsInput): AppSettings {
+    if (input.stretchingPosterId) this.getMedia(input.stretchingPosterId);
+    this.database
+      .prepare('UPDATE app_settings SET stretching_poster_id = ? WHERE id = 1')
+      .run(input.stretchingPosterId);
+    return this.getSettings();
+  }
+
+  mediaIsReferenced(id: string): boolean {
+    return Boolean(
+      this.database
+        .prepare(
+          `SELECT 1 FROM exercises WHERE image_id = ?
+           UNION ALL
+           SELECT 1 FROM app_settings WHERE stretching_poster_id = ?
+           LIMIT 1`,
+        )
+        .get(id, id),
+    );
+  }
+
   deleteMedia(id: string): ExerciseMedia {
     const media = this.getMedia(id);
+    if (this.mediaIsReferenced(id))
+      throw new AppError(
+        409,
+        'DEPENDENCY_EXISTS',
+        'Image is still assigned to an exercise or setting',
+      );
     this.database.transaction(() => {
       this.database.prepare('DELETE FROM exercise_images WHERE id = ?').run(id);
       this.incrementReferenceRevision();
@@ -222,6 +262,7 @@ export class SpotterStore {
              VALUES (?, ?, ?, ?, ?, ?)`,
           )
           .run(id, input.name, Number(isActive), input.notes, now, now);
+        this.replaceTemplateDayNames(id, input.dayNames ?? []);
         this.replaceTemplateExercises(id, input.exercises);
         this.incrementReferenceRevision();
       })();
@@ -261,6 +302,8 @@ export class SpotterStore {
           );
         if (result.changes === 0)
           throw new AppError(404, 'NOT_FOUND', 'Template not found');
+        if (input.dayNames !== undefined)
+          this.replaceTemplateDayNames(id, input.dayNames);
         this.replaceTemplateExercises(id, input.exercises);
         this.incrementReferenceRevision();
       })();
@@ -280,10 +323,10 @@ export class SpotterStore {
       name: this.availableTemplateCopyName(source.name),
       isActive: false,
       notes: source.notes,
+      dayNames: source.dayNames ?? [],
       exercises: source.exercises.map((exercise) => ({
         exerciseId: exercise.exerciseId,
         dayOfWeek: exercise.dayOfWeek,
-        notes: exercise.notes,
         targetSets: exercise.targetSets,
         targetReps: exercise.targetReps,
         targetDurationSeconds: exercise.targetDurationSeconds,
@@ -354,6 +397,24 @@ export class SpotterStore {
       .get(id) as Row | undefined;
     if (!row) throw new AppError(404, 'NOT_FOUND', 'Workout not found');
     return this.mapWorkout(row);
+  }
+
+  deleteWorkout(id: string): void {
+    this.database.transaction(() => {
+      const row = this.database
+        .prepare('SELECT status FROM workout_sessions WHERE id = ?')
+        .get(id) as { status: string } | undefined;
+      if (!row) throw new AppError(404, 'NOT_FOUND', 'Workout not found');
+      if (row.status !== 'completed')
+        throw new AppError(
+          409,
+          'WORKOUT_IN_PROGRESS',
+          'An in-progress workout cannot be deleted from history',
+        );
+      this.database
+        .prepare('DELETE FROM workout_sessions WHERE id = ?')
+        .run(id);
+    })();
   }
 
   applySyncOperation(
@@ -428,6 +489,7 @@ export class SpotterStore {
       exerciseType: row.exercise_type as Exercise['exerciseType'],
       preparation: nullableString(row.preparation),
       execution: nullableString(row.execution),
+      comments: nullableString(row.comments),
       referenceUrl: nullableString(row.source_url),
       muscles,
       media: row.image_id
@@ -456,6 +518,16 @@ export class SpotterStore {
   }
 
   private mapTemplate(row: Row): WorkoutTemplate {
+    const dayNames = this.database
+      .prepare(
+        `SELECT day_of_week, name FROM template_day_names
+         WHERE template_id = ? ORDER BY day_of_week`,
+      )
+      .all(row.id)
+      .map((dayName) => ({
+        dayOfWeek: Number((dayName as Row).day_of_week),
+        name: String((dayName as Row).name),
+      }));
     const exercises = this.database
       .prepare(
         `SELECT template_exercises.*, exercises.name AS exercise_name,
@@ -474,7 +546,6 @@ export class SpotterStore {
         referenceUrl: nullableString((entry as Row).reference_url),
         dayOfWeek: Number((entry as Row).day_of_week),
         position: Number((entry as Row).position),
-        notes: nullableString((entry as Row).notes),
         targetSets: nullableNumber((entry as Row).target_sets),
         targetReps: nullableNumber((entry as Row).target_reps),
         targetDurationSeconds: nullableNumber(
@@ -488,6 +559,7 @@ export class SpotterStore {
       name: String(row.name),
       isActive: Boolean(row.is_active),
       notes: nullableString(row.notes),
+      dayNames,
       exercises,
       createdAt: String(row.created_at),
       updatedAt: String(row.updated_at),
@@ -541,6 +613,7 @@ export class SpotterStore {
       id: String(row.id),
       templateId: nullableString(row.template_id),
       templateDay: nullableNumber(row.template_day),
+      templateDayName: nullableString(row.template_day_name),
       name: String(row.name),
       status: row.status as Workout['status'],
       startedAt: String(row.started_at),
@@ -585,10 +658,10 @@ export class SpotterStore {
       .run(id);
     const insert = this.database.prepare(
       `INSERT INTO template_exercises
-       (id, template_id, exercise_id, day_of_week, position, notes,
+       (id, template_id, exercise_id, day_of_week, position,
         target_sets, target_reps, target_duration_seconds, target_distance,
         target_distance_unit)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     );
     const positions = new Map<number, number>();
     exercises.forEach((exercise) => {
@@ -600,7 +673,6 @@ export class SpotterStore {
         exercise.exerciseId,
         exercise.dayOfWeek,
         position,
-        exercise.notes,
         exercise.targetSets,
         exercise.targetReps,
         exercise.targetDurationSeconds,
@@ -608,6 +680,21 @@ export class SpotterStore {
         exercise.targetDistanceUnit,
       );
     });
+  }
+
+  private replaceTemplateDayNames(
+    id: string,
+    dayNames: NonNullable<WorkoutTemplateInput['dayNames']>,
+  ) {
+    this.database
+      .prepare('DELETE FROM template_day_names WHERE template_id = ?')
+      .run(id);
+    const insert = this.database.prepare(
+      `INSERT INTO template_day_names (template_id, day_of_week, name)
+       VALUES (?, ?, ?)`,
+    );
+    for (const dayName of dayNames)
+      insert.run(id, dayName.dayOfWeek, dayName.name);
   }
 
   private assertExerciseTypeChangeIsCompatible(
@@ -680,10 +767,12 @@ export class SpotterStore {
     this.database
       .prepare(
         `INSERT INTO workout_sessions
-         (id, template_id, template_day, name, status, started_at, completed_at, notes, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+         (id, template_id, template_day, template_day_name, name, status,
+          started_at, completed_at, notes, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET template_id = excluded.template_id,
-           template_day = excluded.template_day, name = excluded.name,
+           template_day = excluded.template_day,
+           template_day_name = excluded.template_day_name, name = excluded.name,
            status = excluded.status, started_at = excluded.started_at,
            completed_at = excluded.completed_at, notes = excluded.notes, updated_at = excluded.updated_at`,
       )
@@ -691,6 +780,7 @@ export class SpotterStore {
         workout.id,
         templateExists ? workout.templateId : null,
         workout.templateDay,
+        workout.templateDayName ?? null,
         workout.name,
         workout.status,
         workout.startedAt,

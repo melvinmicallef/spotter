@@ -163,14 +163,17 @@ introduced without replacing the workout model or synchronization core.
 - `idb` provides the browser repository boundary. Workout and outbox changes
   share one transaction; synchronization is serialized and idempotent.
 - The `0.1.0` product boundary is one active workout per device, explicit
-  strength/cardio exercise types, ISO-weekday templates, `kg`/`lb` weight and
-  `km`/`mi` distance, read-only completed workouts, and one trusted user per
-  deployment without built-in authentication.
+  strength/cardio exercise types, ISO-weekday templates with optional named
+  days, `kg`/`lb` weight and `km`/`mi` distance, read-only completed workouts,
+  and one trusted user per deployment without built-in authentication.
 - Exercise demonstrations are validated GIF, PNG, or JPEG uploads of at most
   five MiB, stored below `/data/media`, and prefetched into a dedicated offline
   application cache. Website import is not part of the product. Exercises may
   instead store an optional validated HTTP/HTTPS reference link, which is
   copied into template and workout snapshots for use during a workout.
+- A single stretching-poster image is configured online in Settings and shared
+  across devices on the deployment; Today opens its uncropped view. Appearance
+  and measurement preferences remain device-local.
 
 These remain revisable while Spotter is in the `0.x` development line.
 
