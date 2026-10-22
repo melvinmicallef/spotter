@@ -151,13 +151,17 @@ Each workout-exercise snapshot copies its `strength`, `calisthenics`, or
 `cardio` category. Strength efforts use repetitions, optional weight, and
 `kg`/`lb`; calisthenics efforts use repetitions without weight; cardio efforts
 use either one duration result or a configured interval timer plus optional
-distance. Duration and interval settings are stored per template entry and
-copied into the workout snapshot. The interval timer runs prep, work, and rest
-stages, beeps for countdown values five through one and at stage transitions,
-and records total work time when it completes. A device-local Metric/Imperial
+distance. Templates select duration or interval mode; interval timing is
+configured on each workout and stored only in its workout-exercise snapshot.
+Starting an interval workout uses the latest completed interval execution for
+that exercise, across templates, or defaults to 0 prep seconds, 30 work
+seconds, 30 rest seconds, and 8 iterations. Users can adjust those values
+before starting the timer. The interval timer runs prep, work, and rest stages,
+beeps for countdown values five through one and at stage transitions, and
+records total work time when it completes. A device-local Metric/Imperial
 Settings preference controls weight entry and display, and cardio distance
-uses `km`/`mi` derived from that preference. Saved weighted values retain
-their recorded unit.
+uses `km`/`mi` derived from that preference. Saved weighted values retain their
+recorded unit.
 The browser keeps a small numeric interval-timer checkpoint keyed by workout
 exercise so a running or paused timer can resume after a refresh on that device.
 The finished duration is written through the normal IndexedDB workout and

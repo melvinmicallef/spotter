@@ -12,6 +12,7 @@ import { weekdayName } from './weekdays.js';
 export function createWorkout(
   template: WorkoutTemplate,
   dayOfWeek: DayOfWeek,
+  previousWorkouts: Workout[] = [],
 ): Workout {
   const now = new Date().toISOString();
   const entries = template.exercises.filter(
@@ -31,33 +32,101 @@ export function createWorkout(
     completedAt: null,
     notes: null,
     updatedAt: now,
-    exercises: entries.map((entry, position) => ({
-      id: crypto.randomUUID(),
-      exerciseId: entry.exerciseId,
-      exerciseName: entry.exerciseName,
-      exerciseType: entry.exerciseType,
-      referenceUrl: entry.referenceUrl,
-      position,
-      notes: null,
-      targetSets: entry.targetSets,
-      targetReps: entry.targetReps,
-      targetDurationSeconds: entry.targetDurationSeconds,
-      cardioMode: entry.cardioMode ?? 'duration',
-      intervalPrepSeconds: entry.intervalPrepSeconds ?? null,
-      intervalWorkSeconds: entry.intervalWorkSeconds ?? null,
-      intervalRestSeconds: entry.intervalRestSeconds ?? null,
-      intervalIterations: entry.intervalIterations ?? null,
-      targetDistance: entry.targetDistance,
-      targetDistanceUnit: entry.targetDistanceUnit,
-      completed: false,
-      sets: Array.from(
-        {
-          length: entry.exerciseType !== 'cardio' ? (entry.targetSets ?? 1) : 1,
-        },
-        (_, setPosition) => createSet(setPosition),
-      ),
-    })),
+    exercises: entries.map((entry, position) => {
+      const cardioMode = entry.cardioMode ?? 'duration';
+      const previousInterval =
+        entry.exerciseType === 'cardio' && cardioMode === 'interval'
+          ? previousIntervalExecution(entry, previousWorkouts)
+          : undefined;
+      return {
+        id: crypto.randomUUID(),
+        exerciseId: entry.exerciseId,
+        exerciseName: entry.exerciseName,
+        exerciseType: entry.exerciseType,
+        referenceUrl: entry.referenceUrl,
+        position,
+        notes: null,
+        targetSets: entry.targetSets,
+        targetReps: entry.targetReps,
+        targetDurationSeconds: entry.targetDurationSeconds,
+        cardioMode,
+        intervalPrepSeconds:
+          cardioMode === 'interval'
+            ? (previousInterval?.intervalPrepSeconds ?? 0)
+            : null,
+        intervalWorkSeconds:
+          cardioMode === 'interval'
+            ? (previousInterval?.intervalWorkSeconds ?? 30)
+            : null,
+        intervalRestSeconds:
+          cardioMode === 'interval'
+            ? (previousInterval?.intervalRestSeconds ?? 30)
+            : null,
+        intervalIterations:
+          cardioMode === 'interval'
+            ? (previousInterval?.intervalIterations ?? 8)
+            : null,
+        targetDistance: entry.targetDistance,
+        targetDistanceUnit: entry.targetDistanceUnit,
+        completed: false,
+        sets: Array.from(
+          {
+            length:
+              entry.exerciseType !== 'cardio' ? (entry.targetSets ?? 1) : 1,
+          },
+          (_, setPosition) => createSet(setPosition),
+        ),
+      };
+    }),
   };
+}
+
+function previousIntervalExecution(
+  entry: WorkoutTemplate['exercises'][number],
+  previousWorkouts: Workout[],
+): WorkoutExercise | undefined {
+  const previousEntries = previousWorkouts
+    .filter((workout) => workout.status === 'completed')
+    .sort((left, right) => right.startedAt.localeCompare(left.startedAt))
+    .flatMap((workout) => workout.exercises)
+    .filter(
+      (exercise) =>
+        exercise.exerciseType === 'cardio' &&
+        exercise.cardioMode === 'interval',
+    );
+
+  const byId = entry.exerciseId
+    ? previousEntries.find(
+        (exercise) => exercise.exerciseId === entry.exerciseId,
+      )
+    : undefined;
+  return (
+    byId ??
+    previousEntries.find(
+      (exercise) =>
+        exercise.exerciseName === entry.exerciseName &&
+        exercise.exerciseType === entry.exerciseType,
+    )
+  );
+}
+
+export function updateIntervalSettings(
+  workout: Workout,
+  workoutExerciseId: string,
+  patch: Partial<
+    Pick<
+      WorkoutExercise,
+      | 'intervalPrepSeconds'
+      | 'intervalWorkSeconds'
+      | 'intervalRestSeconds'
+      | 'intervalIterations'
+    >
+  >,
+): Workout {
+  return updateExercise(workout, workoutExerciseId, (exercise) => ({
+    ...exercise,
+    ...patch,
+  }));
 }
 
 export function addExercise(workout: Workout, exercise: Exercise): Workout {

@@ -365,7 +365,7 @@ export const workoutExerciseSchema = z
     sets: z.array(workoutSetSchema).max(200),
   })
   .superRefine((exercise, context) => {
-    validateTargetMetrics(exercise, context);
+    validateTargetMetrics(exercise, context, true);
     exercise.sets.forEach((set, index) => {
       if (
         exercise.exerciseType !== 'cardio' &&
@@ -411,6 +411,7 @@ function validateTargetMetrics(
     targetDistance: number | null;
   },
   context: z.RefinementCtx,
+  requireIntervalSettings = false,
 ) {
   if (
     exercise.exerciseType !== 'cardio' &&
@@ -466,28 +467,28 @@ function validateTargetMetrics(
         'Interval cardio uses work and rest settings instead of a duration target',
     });
   }
-  if (exercise.intervalPrepSeconds == null) {
+  if (requireIntervalSettings && exercise.intervalPrepSeconds == null) {
     context.addIssue({
       code: 'custom',
       path: ['intervalPrepSeconds'],
       message: 'Interval cardio requires a prep time',
     });
   }
-  if (exercise.intervalWorkSeconds == null) {
+  if (requireIntervalSettings && exercise.intervalWorkSeconds == null) {
     context.addIssue({
       code: 'custom',
       path: ['intervalWorkSeconds'],
       message: 'Interval cardio requires a work time',
     });
   }
-  if (exercise.intervalRestSeconds == null) {
+  if (requireIntervalSettings && exercise.intervalRestSeconds == null) {
     context.addIssue({
       code: 'custom',
       path: ['intervalRestSeconds'],
       message: 'Interval cardio requires a rest time',
     });
   }
-  if (exercise.intervalIterations == null) {
+  if (requireIntervalSettings && exercise.intervalIterations == null) {
     context.addIssue({
       code: 'custom',
       path: ['intervalIterations'],

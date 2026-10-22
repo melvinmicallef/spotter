@@ -42,6 +42,7 @@ import {
   removeExercise,
   removeSet,
   setExerciseCompleted,
+  updateIntervalSettings,
   updateSet,
 } from './workout.js';
 
@@ -102,6 +103,20 @@ export function App() {
     weekProgressReady && weekProgressRecord
       ? weekProgressRecord.progress
       : EMPTY_WEEK_PROGRESS;
+  const history = useMemo(() => {
+    const merged = new Map(
+      serverWorkouts
+        .filter((workout) => workout.status === 'completed')
+        .map((workout) => [workout.id, workout]),
+    );
+    for (const workout of localWorkouts) {
+      if (workout.status === 'completed' && !merged.has(workout.id))
+        merged.set(workout.id, workout);
+    }
+    return [...merged.values()].sort((a, b) =>
+      b.startedAt.localeCompare(a.startedAt),
+    );
+  }, [localWorkouts, serverWorkouts]);
   useEffect(() => applyTheme(theme), [theme]);
   useEffect(() => {
     const nextMidnight = new Date();
@@ -344,7 +359,7 @@ export function App() {
     if (activeWorkoutRef.current) return;
     if (!weekProgressReady) return;
     if (weekProgress.completedDays.includes(dayOfWeek)) return;
-    const workout = createWorkout(template, dayOfWeek);
+    const workout = createWorkout(template, dayOfWeek, history);
     activeWorkoutRef.current = workout;
     setActiveWorkout(workout);
     persistWorkout(workout);
@@ -470,21 +485,6 @@ export function App() {
     return updatedWorkout;
   }
 
-  const history = useMemo(() => {
-    const merged = new Map(
-      serverWorkouts
-        .filter((workout) => workout.status === 'completed')
-        .map((workout) => [workout.id, workout]),
-    );
-    for (const workout of localWorkouts) {
-      if (workout.status === 'completed' && !merged.has(workout.id))
-        merged.set(workout.id, workout);
-    }
-    return [...merged.values()].sort((a, b) =>
-      b.startedAt.localeCompare(a.startedAt),
-    );
-  }, [localWorkouts, serverWorkouts]);
-
   if (!ready) {
     return (
       <main className="loading">
@@ -556,6 +556,7 @@ export function App() {
               addSet,
               removeSet,
               updateSet,
+              updateIntervalSettings,
               setExerciseCompleted,
               finish: finishWorkout,
             }}

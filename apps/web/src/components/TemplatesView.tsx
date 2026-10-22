@@ -577,22 +577,10 @@ function TemplateEditor({
                                         cardioMode === 'duration'
                                           ? entry.targetDistance
                                           : null,
-                                      intervalPrepSeconds:
-                                        cardioMode === 'interval'
-                                          ? (entry.intervalPrepSeconds ?? 0)
-                                          : null,
-                                      intervalWorkSeconds:
-                                        cardioMode === 'interval'
-                                          ? (entry.intervalWorkSeconds ?? 30)
-                                          : null,
-                                      intervalRestSeconds:
-                                        cardioMode === 'interval'
-                                          ? (entry.intervalRestSeconds ?? 30)
-                                          : null,
-                                      intervalIterations:
-                                        cardioMode === 'interval'
-                                          ? (entry.intervalIterations ?? 8)
-                                          : null,
+                                      intervalPrepSeconds: null,
+                                      intervalWorkSeconds: null,
+                                      intervalRestSeconds: null,
+                                      intervalIterations: null,
                                     });
                                   }}
                                 >
@@ -613,61 +601,9 @@ function TemplateEditor({
                                   ariaLabel={`${exercise.name} duration on ${day.label}`}
                                 />
                               ) : (
-                                <>
-                                  <TimeTargetFields
-                                    label="Prep time"
-                                    value={entry.intervalPrepSeconds ?? null}
-                                    onChange={(intervalPrepSeconds) =>
-                                      updateEntry(index, {
-                                        intervalPrepSeconds:
-                                          intervalPrepSeconds ?? 0,
-                                      })
-                                    }
-                                    ariaLabel={`${exercise.name} prep time on ${day.label}`}
-                                    allowZero
-                                  />
-                                  <TimeTargetFields
-                                    label="Work time"
-                                    value={entry.intervalWorkSeconds ?? null}
-                                    onChange={(intervalWorkSeconds) =>
-                                      updateEntry(index, {
-                                        intervalWorkSeconds:
-                                          intervalWorkSeconds ?? 0,
-                                      })
-                                    }
-                                    ariaLabel={`${exercise.name} work time on ${day.label}`}
-                                  />
-                                  <TimeTargetFields
-                                    label="Rest time"
-                                    value={entry.intervalRestSeconds ?? null}
-                                    onChange={(intervalRestSeconds) =>
-                                      updateEntry(index, {
-                                        intervalRestSeconds:
-                                          intervalRestSeconds ?? 0,
-                                      })
-                                    }
-                                    ariaLabel={`${exercise.name} rest time on ${day.label}`}
-                                    allowZero
-                                  />
-                                  <label>
-                                    Iterations
-                                    <input
-                                      aria-label={`${exercise.name} interval iterations on ${day.label}`}
-                                      inputMode="numeric"
-                                      type="number"
-                                      min="1"
-                                      max="999"
-                                      value={entry.intervalIterations ?? ''}
-                                      onChange={(event) =>
-                                        updateEntry(index, {
-                                          intervalIterations: event.target.value
-                                            ? Number(event.target.value)
-                                            : null,
-                                        })
-                                      }
-                                    />
-                                  </label>
-                                </>
+                                <p className="target-summary">
+                                  Set for each workout
+                                </p>
                               )}
                               {(entry.cardioMode ?? 'duration') ===
                                 'duration' && (
@@ -821,9 +757,7 @@ function templateTargetSummary(
   const parts: string[] = [];
   if ((exercise?.exerciseType ?? entry.exerciseType) === 'cardio') {
     if (entry.cardioMode === 'interval') {
-      parts.push(
-        `Prep ${formatTimer(entry.intervalPrepSeconds ?? 0)} · Work ${formatTimer(entry.intervalWorkSeconds ?? 0)} · Rest ${formatTimer(entry.intervalRestSeconds ?? 0)} × ${entry.intervalIterations ?? 0}`,
-      );
+      parts.push('Interval');
     } else if (entry.targetDurationSeconds != null) {
       parts.push(`${formatTimer(entry.targetDurationSeconds)}`);
     }
@@ -873,10 +807,10 @@ function toInput(template: WorkoutTemplate): WorkoutTemplateInput {
       targetReps: entry.targetReps,
       targetDurationSeconds: entry.targetDurationSeconds,
       cardioMode: entry.cardioMode ?? 'duration',
-      intervalPrepSeconds: entry.intervalPrepSeconds ?? null,
-      intervalWorkSeconds: entry.intervalWorkSeconds ?? null,
-      intervalRestSeconds: entry.intervalRestSeconds ?? null,
-      intervalIterations: entry.intervalIterations ?? null,
+      intervalPrepSeconds: null,
+      intervalWorkSeconds: null,
+      intervalRestSeconds: null,
+      intervalIterations: null,
       targetDistance: entry.targetDistance,
       targetDistanceUnit: entry.targetDistanceUnit,
     })),

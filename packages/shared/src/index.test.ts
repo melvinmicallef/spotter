@@ -113,6 +113,22 @@ describe('service contracts', () => {
         targetSets: 3,
       }),
     ).toThrow(/set or rep targets/);
+
+    expect(
+      templateExerciseSchema.parse({
+        ...base,
+        exerciseType: 'cardio',
+        dayOfWeek: 1,
+        targetDurationSeconds: null,
+        targetDistance: null,
+        targetDistanceUnit: 'km',
+        cardioMode: 'interval',
+        intervalPrepSeconds: null,
+        intervalWorkSeconds: null,
+        intervalRestSeconds: null,
+        intervalIterations: null,
+      }),
+    ).toMatchObject({ cardioMode: 'interval' });
   });
 
   it('keeps strength and cardio set measurements separate', () => {
@@ -154,6 +170,30 @@ describe('service contracts', () => {
         sets: [{ ...set, durationSeconds: 900, distance: 3 }],
       }),
     ).toBeTruthy();
+    expect(() =>
+      workoutExerciseSchema.parse({
+        ...base,
+        exerciseType: 'cardio',
+        cardioMode: 'interval',
+        targetDurationSeconds: null,
+        targetDistance: null,
+        sets: [{ ...set }],
+      }),
+    ).toThrow(/Interval cardio requires a prep time/);
+    expect(
+      workoutExerciseSchema.parse({
+        ...base,
+        exerciseType: 'cardio',
+        cardioMode: 'interval',
+        targetDurationSeconds: null,
+        targetDistance: null,
+        intervalPrepSeconds: 0,
+        intervalWorkSeconds: 30,
+        intervalRestSeconds: 30,
+        intervalIterations: 8,
+        sets: [{ ...set }],
+      }),
+    ).toMatchObject({ cardioMode: 'interval', intervalIterations: 8 });
     expect(() =>
       workoutExerciseSchema.parse({
         ...base,

@@ -55,9 +55,9 @@ associated muscles. Every exercise is either:
 
 - **strength**, recorded as sets with repetitions and optional weight;
 - **calisthenics**, recorded as sets and repetitions without weight; or
-- **cardio**, planned in duration mode (minutes and seconds) or interval mode
-  (prep, work, rest, and iteration count), and recorded with duration and
-  optional distance.
+- **cardio**, planned in duration mode (minutes and seconds) or interval mode,
+  and recorded with duration and optional distance. Interval timing is
+  configured per workout rather than on the reusable template.
 
 ### Weekly workout template
 
@@ -91,14 +91,18 @@ not change the workout's history.
 A strength effort supports repetitions and optional weight with explicit `kg`
 or `lb` units. A calisthenics effort supports repetitions without a weight
 field. A duration cardio entry stores one duration in seconds and an optional
-target distance. An interval plan stores prep, work, and rest durations plus
-iteration count in the template entry and workout snapshot; interval plans have
-no target distance. The workout timer beeps for the last five seconds of each
-stage and when a stage changes; finishing the timer records total work time.
-Cardio results retain duration and distance with explicit `km` or `mi` units,
-including distance recorded as an interval result. The UI must show only the
-fields that apply to the exercise type. Weight and distance entry use the units
-derived from the Metric or Imperial system selected in device Settings.
+target distance. A template can select interval mode but stores no interval
+timing. Each workout snapshot stores its prep, work, and rest durations plus
+iteration count. Starting an interval workout prefills those values from the
+latest completed interval execution of the same exercise, across templates;
+the first execution defaults to 0 prep seconds, 30 work seconds, 30 rest
+seconds, and 8 iterations. The user can adjust them before starting the timer.
+The timer beeps for the last five seconds of each stage and when a stage
+changes; finishing the timer records total work time. Cardio results retain
+duration and distance with explicit `km` or `mi` units, including distance
+recorded as an interval result. The UI must show only the fields that apply to
+the exercise type. Weight and distance entry use the units derived from the
+Metric or Imperial system selected in device Settings.
 Changing that preference converts displayed active-workout and template target
 values while saved efforts and history retain their recorded units.
 
@@ -192,8 +196,7 @@ While online, a user can:
 - remove and reorder exercises within each day; and
 - configure type-appropriate initial targets, with repetitions shown before
   sets for strength and calisthenics exercises; and
-- choose duration or interval mode for each cardio entry and configure its
-  interval stages.
+- choose duration or interval mode for each cardio entry.
 
 Template exercises do not have notes, and weekly templates do not have notes.
 
@@ -230,9 +233,12 @@ A user can:
   omitted;
 - record repetitions and weight for strength exercises;
 - record repetitions without weight for calisthenics exercises;
-- record cardio duration as minutes and seconds, or run the configured
-  interval timer with audible five-to-one countdown and stage-transition
-  beeps; resume its saved countdown after a refresh on the same device;
+- record cardio duration as minutes and seconds, or configure prep, work,
+  rest, and iterations for an interval timer. Interval values prefill from the
+  latest completed interval execution of that exercise across templates, with
+  defaults on first use. The timer uses audible five-to-one countdown and
+  stage-transition beeps and resumes its saved countdown after a refresh on
+  the same device;
 - record optional distance for cardio exercises;
 - open an exercise guide modal with its demonstration, instructions, comments,
   reference link, and target muscles;
@@ -345,7 +351,8 @@ The first usable release is complete when:
 
 1. Calisthenics can be planned and recorded with repetitions and sets without
    weight fields; duration cardio accepts minutes and seconds, while interval
-   cardio configures prep, work, rest, and iterations.
+   cardio configures prep, work, rest, and iterations per workout, prefilling
+   from the previous completed interval execution of that exercise.
 2. The interval timer beeps for the final five seconds and on stage changes,
    records total work duration, and restores its countdown after a refresh.
 3. Strength inputs show previous completed values as placeholders, leave the

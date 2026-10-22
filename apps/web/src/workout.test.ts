@@ -7,6 +7,7 @@ import {
   addSet,
   createWorkout,
   finishWorkout,
+  updateIntervalSettings,
   updateSet,
   updateWorkoutNotes,
 } from './workout.js';
@@ -69,6 +70,80 @@ describe('local workout commands', () => {
       targetDistance: 5,
     });
     expect(workout.exercises[0]?.sets).toHaveLength(1);
+  });
+
+  it('starts interval cardio with defaults, then reuses its last execution', () => {
+    const intervalTemplate: WorkoutTemplate = {
+      ...template,
+      exercises: [
+        templateEntry(cardioExercise, 1, 0, {
+          cardioMode: 'interval',
+          intervalPrepSeconds: 120,
+          intervalWorkSeconds: 120,
+          intervalRestSeconds: 120,
+          intervalIterations: 12,
+        }),
+      ],
+    };
+    const firstWorkout = createWorkout(intervalTemplate, 1);
+    expect(firstWorkout.exercises[0]).toMatchObject({
+      intervalPrepSeconds: 0,
+      intervalWorkSeconds: 30,
+      intervalRestSeconds: 30,
+      intervalIterations: 8,
+    });
+
+    let completedWorkout = updateIntervalSettings(
+      firstWorkout,
+      firstWorkout.exercises[0]!.id,
+      {
+        intervalPrepSeconds: 15,
+        intervalWorkSeconds: 45,
+        intervalRestSeconds: 20,
+        intervalIterations: 6,
+      },
+    );
+    completedWorkout = {
+      ...completedWorkout,
+      status: 'completed',
+      startedAt: '2026-01-01T10:00:00.000Z',
+    };
+    const latestWorkout = {
+      ...completedWorkout,
+      id: crypto.randomUUID(),
+      startedAt: '2026-02-01T10:00:00.000Z',
+      exercises: completedWorkout.exercises.map((exercise) => ({
+        ...exercise,
+        intervalPrepSeconds: 25,
+        intervalWorkSeconds: 60,
+        intervalRestSeconds: 15,
+        intervalIterations: 5,
+      })),
+    };
+    const nextTemplate: WorkoutTemplate = {
+      ...intervalTemplate,
+      id: crypto.randomUUID(),
+      exercises: [
+        templateEntry(cardioExercise, 2, 0, {
+          cardioMode: 'interval',
+          intervalPrepSeconds: null,
+          intervalWorkSeconds: null,
+          intervalRestSeconds: null,
+          intervalIterations: null,
+        }),
+      ],
+    };
+
+    const nextWorkout = createWorkout(nextTemplate, 2, [
+      latestWorkout,
+      completedWorkout,
+    ]);
+    expect(nextWorkout.exercises[0]).toMatchObject({
+      intervalPrepSeconds: 25,
+      intervalWorkSeconds: 60,
+      intervalRestSeconds: 15,
+      intervalIterations: 5,
+    });
   });
 
   it('keeps rapid mutations monotonic so later edits cannot be stale', () => {

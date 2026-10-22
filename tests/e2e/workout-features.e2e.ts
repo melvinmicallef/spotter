@@ -140,6 +140,21 @@ test('records typed sets, previous values, and an audible interval timer', async
           targetDistance: null,
           targetDistanceUnit: 'km',
         },
+        {
+          exerciseId: cardio.id,
+          dayOfWeek: thirdDay,
+          notes: null,
+          targetSets: null,
+          targetReps: null,
+          targetDurationSeconds: null,
+          cardioMode: 'interval',
+          intervalPrepSeconds: null,
+          intervalWorkSeconds: null,
+          intervalRestSeconds: null,
+          intervalIterations: null,
+          targetDistance: null,
+          targetDistanceUnit: 'km',
+        },
       ],
     },
   });
@@ -231,18 +246,9 @@ test('records typed sets, previous values, and an audible interval timer', async
   await expect(
     templateCard.getByLabel(`${cardioName} target distance on ${todayName}`),
   ).toHaveCount(0);
-  await templateCard
-    .getByLabel(`${cardioName} prep time on ${todayName} seconds`)
-    .fill('20');
-  await templateCard
-    .getByLabel(`${cardioName} work time on ${todayName} seconds`)
-    .fill('20');
-  await templateCard
-    .getByLabel(`${cardioName} rest time on ${todayName} seconds`)
-    .fill('0');
-  await templateCard
-    .getByLabel(`${cardioName} interval iterations on ${todayName}`)
-    .fill('1');
+  await expect(
+    templateCard.getByLabel(`${cardioName} prep time on ${todayName} seconds`),
+  ).toHaveCount(0);
   await templateCard
     .getByRole('button', { name: 'Save weekly template' })
     .click();
@@ -265,10 +271,10 @@ test('records typed sets, previous values, and an audible interval timer', async
     ?.exercises.find((entry) => entry.exerciseName === cardioName);
   expect(savedInterval).toMatchObject({
     cardioMode: 'interval',
-    intervalPrepSeconds: 20,
-    intervalWorkSeconds: 20,
-    intervalRestSeconds: 0,
-    intervalIterations: 1,
+    intervalPrepSeconds: null,
+    intervalWorkSeconds: null,
+    intervalRestSeconds: null,
+    intervalIterations: null,
     targetDistance: null,
   });
 
@@ -288,6 +294,19 @@ test('records typed sets, previous values, and an audible interval timer', async
     .locator('article.workout-card')
     .filter({ hasText: cardioName });
   await expect(cardioCard.locator('.target-summary')).not.toContainText('km');
+  await expect(
+    cardioCard.getByLabel(`${cardioName} prep time seconds`),
+  ).toHaveValue('0');
+  await expect(
+    cardioCard.getByLabel(`${cardioName} work time seconds`),
+  ).toHaveValue('30');
+  await expect(
+    cardioCard.getByLabel(`${cardioName} interval iterations`),
+  ).toHaveValue('8');
+  await cardioCard.getByLabel(`${cardioName} prep time seconds`).fill('20');
+  await cardioCard.getByLabel(`${cardioName} work time seconds`).fill('20');
+  await cardioCard.getByLabel(`${cardioName} rest time seconds`).fill('0');
+  await cardioCard.getByLabel(`${cardioName} interval iterations`).fill('1');
 
   await expect(
     strengthCard.getByLabel(`${strengthName} weight set 1`),
@@ -470,6 +489,21 @@ test('records typed sets, previous values, and an audible interval timer', async
   const thirdStrength = page
     .locator('article.workout-card')
     .filter({ hasText: strengthName });
+  const thirdCardio = page
+    .locator('article.workout-card')
+    .filter({ hasText: cardioName });
+  await expect(
+    thirdCardio.getByLabel(`${cardioName} prep time seconds`),
+  ).toHaveValue('20');
+  await expect(
+    thirdCardio.getByLabel(`${cardioName} work time seconds`),
+  ).toHaveValue('20');
+  await expect(
+    thirdCardio.getByLabel(`${cardioName} rest time seconds`),
+  ).toHaveValue('0');
+  await expect(
+    thirdCardio.getByLabel(`${cardioName} interval iterations`),
+  ).toHaveValue('1');
   await expect(
     thirdStrength.getByLabel(`${strengthName} weight set 3`),
   ).toHaveCount(0);

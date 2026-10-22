@@ -58,6 +58,19 @@ interface WorkoutViewProps {
       exerciseId: string,
       completed: boolean,
     ) => Workout;
+    updateIntervalSettings: (
+      workout: Workout,
+      exerciseId: string,
+      patch: Partial<
+        Pick<
+          WorkoutExercise,
+          | 'intervalPrepSeconds'
+          | 'intervalWorkSeconds'
+          | 'intervalRestSeconds'
+          | 'intervalIterations'
+        >
+      >,
+    ) => Workout;
     finish: (workout: Workout) => Workout;
   };
 }
@@ -1105,8 +1118,75 @@ function IntervalTimer({
     lastElapsedMs.current = nowElapsed;
   }
 
+  function updateIntervalSettings(
+    patch: Partial<
+      Pick<
+        WorkoutExercise,
+        | 'intervalPrepSeconds'
+        | 'intervalWorkSeconds'
+        | 'intervalRestSeconds'
+        | 'intervalIterations'
+      >
+    >,
+  ) {
+    onChange((current) =>
+      actions.updateIntervalSettings(current, entry.id, patch),
+    );
+  }
+
   return (
     <div className="cardio-interval-workout">
+      {run.status === 'idle' && (
+        <div className="interval-settings">
+          <strong>Interval settings</strong>
+          <DurationInput
+            label={`${entry.exerciseName} prep time`}
+            value={entry.intervalPrepSeconds ?? 0}
+            onChange={(intervalPrepSeconds) =>
+              updateIntervalSettings({
+                intervalPrepSeconds: intervalPrepSeconds ?? 0,
+              })
+            }
+          />
+          <DurationInput
+            label={`${entry.exerciseName} work time`}
+            value={entry.intervalWorkSeconds ?? 30}
+            onChange={(intervalWorkSeconds) =>
+              updateIntervalSettings({
+                intervalWorkSeconds: intervalWorkSeconds ?? 1,
+              })
+            }
+          />
+          <DurationInput
+            label={`${entry.exerciseName} rest time`}
+            value={entry.intervalRestSeconds ?? 0}
+            onChange={(intervalRestSeconds) =>
+              updateIntervalSettings({
+                intervalRestSeconds: intervalRestSeconds ?? 0,
+              })
+            }
+          />
+          <label className="interval-iterations-field">
+            Iterations
+            <input
+              aria-label={`${entry.exerciseName} interval iterations`}
+              inputMode="numeric"
+              type="number"
+              min="1"
+              max="999"
+              value={entry.intervalIterations ?? 8}
+              onChange={(event) =>
+                updateIntervalSettings({
+                  intervalIterations: Math.max(
+                    1,
+                    Math.min(999, Number(event.target.value) || 1),
+                  ),
+                })
+              }
+            />
+          </label>
+        </div>
+      )}
       {recordedResult && (
         <label className="cardio-distance-input">
           Distance ({distanceUnit})
