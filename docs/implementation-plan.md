@@ -222,8 +222,9 @@ PWA, reports healthy, preserves data across replacement, and shuts down cleanly.
 ### Deliverables
 
 - Validation workflow for pull requests and normal pushes.
-- Separate image workflow triggered only by pushed `v*` tags and
-  `workflow_dispatch`.
+- Reusable image workflow called by a dependent job after successful
+  validation of pushed `v*` tags, with an independently validated
+  `workflow_dispatch` path.
 - Minimal workflow permissions: `contents: read` and `packages: write` for the
   publishing job.
 - Docker Buildx build and GHCR authentication using the workflow token.
@@ -231,8 +232,9 @@ PWA, reports healthy, preserves data across replacement, and shuts down cleanly.
 - Manual image tag input with a safe `sha-<commit>` fallback.
 - Confirmation that ordinary commits never publish an image.
 - Release checklist and changelog or release-note process.
-- Playwright browser tests run in both the ordinary validation workflow and
-  the release workflow before an image can be published.
+- Playwright browser tests run in the validation workflow for branch, pull
+  request, and tag changes. Tag publication waits for that validation to pass;
+  manual release dispatch runs the same checks before publishing.
 
 ### Exit gate
 
@@ -266,8 +268,9 @@ service-worker shell caching, offline IndexedDB recovery and exactly-once
 synchronization, catalogue and template CRUD, exercise guide/comments and media,
 confirmation dialogs, typed strength/calisthenics/cardio inputs, interval timer
 beeps and refresh recovery, previous-value placeholders, measurement and theme
-preferences, stretching-poster caching and deletion, and history. CI and the
-release workflow install Chromium before running them.
+preferences, stretching-poster caching and deletion, and history. CI installs
+Chromium for these runs. Tag releases call the publishing workflow only after
+the tag's validation job succeeds; manual dispatch runs browser tests itself.
 
 ## Release documentation
 

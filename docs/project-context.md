@@ -55,7 +55,7 @@ baseline.
 | HTTP serving           | Express serves both `/api/*` and the compiled PWA                                                    |
 | Persistent path        | SQLite and related files under `/data`                                                               |
 | Image registry         | `ghcr.io/melvinmicallef/spotter`                                                                     |
-| Image triggers         | Pushed `v*` tags and optional manual workflow dispatch                                               |
+| Image triggers         | `v*` tags after successful validation; optional validated manual workflow dispatch                   |
 | Ordinary CI            | Validate commits and pull requests without publishing an image                                       |
 | Default branch         | `develop`                                                                                            |
 | Versioning             | Semantic versioning beginning at `0.1.0`; remain on `0.x` during active development                  |
@@ -114,8 +114,10 @@ same process. Runtime state is written only beneath `/data`.
 
 Routine validation includes formatting, linting, type-checking, automated
 tests, a production application build, and a non-publishing Docker build for
-every branch push and pull request. Container publication is separate and runs
-only for strict Semantic Version tags beginning with `v`, or manual dispatch.
+every branch push and pull request. Pushed `v*` tags run the same validation
+workflow; a dependent job calls the publisher only after validation succeeds
+and confirms the tag still references the validated commit. Manual dispatch
+runs the same checks before publishing.
 
 The first release `v0.1.0` and current release `v0.2.0` are published. A stable
 semantic-version tag publishes exact, minor, and `latest`

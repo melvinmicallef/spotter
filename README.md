@@ -230,7 +230,8 @@ development. Version `1.0.0` will mark the first stable public contract.
 Container publishing is triggered by:
 
 - pushing a strict Semantic Version tag beginning with `v`, such as `v0.2.0`;
-  malformed `v*` tags fail validation before publication; or
+  its publish job runs only after `Validate` passes, and malformed
+  `v*` tags fail before publication; or
 - starting the release workflow manually through GitHub Actions.
 
 Images will be published to `ghcr.io/melvinmicallef/spotter`.

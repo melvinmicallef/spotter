@@ -354,22 +354,17 @@ Validation runs for pull requests and every branch push and performs:
 - a production application build; and
 - a non-publishing Docker build.
 
-Image publication is triggered by:
+Pushed `v*` tags also run the same validation workflow. Its dependent
+publishing job calls the reusable release workflow only after the checks pass;
+the publisher confirms the tag still points to the validated commit. A manual
+release dispatch runs the checks within the release workflow before publishing.
 
-```yaml
-on:
-  push:
-    tags:
-      - 'v*'
-  workflow_dispatch:
-```
-
-It uses GitHub's short-lived workflow token, grants only `contents: read` and
-`packages: write`, builds with Docker Buildx, and publishes to
-`ghcr.io/melvinmicallef/spotter`. A read-only validation job runs the repository
-checks and resolves release metadata first. Only the dependent publication job
-receives package-write permission and logs into GHCR. Buildx uses the GitHub
-Actions cache without changing image contents or tags.
+The reusable publisher accepts only the validated tag and commit from its
+caller. It uses GitHub's short-lived workflow token, grants only
+`contents: read` and `packages: write`, builds with Docker Buildx, and publishes
+to `ghcr.io/melvinmicallef/spotter`. A read-only preparation job validates
+release metadata before the package-write job logs into GHCR. Buildx uses the
+GitHub Actions cache without changing image contents or tags.
 
 The broad `v*` trigger is guarded by a tested strict SemVer validator before
 registry login or publication. The first release tag `v0.1.0` produced
@@ -403,8 +398,8 @@ browser scenarios exercise muscle and exercise browsing, image upload,
 comments, in-app deletion confirmations, weekly template editing and day names,
 typed strength/calisthenics/cardio entries, previous-set hints, interval timer
 beeps and recovery, exercise-guide modals, Settings, and stretching-poster
-upload, removal, and offline viewing. The release workflow installs Chromium
-and runs this suite before it publishes a release image.
+upload, removal, and offline viewing. The validation workflow installs
+Chromium; the tag publisher waits for its successful completion.
 
 ## Observability and recovery
 

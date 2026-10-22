@@ -1,10 +1,12 @@
 # Spotter Release Guide
 
-Spotter releases are deliberate. A pushed, strict Semantic Version tag builds
-the production image; ordinary branch pushes and pull requests only validate
-the repository. The first release `v0.1.0` is published. Do not create the
-current `v0.2.0` release tag until the product acceptance criteria and browser
-test matrix have passed.
+Spotter releases are deliberate. A pushed, strict Semantic Version tag first
+runs the `Validate` workflow; its dependent publish job calls the reusable
+image workflow only after validation succeeds and confirms the tag points to
+the validated commit. Ordinary branch pushes and pull requests only validate.
+Manual release dispatch runs its own checks before it can publish. The first
+release `v0.1.0` is published. Do not create the current `v0.2.0` release tag
+until the product acceptance criteria and browser test matrix have passed.
 
 ## Version and image policy
 
@@ -24,11 +26,14 @@ test matrix have passed.
 - Strings that merely start with `v` but are not valid Semantic Versions fail
   before registry login or image publication.
 
-The release workflow is the only automation that pushes images. Its read-only
-validation job runs `npm run check`, Playwright browser tests, and release
-metadata validation before a separate package-write job can authenticate to
-GHCR. The ordinary validation workflow also runs the checks, browser tests, and
-a non-publishing Docker build for every branch push and pull request.
+The reusable release workflow is the only automation that pushes images. For
+tag releases, the `Validate` workflow calls it from a dependent job that runs
+only after successful validation of a pushed `v*` tag. It checks that the tag
+still resolves to the validated commit and verifies release metadata before a
+separate package-write job can authenticate to GHCR. The ordinary validation
+workflow runs checks, browser tests, and a non-publishing Docker build for
+every branch push and pull request. Manual dispatch runs `npm run check` and
+Playwright browser tests before the package-write job.
 
 ## Release candidate checklist
 

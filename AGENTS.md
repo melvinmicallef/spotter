@@ -82,6 +82,8 @@ architecture document or a dedicated decision record and explain its impact.
 - Normal `0.x` release tags may update `latest`; prerelease tags such as
   `v0.2.0-beta.1` must not.
 - A manual image build uses an explicit image tag or a unique `sha-<commit>` tag.
+- A pushed release tag must pass the `Validate` workflow before its dependent
+  job calls the container publisher. Manual releases must run the same checks.
 - Do not tag or push a release until formatting, lint, type checks, unit and
   integration tests, Playwright browser tests, production build, and Docker
   build have passed and release documentation is current.
