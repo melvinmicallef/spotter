@@ -412,6 +412,7 @@ export function App() {
         {view === 'workout' && (
           <WorkoutView
             workout={activeWorkout}
+            previousWorkouts={history}
             exercises={exercises}
             activeTemplate={activeTemplate}
             today={today}

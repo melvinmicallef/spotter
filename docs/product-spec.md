@@ -190,6 +190,10 @@ A user can:
 - add, edit, and remove sets;
 - display strength weights and repetitions in a compact grid, with controls to
   add or remove each exercise's sets;
+- show the most recent completed workout's strength repetitions and weight as
+  placeholders by set position, without pre-filling today's values. Only sets
+  present in today's workout are shown; new sets beyond the previous workout
+  stay blank, and previous extra sets are omitted;
 - record repetitions and weight for strength exercises;
 - record duration and distance for cardio exercises;
 - record notes on individual efforts;

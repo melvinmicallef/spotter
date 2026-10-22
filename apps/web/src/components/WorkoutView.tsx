@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import type {
   DayOfWeek,
@@ -15,6 +15,7 @@ import { ExerciseDetailsModal } from './CatalogueView.js';
 
 interface WorkoutViewProps {
   workout?: Workout;
+  previousWorkouts: Workout[];
   exercises: Exercise[];
   activeTemplate?: WorkoutTemplate;
   today: DayOfWeek;
@@ -49,6 +50,7 @@ interface WorkoutViewProps {
 
 export function WorkoutView({
   workout,
+  previousWorkouts,
   exercises,
   activeTemplate,
   today,
@@ -69,6 +71,30 @@ export function WorkoutView({
   const exerciseDetails = exercises.find(
     (exercise) => exercise.id === exerciseDetailsId,
   );
+  const previousSetsByExercise = useMemo(() => {
+    const previousSets = new Map<string, WorkoutSet[]>();
+    const sortedWorkouts = [...previousWorkouts]
+      .filter((item) => item.status === 'completed')
+      .sort((left, right) => right.startedAt.localeCompare(left.startedAt));
+
+    for (const previousWorkout of sortedWorkouts) {
+      for (const previousExercise of previousWorkout.exercises) {
+        if (
+          previousExercise.exerciseId &&
+          !previousSets.has(previousExercise.exerciseId)
+        ) {
+          previousSets.set(
+            previousExercise.exerciseId,
+            [...previousExercise.sets].sort(
+              (left, right) => left.position - right.position,
+            ),
+          );
+        }
+      }
+    }
+
+    return previousSets;
+  }, [previousWorkouts]);
   const scheduledDayName = activeTemplate?.dayNames?.find(
     (dayName) => dayName.dayOfWeek === scheduledDay,
   )?.name;
@@ -311,6 +337,9 @@ export function WorkoutView({
             ) : (
               <StrengthSets
                 entry={entry}
+                previousSets={
+                  previousSetsByExercise.get(entry.exerciseId ?? '') ?? []
+                }
                 weightUnit={weightUnit}
                 onChange={onChange}
                 actions={actions}
@@ -369,11 +398,13 @@ function TargetSummary({
 
 function StrengthSets({
   entry,
+  previousSets,
   weightUnit,
   onChange,
   actions,
 }: {
   entry: WorkoutEntry;
+  previousSets: WorkoutSet[];
   weightUnit: WeightUnit;
   onChange: WorkoutViewProps['onChange'];
   actions: WorkoutActions;
@@ -382,65 +413,82 @@ function StrengthSets({
     <div className="workout-strength-sets">
       <div className="strength-workout-grid-scroll">
         <div className="strength-workout-grid">
-          {entry.sets.map((set, setIndex) => (
-            <div className="strength-grid-set" key={set.id}>
-              <div className="strength-grid-set-heading">
-                <span>Set {setIndex + 1}</span>
-                <RemoveEffort
-                  label={`Remove ${entry.exerciseName} set ${setIndex + 1}`}
-                  onClick={() =>
-                    onChange((current) =>
-                      actions.removeSet(current, entry.id, set.id),
-                    )
-                  }
-                />
-              </div>
-              <div className="strength-grid-cell strength-grid-weight">
-                <div className="strength-grid-number-unit">
+          {entry.sets.map((set, setIndex) => {
+            const previousSet = previousSets[setIndex];
+            return (
+              <div className="strength-grid-set" key={set.id}>
+                <div className="strength-grid-set-heading">
+                  <span>Set {setIndex + 1}</span>
+                  <RemoveEffort
+                    label={`Remove ${entry.exerciseName} set ${setIndex + 1}`}
+                    onClick={() =>
+                      onChange((current) =>
+                        actions.removeSet(current, entry.id, set.id),
+                      )
+                    }
+                  />
+                </div>
+                <div className="strength-grid-cell strength-grid-weight">
+                  <div className="strength-grid-number-unit">
+                    <input
+                      aria-label={`${entry.exerciseName} weight set ${setIndex + 1}`}
+                      placeholder={
+                        previousSet?.weight == null
+                          ? 'Wt'
+                          : String(
+                              displayWeight(
+                                previousSet.weight,
+                                previousSet.weightUnit,
+                                weightUnit,
+                              ),
+                            )
+                      }
+                      inputMode="decimal"
+                      type="number"
+                      min="0"
+                      value={displayWeight(
+                        set.weight,
+                        set.weightUnit,
+                        weightUnit,
+                      )}
+                      onChange={(event) =>
+                        updateEffort(onChange, actions, entry.id, set.id, {
+                          weight:
+                            event.target.value === ''
+                              ? null
+                              : Number(event.target.value),
+                          weightUnit,
+                        })
+                      }
+                    />
+                    <span className="unit-label">{weightUnit}</span>
+                  </div>
+                </div>
+                <div className="strength-grid-cell strength-grid-reps">
                   <input
-                    aria-label={`${entry.exerciseName} weight set ${setIndex + 1}`}
-                    placeholder="Wt"
-                    inputMode="decimal"
+                    aria-label={`${entry.exerciseName} repetitions set ${setIndex + 1}`}
+                    placeholder={
+                      previousSet?.reps == null
+                        ? 'Reps'
+                        : String(previousSet.reps)
+                    }
+                    inputMode="numeric"
                     type="number"
                     min="0"
-                    value={displayWeight(
-                      set.weight,
-                      set.weightUnit,
-                      weightUnit,
-                    )}
+                    value={set.reps ?? ''}
                     onChange={(event) =>
                       updateEffort(onChange, actions, entry.id, set.id, {
-                        weight:
+                        reps:
                           event.target.value === ''
                             ? null
                             : Number(event.target.value),
-                        weightUnit,
                       })
                     }
                   />
-                  <span className="unit-label">{weightUnit}</span>
                 </div>
               </div>
-              <div className="strength-grid-cell strength-grid-reps">
-                <input
-                  aria-label={`${entry.exerciseName} repetitions set ${setIndex + 1}`}
-                  placeholder="Reps"
-                  inputMode="numeric"
-                  type="number"
-                  min="0"
-                  value={set.reps ?? ''}
-                  onChange={(event) =>
-                    updateEffort(onChange, actions, entry.id, set.id, {
-                      reps:
-                        event.target.value === ''
-                          ? null
-                          : Number(event.target.value),
-                    })
-                  }
-                />
-              </div>
-            </div>
-          ))}
+            );
+          })}
           <div className="strength-grid-add">
             <span className="strength-grid-set-heading">Sets</span>
             <button
