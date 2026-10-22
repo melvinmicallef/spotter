@@ -1034,21 +1034,6 @@ small {
 .calisthenics-grid-add button {
   grid-row: 2;
 }
-.workout-effort-notes summary {
-  width: fit-content;
-  color: var(--text-muted);
-  font-size: 0.78rem;
-  cursor: pointer;
-}
-.workout-effort-notes-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 8px;
-  margin-top: 8px;
-}
-.workout-effort-notes-list .set-notes {
-  padding: 0;
-}
 .inline-form,
 .list-row,
 .inline-actions {
@@ -1470,17 +1455,6 @@ small {
   grid-template-columns: 38px minmax(130px, 1fr) minmax(65px, 0.5fr) 30px;
   align-items: center;
   gap: 8px;
-}
-.set-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.set-notes {
-  padding-left: 45px;
-}
-.set-notes input {
-  padding-block: 8px;
 }
 .sr-only {
   position: absolute;

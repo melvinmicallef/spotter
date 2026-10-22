@@ -209,7 +209,6 @@ A user can:
 - record repetitions and weight for strength exercises;
 - record repetitions without weight for calisthenics exercises;
 - record duration and distance for cardio exercises;
-- record notes on individual efforts;
 - open an exercise guide modal with its demonstration, instructions, comments,
   reference link, and target muscles;
 - finish a workout;

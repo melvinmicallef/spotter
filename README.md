@@ -57,7 +57,7 @@ data to log a workout without a network connection. While offline, a user can:
 - record duration and distance for cardio exercises;
 - mark finished exercises complete to collapse them while keeping progress
   available to resume;
-- record notes and completion state; and
+- record completion state; and
 - finish a workout.
 
 Creating or editing exercises and templates requires a connection.

@@ -560,21 +560,6 @@ function StrengthSets({
           </div>
         </div>
       </div>
-      <details className="workout-effort-notes">
-        <summary>Set notes</summary>
-        <div className="workout-effort-notes-list">
-          {entry.sets.map((set, setIndex) => (
-            <EffortNotes
-              key={set.id}
-              label={`${entry.exerciseName} set ${setIndex + 1} notes`}
-              value={set.notes}
-              onChange={(notes) =>
-                updateEffort(onChange, actions, entry.id, set.id, { notes })
-              }
-            />
-          ))}
-        </div>
-      </details>
     </div>
   );
 }
@@ -651,21 +636,6 @@ function CalisthenicsSets({
           </div>
         </div>
       </div>
-      <details className="workout-effort-notes">
-        <summary>Set notes</summary>
-        <div className="workout-effort-notes-list">
-          {entry.sets.map((set, setIndex) => (
-            <EffortNotes
-              key={set.id}
-              label={`${entry.exerciseName} set ${setIndex + 1} notes`}
-              value={set.notes}
-              onChange={(notes) =>
-                updateEffort(onChange, actions, entry.id, set.id, { notes })
-              }
-            />
-          ))}
-        </div>
-      </details>
     </div>
   );
 }
@@ -690,69 +660,58 @@ function CardioEfforts({
         <span />
       </div>
       {entry.sets.map((effort, effortIndex) => (
-        <div className="set-group" key={effort.id}>
-          <div className="set-row">
-            <strong>{effortIndex + 1}</strong>
+        <div className="set-row" key={effort.id}>
+          <strong>{effortIndex + 1}</strong>
+          <input
+            aria-label={`${entry.exerciseName} duration minutes effort ${effortIndex + 1}`}
+            inputMode="decimal"
+            type="number"
+            min="0"
+            step="0.1"
+            value={
+              effort.durationSeconds == null ? '' : effort.durationSeconds / 60
+            }
+            onChange={(event) =>
+              updateEffort(onChange, actions, entry.id, effort.id, {
+                durationSeconds:
+                  event.target.value === ''
+                    ? null
+                    : Math.round(Number(event.target.value) * 60),
+              })
+            }
+          />
+          <div className="number-unit">
             <input
-              aria-label={`${entry.exerciseName} duration minutes effort ${effortIndex + 1}`}
+              aria-label={`${entry.exerciseName} distance effort ${effortIndex + 1}`}
               inputMode="decimal"
               type="number"
               min="0"
-              step="0.1"
+              step="0.01"
               value={
-                effort.durationSeconds == null
-                  ? ''
-                  : effort.durationSeconds / 60
+                convertDistance(
+                  effort.distance,
+                  effort.distanceUnit,
+                  distanceUnit,
+                ) ?? ''
               }
               onChange={(event) =>
                 updateEffort(onChange, actions, entry.id, effort.id, {
-                  durationSeconds:
+                  distance:
                     event.target.value === ''
                       ? null
-                      : Math.round(Number(event.target.value) * 60),
+                      : Number(event.target.value),
+                  distanceUnit,
                 })
               }
             />
-            <div className="number-unit">
-              <input
-                aria-label={`${entry.exerciseName} distance effort ${effortIndex + 1}`}
-                inputMode="decimal"
-                type="number"
-                min="0"
-                step="0.01"
-                value={
-                  convertDistance(
-                    effort.distance,
-                    effort.distanceUnit,
-                    distanceUnit,
-                  ) ?? ''
-                }
-                onChange={(event) =>
-                  updateEffort(onChange, actions, entry.id, effort.id, {
-                    distance:
-                      event.target.value === ''
-                        ? null
-                        : Number(event.target.value),
-                    distanceUnit,
-                  })
-                }
-              />
-              <span className="unit-label">{distanceUnit}</span>
-            </div>
-            <RemoveEffort
-              label={`Remove ${entry.exerciseName} effort ${effortIndex + 1}`}
-              onClick={() =>
-                onChange((current) =>
-                  actions.removeSet(current, entry.id, effort.id),
-                )
-              }
-            />
+            <span className="unit-label">{distanceUnit}</span>
           </div>
-          <EffortNotes
-            label={`${entry.exerciseName} effort ${effortIndex + 1} notes`}
-            value={effort.notes}
-            onChange={(notes) =>
-              updateEffort(onChange, actions, entry.id, effort.id, { notes })
+          <RemoveEffort
+            label={`Remove ${entry.exerciseName} effort ${effortIndex + 1}`}
+            onClick={() =>
+              onChange((current) =>
+                actions.removeSet(current, entry.id, effort.id),
+              )
             }
           />
         </div>
@@ -804,28 +763,6 @@ function displayWeight(
   displayUnit: WeightUnit,
 ) {
   return convertWeight(weight, recordedUnit, displayUnit) ?? '';
-}
-
-function EffortNotes({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: string | null;
-  onChange: (notes: string | null) => void;
-}) {
-  return (
-    <label className="set-notes">
-      <span className="sr-only">{label}</span>
-      <input
-        aria-label={label}
-        placeholder="Notes"
-        value={value ?? ''}
-        onChange={(event) => onChange(event.target.value || null)}
-      />
-    </label>
-  );
 }
 
 function AddEffort({
