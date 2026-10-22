@@ -1845,6 +1845,13 @@ small {
   min-width: 0;
   padding: 8px 7px;
 }
+.interval-total-duration {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+.interval-timer .inline-actions {
+  flex-wrap: wrap;
+}
 .interval-timer {
   display: flex;
   align-items: center;

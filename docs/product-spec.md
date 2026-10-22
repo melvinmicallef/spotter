@@ -101,7 +101,9 @@ the first execution defaults to 0 prep seconds, 30 work seconds, 30 rest
 seconds, and 8 iterations. The user can adjust them before starting the timer.
 The timer beeps for the last five seconds of each stage and when a stage
 changes, can skip the current stage, and records work duration accounting for
-work stages skipped early. Duration cardio results can include distance with
+work stages skipped early. Before starting, the timer shows the planned total
+duration calculated as prep + (work × iterations) + (rest × (iterations − 1)).
+Duration cardio results can include distance with
 explicit `km` or `mi` units; interval results do not include distance. History
 shows interval settings and recorded work duration and allows editing that
 duration without a distance field. The UI must show only the fields that apply

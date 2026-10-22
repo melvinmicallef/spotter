@@ -126,7 +126,7 @@ snapshot for any populated day.
   interval execution of the same exercise across templates, and adjustable
   before the timer starts. The timer provides countdown and stage-transition
   beeps, can skip the active stage, and records the resulting work duration in
-  history.
+  history. It shows the planned total duration next to the start control.
 - Open the exercise guide, including its demonstration and instructions, from
   the active workout in a modal.
 - Upload one persistent stretching poster in Settings and open its uncropped

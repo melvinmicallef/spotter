@@ -1334,13 +1334,20 @@ function IntervalTimer({
               )}
             </>
           ) : (
-            <button type="button" onClick={start}>
-              {run.status === 'paused'
-                ? 'Resume timer'
-                : run.status === 'complete'
-                  ? 'Start again'
-                  : 'Start interval timer'}
-            </button>
+            <>
+              <button type="button" onClick={start}>
+                {run.status === 'paused'
+                  ? 'Resume timer'
+                  : run.status === 'complete'
+                    ? 'Start again'
+                    : 'Start interval timer'}
+              </button>
+              {run.status === 'idle' && (
+                <small className="interval-total-duration">
+                  Total workout time: {formatClock(totalMs / 1000)}
+                </small>
+              )}
+            </>
           )}
           {run.status === 'running' &&
             !soundReady &&
