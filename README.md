@@ -6,7 +6,7 @@ as a single Docker image.
 
 The project is under active implementation on the `develop` branch. Its npm
 workspace contains the React client, Express server, and shared wire contracts.
-The first planned development release is `0.1.0`.
+The current development release is `0.1.0`.
 
 ## Product principles
 
@@ -154,12 +154,36 @@ history expands to show the preserved exercise and set snapshots.
 
 ## Run the production image
 
+Create a `compose.yaml` file for a self-hosted instance:
+
+```yaml
+services:
+  spotter:
+    image: ghcr.io/melvinmicallef/spotter:latest
+    ports:
+      - '3000:3000'
+    volumes:
+      - spotter-data:/data
+    restart: unless-stopped
+
+volumes:
+  spotter-data:
+```
+
+The named `spotter-data` volume stores the SQLite database and uploaded exercise
+images outside the container. To pin upgrades, replace `latest` with a released
+version such as `0.1.0`.
+
+Start the instance:
+
 ```bash
-docker compose up --build
+docker compose pull
+docker compose up -d
 ```
 
 Then open `http://localhost:3000`. The named volume mounted at `/data` retains
-`spotter.sqlite` and its WAL files when the container is replaced.
+`spotter.sqlite`, its WAL files, and uploaded media when the container is
+replaced.
 
 The application currently targets a trusted, single-user deployment. Put an
 authentication-aware reverse proxy in front of it before exposing it to an
@@ -171,11 +195,9 @@ Open the repository at its root and ask the new chat to read `AGENTS.md` and the
 documentation listed above before changing files. A complete starter prompt is
 available in [the project handoff](docs/project-context.md#starter-prompt-for-a-new-ai-chat).
 
-The release automation is implemented, but no release has been approved or
-published. The remaining release gates include the complete acceptance and test
-matrix, accessibility and mobile QA, and release candidate verification. The
-automated browser-level offline test must pass on the release commit. See the
-[release guide](docs/releasing.md) before creating `v0.1.0`.
+Release `v0.1.0` is published. Future releases should follow the acceptance,
+test, accessibility, mobile QA, and release-candidate gates in the
+[release guide](docs/releasing.md).
 
 ## Release policy
 
@@ -195,5 +217,5 @@ Container publishing is triggered by:
 Images will be published to `ghcr.io/melvinmicallef/spotter`.
 Stable tags publish exact, minor, and `latest` image tags. Prereleases publish
 only the exact prerelease version, and manual runs publish only an explicit tag
-or a unique `sha-<commit>` fallback. No Spotter release has been published from
-this repository state.
+or a unique `sha-<commit>` fallback. Release `v0.1.0` is available as `0.1.0`,
+`0.1`, and `latest`.
