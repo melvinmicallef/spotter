@@ -68,7 +68,8 @@ back/forward navigation restores the corresponding view, and Express plus the
 service-worker navigation fallback both return the PWA shell for a direct load
 or refresh on those paths. Exercise creation, details, and editing also have
 stable nested routes: `/exercises/new`, `/exercises/:id`, and
-`/exercises/:id/edit`.
+`/exercises/:id/edit`. Weekly templates follow the same list/detail/editor
+pattern at `/templates/new`, `/templates/:id`, and `/templates/:id/edit`.
 
 The catalogue has separate muscle and exercise views. The muscle view renders a
 read-only built-in hierarchy sourced from the ExRx directory: only leaf records
@@ -151,6 +152,10 @@ exercise reference data. The picker filters locally by case-insensitive name or
 associated muscle and renders uploaded demonstration images from their existing
 media URLs; choosing an exercise only updates the template draft until the user
 saves it through the online template API.
+
+The template catalogue is a compact list. Selecting a template opens a
+read-only weekly-plan detail page; editing and deletion are explicit actions on
+that page, and the full weekly editor is isolated on its own route.
 
 ### Exercise images
 
