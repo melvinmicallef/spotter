@@ -535,15 +535,14 @@ small {
   list-style: none;
 }
 .muscle-tree-children {
-  padding: 8px 0 10px 18px;
+  padding: 8px 0 10px;
 }
 .muscle-tree-branch {
-  padding: 8px 14px 4px 12px;
-  border-left: 2px solid var(--border-strong);
+  padding: 0;
 }
 .muscle-tree-branch > span {
   display: block;
-  margin-bottom: 4px;
+  padding: 10px 16px 5px 32px;
   color: var(--text-secondary);
   font-size: 0.78rem;
   font-weight: 850;
@@ -551,24 +550,26 @@ small {
   letter-spacing: 0.06em;
 }
 .muscle-tree-branch ul {
-  padding-left: 18px;
-  border-left: 1px solid var(--border);
+  padding: 0;
 }
 .muscle-tree-leaf {
-  border-left: 2px solid var(--border-strong);
-}
-.muscle-tree-branch .muscle-tree-leaf {
-  border-left: 0;
+  padding: 0;
 }
 .muscle-tree-leaf a {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 9px 14px 9px 12px;
+  padding: 9px 14px;
   color: var(--text-secondary);
   font-weight: 700;
   text-decoration: none;
+}
+.muscle-tree-level-2 a {
+  padding-left: 32px;
+}
+.muscle-tree-level-3 a {
+  padding-left: 56px;
 }
 .muscle-tree-leaf a span {
   color: var(--text-muted);
@@ -1058,7 +1059,7 @@ small {
   background: var(--nav-bg);
   backdrop-filter: blur(18px);
 }
-.bottom-nav button {
+.bottom-nav a {
   display: flex;
   min-width: 76px;
   flex-direction: column;
@@ -1068,11 +1069,12 @@ small {
   color: var(--text-muted);
   background: transparent;
   font-size: 0.7rem;
+  text-decoration: none;
 }
-.bottom-nav button span {
+.bottom-nav a span {
   font-size: 1.15rem;
 }
-.bottom-nav button.active {
+.bottom-nav a.active {
   color: var(--accent);
   background: var(--accent-soft);
 }
@@ -1132,7 +1134,7 @@ small {
   .theme-toggle {
     padding-inline: 8px;
   }
-  .bottom-nav button {
+  .bottom-nav a {
     min-width: 0;
     flex: 1;
     padding-inline: 5px;

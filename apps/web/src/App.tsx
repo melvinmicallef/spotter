@@ -17,6 +17,7 @@ import { StatusBar } from './components/StatusBar.js';
 import { TemplatesView } from './components/TemplatesView.js';
 import { WorkoutView } from './components/WorkoutView.js';
 import { localRepository } from './db.js';
+import { pathForView, viewFromPath, type View } from './routes.js';
 import {
   isoWeekKey,
   scheduledTemplateDay,
@@ -40,10 +41,10 @@ import {
   updateWorkoutNotes,
 } from './workout.js';
 
-type View = 'workout' | 'history' | 'muscles' | 'exercises' | 'templates';
-
 export function App() {
-  const [view, setView] = useState<View>('workout');
+  const [view, setView] = useState<View>(() =>
+    viewFromPath(window.location.pathname),
+  );
   const [theme, setTheme] = useState<Theme>(initialTheme);
   const [online, setOnline] = useState(() => navigator.onLine);
   const [activeWorkout, setActiveWorkout] = useState<Workout>();
@@ -70,6 +71,12 @@ export function App() {
   const scheduledDay = scheduledTemplateDay(today, weekSchedule);
 
   useEffect(() => applyTheme(theme), [theme]);
+
+  useEffect(() => {
+    const restoreView = () => setView(viewFromPath(window.location.pathname));
+    window.addEventListener('popstate', restoreView);
+    return () => window.removeEventListener('popstate', restoreView);
+  }, []);
 
   useEffect(() => {
     if (!activeTemplate) {
@@ -99,7 +106,7 @@ export function App() {
     setActiveWorkout(active);
     activeWorkoutRef.current = active;
     setLocalWorkouts(workouts);
-    setMuscles(references.muscles);
+    setMuscles(references.muscles.filter((muscle) => muscle.isBuiltin));
     setExercises(references.exercises);
     setTemplates(references.templates);
     setPending(outbox.length);
@@ -121,7 +128,7 @@ export function App() {
         refreshReferences(),
         api.workouts(),
       ]);
-      setMuscles(references.muscles);
+      setMuscles(references.muscles.filter((muscle) => muscle.isBuiltin));
       setExercises(references.exercises);
       setTemplates(references.templates);
       setServerWorkouts(workouts);
@@ -182,6 +189,14 @@ export function App() {
       });
   }
 
+  function navigate(nextView: View) {
+    const nextPath = pathForView(nextView);
+    if (window.location.pathname !== nextPath)
+      window.history.pushState(null, '', nextPath);
+    setView(nextView);
+    window.scrollTo({ top: 0 });
+  }
+
   function mutateWorkout(update: (workout: Workout) => Workout) {
     const current = activeWorkoutRef.current;
     if (!current) return;
@@ -230,7 +245,7 @@ export function App() {
 
   const refreshOnlineReferences = useCallback(async () => {
     const references = await refreshReferences();
-    setMuscles(references.muscles);
+    setMuscles(references.muscles.filter((muscle) => muscle.isBuiltin));
     setExercises(references.exercises);
     setTemplates(references.templates);
   }, []);
@@ -262,7 +277,7 @@ export function App() {
         <button
           className="brand"
           type="button"
-          onClick={() => setView('workout')}
+          onClick={() => navigate('workout')}
         >
           <span className="brand-mark">S</span>
           <span>Spotter</span>
@@ -356,31 +371,36 @@ export function App() {
           active={view === 'workout'}
           label="Workout"
           icon="●"
-          onClick={() => setView('workout')}
+          href={pathForView('workout')}
+          onClick={() => navigate('workout')}
         />
         <NavButton
           active={view === 'history'}
           label="History"
           icon="↗"
-          onClick={() => setView('history')}
+          href={pathForView('history')}
+          onClick={() => navigate('history')}
         />
         <NavButton
           active={view === 'muscles'}
           label="Muscles"
           icon="◇"
-          onClick={() => setView('muscles')}
+          href={pathForView('muscles')}
+          onClick={() => navigate('muscles')}
         />
         <NavButton
           active={view === 'exercises'}
           label="Exercises"
           icon="◆"
-          onClick={() => setView('exercises')}
+          href={pathForView('exercises')}
+          onClick={() => navigate('exercises')}
         />
         <NavButton
           active={view === 'templates'}
           label="Templates"
           icon="▤"
-          onClick={() => setView('templates')}
+          href={pathForView('templates')}
+          onClick={() => navigate('templates')}
         />
       </nav>
       <PwaUpdate />
@@ -392,17 +412,27 @@ function NavButton({
   active,
   label,
   icon,
+  href,
   onClick,
 }: {
   active: boolean;
   label: string;
   icon: string;
+  href: string;
   onClick: () => void;
 }) {
   return (
-    <button className={active ? 'active' : ''} type="button" onClick={onClick}>
+    <a
+      aria-current={active ? 'page' : undefined}
+      className={active ? 'active' : ''}
+      href={href}
+      onClick={(event) => {
+        event.preventDefault();
+        onClick();
+      }}
+    >
       <span>{icon}</span>
       {label}
-    </button>
+    </a>
   );
 }

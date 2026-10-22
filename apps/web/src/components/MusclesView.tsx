@@ -22,13 +22,17 @@ export function MusclesView({ muscles }: MusclesViewProps) {
             <ul className="muscle-tree-children">
               {muscleTree(entries).map((node) =>
                 node.kind === 'muscle' ? (
-                  <MuscleLeaf muscle={node.muscle} key={node.muscle.id} />
+                  <MuscleLeaf
+                    level={2}
+                    muscle={node.muscle}
+                    key={node.muscle.id}
+                  />
                 ) : (
                   <li className="muscle-tree-branch" key={node.name}>
                     <span>{node.name}</span>
                     <ul>
                       {node.muscles.map((muscle) => (
-                        <MuscleLeaf muscle={muscle} key={muscle.id} />
+                        <MuscleLeaf level={3} muscle={muscle} key={muscle.id} />
                       ))}
                     </ul>
                   </li>
@@ -42,14 +46,10 @@ export function MusclesView({ muscles }: MusclesViewProps) {
   );
 }
 
-function MuscleLeaf({ muscle }: { muscle: Muscle }) {
+function MuscleLeaf({ muscle, level }: { muscle: Muscle; level: 2 | 3 }) {
   return (
-    <li className="muscle-tree-leaf">
-      <a
-        href={muscle.referenceUrl ?? undefined}
-        target="_blank"
-        rel="noreferrer"
-      >
+    <li className={`muscle-tree-leaf muscle-tree-level-${level}`}>
+      <a href={muscle.referenceUrl ?? undefined}>
         {muscle.name}
         <span aria-hidden="true">↗</span>
       </a>

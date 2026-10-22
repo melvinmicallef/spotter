@@ -44,7 +44,8 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
     })
     .toEqual({ x: 0, width: 1280, viewport: 1280 });
 
-  await page.getByRole('button', { name: 'Muscles' }).click();
+  await page.getByRole('link', { name: 'Muscles' }).click();
+  await expect(page).toHaveURL(/\/muscles$/);
   await expect(page.getByRole('heading', { name: 'Chest' })).toBeVisible();
   await expect(page.getByText('Pectoralis Major').first()).toBeVisible();
   await expect(
@@ -52,7 +53,7 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
   ).toBeVisible();
   await expect(page.getByLabel('New muscle name')).toHaveCount(0);
 
-  await page.getByRole('button', { name: 'Exercises' }).click();
+  await page.getByRole('link', { name: 'Exercises' }).click();
   await page.getByRole('button', { name: 'Add exercise' }).click();
   await page.getByLabel('Exercise name').fill(strengthName);
   await page
@@ -142,7 +143,7 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
   await page.getByRole('button', { name: `Delete ${disposableName}` }).click();
   await expect(disposableRow).toHaveCount(0);
 
-  await page.getByRole('button', { name: 'Templates' }).click();
+  await page.getByRole('link', { name: 'Templates' }).click();
   await page.getByLabel('New weekly template name').fill(planName);
   await page.getByRole('button', { name: 'Create weekly template' }).click();
   const template = page.locator('.template-card').filter({
@@ -184,7 +185,7 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
     .fill('5');
   await template.getByRole('button', { name: 'Save weekly template' }).click();
 
-  await page.getByRole('button', { name: 'Workout' }).click();
+  await page.getByRole('link', { name: 'Workout' }).click();
   await expect(page.getByRole('button', { name: /^Start Monday/ })).toHaveCount(
     0,
   );
@@ -207,7 +208,7 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
   await page.getByLabel(`${cardioName} effort 1 complete`).check();
   await page.getByRole('button', { name: 'Finish' }).click();
 
-  await page.getByRole('button', { name: 'History' }).click();
+  await page.getByRole('link', { name: 'History' }).click();
   const history = page.locator('details').filter({ hasText: planName });
   await history.locator('summary').click();
   await expect(history).toContainText('52.5 kg × 10 reps');

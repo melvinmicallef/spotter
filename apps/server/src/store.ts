@@ -33,6 +33,7 @@ export class SpotterStore {
     return this.database
       .prepare(
         `SELECT * FROM muscles
+         WHERE is_builtin = 1
          ORDER BY group_order, muscle_order, name COLLATE NOCASE`,
       )
       .all()

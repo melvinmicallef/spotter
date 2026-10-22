@@ -266,11 +266,11 @@ test('installs its shell and synchronizes one offline workout after reload', asy
   await expect(page.getByLabel(`${exerciseName} set 1 complete`)).toBeChecked();
 
   await page.getByRole('button', { name: 'Finish' }).click();
-  await page.getByRole('button', { name: 'History' }).click();
+  await page.getByRole('link', { name: 'History' }).click();
   await expect(page.getByText('1 completed efforts')).toBeVisible();
 
   await page.reload();
-  await page.getByRole('button', { name: 'History' }).click();
+  await page.getByRole('link', { name: 'History' }).click();
   await expect(page.getByText('1 completed efforts')).toBeVisible();
 
   let acknowledgementDropped = false;

@@ -21,11 +21,14 @@ describe('muscle directory hierarchy', () => {
     expect(html).toContain(
       '<li class="muscle-tree-branch"><span>Deltoid</span>',
     );
+    expect(html).toContain('<li class="muscle-tree-leaf muscle-tree-level-3">');
+    expect(html).toContain('<li class="muscle-tree-leaf muscle-tree-level-2">');
     expect(html).toContain('>Anterior<span aria-hidden="true">↗</span></a>');
     expect(html).toContain(
       '>Supraspinatus<span aria-hidden="true">↗</span></a>',
     );
     expect(html).not.toContain('href="https://exrx.net/Shoulders"');
+    expect(html).not.toContain('target="_blank"');
   });
 });
 
