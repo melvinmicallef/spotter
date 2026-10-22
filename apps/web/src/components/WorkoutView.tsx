@@ -185,21 +185,16 @@ export function WorkoutView({
                 be changed.
               </p>
               <div className="day-swap-actions">
-                {WEEKDAYS.filter((day) => day.value !== today).map((day) => {
-                  const count = activeTemplate.exercises.filter(
-                    (entry) => entry.dayOfWeek === day.value,
-                  ).length;
-                  return (
-                    <button
-                      className="secondary"
-                      type="button"
-                      key={day.value}
-                      onClick={() => onSwapToday(day.value)}
-                    >
-                      {day.label} ({count})
-                    </button>
-                  );
-                })}
+                {WEEKDAYS.filter((day) => day.value !== today).map((day) => (
+                  <button
+                    className="secondary"
+                    type="button"
+                    key={day.value}
+                    onClick={() => onSwapToday(day.value)}
+                  >
+                    {day.label}
+                  </button>
+                ))}
               </div>
               {scheduledDay !== today && (
                 <button
