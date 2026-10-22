@@ -32,6 +32,7 @@ export function HistoryView({
           </p>
         )}
         {workouts.map((workout) => {
+          const exerciseCount = workout.exercises.length;
           const templateName = workoutTemplateName(workout);
           const workoutDate = formatWorkoutDate(workout.startedAt);
           return (
@@ -43,7 +44,9 @@ export function HistoryView({
                     <small>{templateName}</small>
                   </div>
                   <div className="history-stats">
-                    <span>{workout.exercises.length} exercises</span>
+                    <span>
+                      {exerciseCount} exercise{exerciseCount === 1 ? '' : 's'}
+                    </span>
                   </div>
                 </summary>
                 <div className="history-body">
