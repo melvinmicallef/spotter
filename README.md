@@ -15,7 +15,8 @@ Spotter is a vibe-coded app built with OpenAI Codex.
 - Workout logging must remain usable when the device loses connectivity.
 - Exercises and workout templates are managed only while online. Muscles are a
   built-in, read-only hierarchy sourced from the ExRx directory.
-- Strength and cardio exercises use different planning and recording fields.
+- Strength, calisthenics, and cardio exercises use different planning and
+  recording fields.
 - Exactly one weekly template is active when templates exist. Workouts start
   only from today's scheduled day; ad-hoc open workouts are not part of the
   product.
@@ -52,6 +53,7 @@ data to log a workout without a network connection. While offline, a user can:
 - start today's workout from the cached active weekly template, including a
   device-local current-week day swap, or resume an in-progress workout;
 - record sets, repetitions, and weight for strength exercises;
+- record sets and repetitions without weight for calisthenics exercises;
 - record duration and distance for cardio exercises;
 - mark finished exercises complete to collapse them while keeping progress
   available to resume;

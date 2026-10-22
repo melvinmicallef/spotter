@@ -952,6 +952,9 @@ small {
   flex: 0 0 86px;
   grid-template-rows: 27px 40px 40px;
 }
+.calisthenics-grid-set {
+  grid-template-rows: 27px 40px;
+}
 .strength-grid-set-heading,
 .strength-grid-cell {
   display: flex;
@@ -1014,6 +1017,9 @@ small {
   grid-template-rows: 27px 1fr 1fr;
   text-align: center;
 }
+.calisthenics-grid-add {
+  grid-template-rows: 27px 40px;
+}
 .strength-grid-add .strength-grid-set-heading {
   justify-content: center;
   border-right: 0;
@@ -1024,6 +1030,9 @@ small {
   padding: 4px;
   border-radius: 7px;
   font-size: 0.72rem;
+}
+.calisthenics-grid-add button {
+  grid-row: 2;
 }
 .workout-effort-notes summary {
   width: fit-content;

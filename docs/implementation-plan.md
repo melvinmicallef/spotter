@@ -55,7 +55,8 @@ healthy API response, and load the PWA shell.
 - Shared request and response schemas.
 - A read-only built-in hierarchical muscle catalogue plus online exercise CRUD,
   using separate muscle and exercise pages.
-- Explicit strength/cardio exercise types with type-appropriate fields.
+- Explicit strength, calisthenics, and cardio exercise types with
+  type-appropriate fields.
 - A compact exercise list and dedicated detail/editor flow, role-aware primary
   and secondary muscle associations, separate preparation/execution
   instructions, optional comments, incremental leaf-muscle assignment with
@@ -110,8 +111,8 @@ snapshot for any populated day.
 - Add, edit, and remove sets.
 - Display strength weight/repetition values in a compact grid with per-exercise
   controls to add or remove sets.
-- Record strength repetitions/weight or cardio duration/distance, effort notes,
-  and explicit unit semantics.
+- Record strength repetitions/weight, calisthenics repetitions without weight,
+  or cardio duration/distance, effort notes, and explicit unit semantics.
 - Open the exercise guide, including its demonstration and instructions, from
   the active workout in a modal.
 - Upload one persistent stretching poster in Settings and open its uncropped

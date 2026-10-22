@@ -306,6 +306,23 @@ export const migrations = [
         CHECK (completed IN (0, 1));
     `,
   },
+  {
+    version: 11,
+    name: 'calisthenics_exercise_category',
+    sql: `
+      ALTER TABLE exercises ADD COLUMN exercise_category TEXT NOT NULL DEFAULT 'strength'
+        CHECK (exercise_category IN ('strength', 'calisthenics', 'cardio'));
+      UPDATE exercises SET exercise_category = exercise_type;
+
+      ALTER TABLE workout_exercises ADD COLUMN exercise_category TEXT NOT NULL DEFAULT 'strength'
+        CHECK (exercise_category IN ('strength', 'calisthenics', 'cardio'));
+      UPDATE workout_exercises SET exercise_category = exercise_type;
+
+      UPDATE app_metadata
+      SET value = CAST(CAST(value AS INTEGER) + 1 AS TEXT)
+      WHERE key = 'reference_revision';
+    `,
+  },
 ] as const;
 
 export type SpotterDatabase = Database.Database;

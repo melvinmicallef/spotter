@@ -21,6 +21,10 @@ import { AppError, isSqliteConstraint } from './errors.js';
 
 type Row = Record<string, unknown>;
 
+function legacyExerciseType(type: ExerciseType): 'strength' | 'cardio' {
+  return type === 'calisthenics' ? 'strength' : type;
+}
+
 export interface MediaInput {
   id: string;
   mimeType: ExerciseMedia['mimeType'];
@@ -64,13 +68,14 @@ export class SpotterStore {
         this.database
           .prepare(
             `INSERT INTO exercises
-             (id, name, exercise_type, preparation, execution, comments, image_id, source_url, source_title,
+             (id, name, exercise_type, exercise_category, preparation, execution, comments, image_id, source_url, source_title,
               source_media_url, source_imported_at, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           )
           .run(
             id,
             input.name,
+            legacyExerciseType(input.exerciseType),
             input.exerciseType,
             input.preparation,
             input.execution,
@@ -101,12 +106,13 @@ export class SpotterStore {
         this.assertExerciseTypeChangeIsCompatible(id, input.exerciseType);
         const result = this.database
           .prepare(
-            `UPDATE exercises SET name = ?, exercise_type = ?, preparation = ?, execution = ?, comments = ?, image_id = ?,
+            `UPDATE exercises SET name = ?, exercise_type = ?, exercise_category = ?, preparation = ?, execution = ?, comments = ?, image_id = ?,
              source_url = ?, source_title = ?, source_media_url = ?,
              source_imported_at = ?, updated_at = ? WHERE id = ?`,
           )
           .run(
             input.name,
+            legacyExerciseType(input.exerciseType),
             input.exerciseType,
             input.preparation,
             input.execution,
@@ -486,7 +492,7 @@ export class SpotterStore {
     return {
       id: String(row.id),
       name: String(row.name),
-      exerciseType: row.exercise_type as Exercise['exerciseType'],
+      exerciseType: row.exercise_category as Exercise['exerciseType'],
       preparation: nullableString(row.preparation),
       execution: nullableString(row.execution),
       comments: nullableString(row.comments),
@@ -531,7 +537,7 @@ export class SpotterStore {
     const exercises = this.database
       .prepare(
         `SELECT template_exercises.*, exercises.name AS exercise_name,
-          exercises.exercise_type AS exercise_type,
+          exercises.exercise_category AS exercise_type,
           exercises.source_url AS reference_url
          FROM template_exercises JOIN exercises ON exercises.id = template_exercises.exercise_id
          WHERE template_exercises.template_id = ?
@@ -595,7 +601,7 @@ export class SpotterStore {
           id: String(exercise.id),
           exerciseId: nullableString(exercise.exercise_id),
           exerciseName: String(exercise.exercise_name),
-          exerciseType: exercise.exercise_type as Exercise['exerciseType'],
+          exerciseType: exercise.exercise_category as Exercise['exerciseType'],
           referenceUrl: nullableString(exercise.reference_url),
           position: Number(exercise.position),
           notes: nullableString(exercise.notes),
@@ -643,14 +649,14 @@ export class SpotterStore {
     exercises: WorkoutTemplateInput['exercises'],
   ) {
     const findExercise = this.database.prepare(
-      'SELECT exercise_type FROM exercises WHERE id = ?',
+      'SELECT exercise_category FROM exercises WHERE id = ?',
     );
     for (const exercise of exercises) {
       const catalogueExercise = findExercise.get(exercise.exerciseId) as
-        { exercise_type: ExerciseType } | undefined;
+        { exercise_category: ExerciseType } | undefined;
       if (!catalogueExercise) continue;
       this.assertTemplateTargetsMatchType(
-        catalogueExercise.exercise_type,
+        catalogueExercise.exercise_category,
         exercise,
       );
     }
@@ -703,20 +709,20 @@ export class SpotterStore {
     exerciseType: ExerciseType,
   ) {
     const current = this.database
-      .prepare('SELECT exercise_type FROM exercises WHERE id = ?')
-      .get(id) as { exercise_type: ExerciseType } | undefined;
-    if (!current || current.exercise_type === exerciseType) return;
+      .prepare('SELECT exercise_category FROM exercises WHERE id = ?')
+      .get(id) as { exercise_category: ExerciseType } | undefined;
+    if (!current || current.exercise_category === exerciseType) return;
 
     const incompatible = this.database
       .prepare(
-        exerciseType === 'strength'
+        exerciseType === 'cardio'
           ? `SELECT 1 FROM template_exercises
              WHERE exercise_id = ?
-               AND (target_duration_seconds IS NOT NULL OR target_distance IS NOT NULL)
+               AND (target_sets IS NOT NULL OR target_reps IS NOT NULL)
              LIMIT 1`
           : `SELECT 1 FROM template_exercises
              WHERE exercise_id = ?
-               AND (target_sets IS NOT NULL OR target_reps IS NOT NULL)
+               AND (target_duration_seconds IS NOT NULL OR target_distance IS NOT NULL)
              LIMIT 1`,
       )
       .get(id);
@@ -740,15 +746,15 @@ export class SpotterStore {
       exercise.targetDurationSeconds !== null ||
       exercise.targetDistance !== null;
     if (
-      (exerciseType === 'strength' && hasCardioTargets) ||
+      (exerciseType !== 'cardio' && hasCardioTargets) ||
       (exerciseType === 'cardio' && hasStrengthTargets)
     ) {
       throw new AppError(
         400,
         'INVALID_TEMPLATE_TARGETS',
-        exerciseType === 'strength'
-          ? 'Strength exercises use set and rep targets'
-          : 'Cardio exercises use duration and distance targets',
+        exerciseType === 'cardio'
+          ? 'Cardio exercises use duration and distance targets'
+          : 'Strength and calisthenics exercises use set and rep targets',
         { exerciseId: exercise.exerciseId, exerciseType },
       );
     }
@@ -794,10 +800,10 @@ export class SpotterStore {
       .run(workout.id);
     const insertExercise = this.database.prepare(
       `INSERT INTO workout_exercises
-       (id, workout_id, exercise_id, exercise_name, exercise_type, reference_url, position,
+       (id, workout_id, exercise_id, exercise_name, exercise_type, exercise_category, reference_url, position,
         notes, target_sets, target_reps, target_duration_seconds,
         target_distance, target_distance_unit, completed)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     );
     const insertSet = this.database.prepare(
       `INSERT INTO workout_sets
@@ -816,6 +822,7 @@ export class SpotterStore {
         workout.id,
         exerciseExists ? exercise.exerciseId : null,
         exercise.exerciseName,
+        legacyExerciseType(exercise.exerciseType),
         exercise.exerciseType,
         exercise.referenceUrl,
         exercise.position,

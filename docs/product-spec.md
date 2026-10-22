@@ -53,7 +53,8 @@ a stable ID, name, type, optional preparation instructions, optional execution
 instructions, optional comments, optional HTTP/HTTPS reference link, and
 associated muscles. Every exercise is either:
 
-- **strength**, recorded as sets with repetitions and optional weight; or
+- **strength**, recorded as sets with repetitions and optional weight;
+- **calisthenics**, recorded as sets and repetitions without weight; or
 - **cardio**, recorded as efforts with duration and optional distance.
 
 ### Weekly workout template
@@ -77,11 +78,12 @@ not change the workout's history.
 
 ### Recorded effort
 
-A strength effort supports repetitions, weight, explicit `kg` or `lb` units,
-and notes. A cardio effort supports duration in seconds, distance, explicit
-`km` or `mi` units, and notes. The UI must show only the fields that apply to
-the exercise type. Weight and distance entry use the units derived from the
-Metric or Imperial system selected in device Settings. Changing that
+A strength effort supports repetitions, optional weight, explicit `kg` or `lb`
+units, and notes. A calisthenics effort supports repetitions and notes without
+a weight field. A cardio effort supports duration in seconds, distance,
+explicit `km` or `mi` units, and notes. The UI must show only the fields that
+apply to the exercise type. Weight and distance entry use the units derived
+from the Metric or Imperial system selected in device Settings. Changing that
 preference converts displayed active-workout and template target values while
 saved efforts and history retain their recorded units.
 
@@ -126,7 +128,7 @@ operating-system color-scheme preference.
 While online, a user can:
 
 - create, view, edit, and delete exercises;
-- choose whether an exercise is strength or cardio;
+- choose whether an exercise is strength, calisthenics, or cardio;
 - record preparation and execution instructions separately, with optional
   comments displayed below execution;
 - add target muscles one at a time as primary or secondary, prevent duplicate
@@ -174,7 +176,7 @@ While online, a user can:
 - assign an optional name to each weekday, such as "Legs" or "Chest & Back";
 - remove and reorder exercises within each day; and
 - configure type-appropriate initial targets, with repetitions shown before
-  sets for strength exercises.
+  sets for strength and calisthenics exercises.
 
 Template exercises do not have individual notes. A template may still have
 notes that apply to the overall weekly plan.
@@ -205,6 +207,7 @@ A user can:
   present in today's workout are shown; new sets beyond the previous workout
   stay blank, and previous extra sets are omitted;
 - record repetitions and weight for strength exercises;
+- record repetitions without weight for calisthenics exercises;
 - record duration and distance for cardio exercises;
 - record notes on individual efforts;
 - open an exercise guide modal with its demonstration, instructions, comments,

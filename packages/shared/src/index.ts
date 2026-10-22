@@ -51,7 +51,11 @@ export const muscleSchema = z.object({
 });
 
 export const muscleRoleSchema = z.enum(['primary', 'secondary']);
-export const exerciseTypeSchema = z.enum(['strength', 'cardio']);
+export const exerciseTypeSchema = z.enum([
+  'strength',
+  'calisthenics',
+  'cardio',
+]);
 export const distanceUnitSchema = z.enum(['km', 'mi']);
 export const dayOfWeekSchema = z.number().int().min(1).max(7);
 export const templateDayNameSchema = z.object({
@@ -275,7 +279,7 @@ export const workoutExerciseSchema = z
     validateTargetMetrics(exercise, context);
     exercise.sets.forEach((set, index) => {
       if (
-        exercise.exerciseType === 'strength' &&
+        exercise.exerciseType !== 'cardio' &&
         (set.durationSeconds !== null || set.distance !== null)
       ) {
         context.addIssue({
@@ -294,6 +298,13 @@ export const workoutExerciseSchema = z
           message: 'Cardio sets cannot contain reps or weight',
         });
       }
+      if (exercise.exerciseType === 'calisthenics' && set.weight !== null) {
+        context.addIssue({
+          code: 'custom',
+          path: ['sets', index, 'weight'],
+          message: 'Calisthenics sets cannot contain weight',
+        });
+      }
     });
   });
 
@@ -308,14 +319,17 @@ function validateTargetMetrics(
   context: z.RefinementCtx,
 ) {
   if (
-    exercise.exerciseType === 'strength' &&
+    exercise.exerciseType !== 'cardio' &&
     (exercise.targetDurationSeconds !== null ||
       exercise.targetDistance !== null)
   ) {
     context.addIssue({
       code: 'custom',
       path: ['exerciseType'],
-      message: 'Strength exercises cannot contain duration or distance targets',
+      message:
+        exercise.exerciseType === 'calisthenics'
+          ? 'Calisthenics exercises cannot contain duration or distance targets'
+          : 'Strength exercises cannot contain duration or distance targets',
     });
   }
   if (

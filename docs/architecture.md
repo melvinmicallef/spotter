@@ -85,8 +85,9 @@ Exercises use a compact image/title/target-muscle list; a selected exercise
 opens a detail page with separate edit and delete actions. Deletion requires an
 explicit confirmation before the online request is sent. Muscle source links
 open ExRx in a new browser tab so the catalogue remains available.
-Exercises own their strength/cardio type, muscle roles, separate preparation
-and execution instructions, optional comments, and uploaded image. The
+Exercises own their strength/calisthenics/cardio category, muscle roles,
+separate preparation and execution instructions, optional comments, and
+uploaded image. The
 version-five SQLite migration and client cache normalization retain legacy
 single-field instructions as execution text; version seven adds the exercise
 comments field and advances the reference revision to refresh cached exercises.
@@ -143,15 +144,20 @@ operation from replacing a newer workout.
 
 ### Typed exercises and weekly templates
 
-`exercises.exercise_type` is either `strength` or `cardio` and is copied into
-each workout-exercise snapshot. Strength efforts use repetitions, weight, and
-`kg`/`lb`; a device-local Metric/Imperial Settings preference controls weight
-entry and display, with active values converted for display and each saved
-value retaining its recorded unit. Cardio efforts use duration seconds,
-distance, and `km`/`mi` derived from that same preference.
+Each workout-exercise snapshot copies its `strength`, `calisthenics`, or
+`cardio` category. Strength efforts use repetitions, optional weight, and
+`kg`/`lb`; calisthenics efforts use repetitions without weight; cardio efforts
+use duration and distance. A device-local Metric/Imperial Settings preference
+controls weight entry and display, and cardio distance uses `km`/`mi` derived
+from that preference. Saved weighted values retain their recorded unit.
 The persistence model retains nullable columns for both measurement families so
 migrations and historical reads remain straightforward, while the client shows
 and writes only the fields valid for the snapshot type.
+
+SQLite retains its original constrained `exercise_type` columns for the
+strength/cardio recording families and adds `exercise_category` for the
+calisthenics distinction. Calisthenics maps to the legacy strength family in
+the database while the API and client use the explicit category.
 
 Template entries use ISO weekday numbers (`1` Monday through `7` Sunday) plus a
 position that is unique within that day. A weekly template can contain multiple
@@ -397,8 +403,8 @@ than copying an actively changing database file without coordination.
 - SQLite driver and migration library.
 - IndexedDB wrapper or direct API usage.
 - Authentication and deployment exposure expectations.
-- Additional exercise types or measurements beyond the recorded strength and
-  cardio baseline.
+- Additional exercise types or measurements beyond the recorded strength,
+  calisthenics, and cardio baseline.
 - Whether completed workouts can be edited offline.
 
 ## Recorded implementation decisions
@@ -424,8 +430,8 @@ uses the server's monotonically increasing revision cursor.
 
 Version `0.1.0` uses one active workout per device, one active weekly ISO-day
 template, today-only starts with device-local current-week day swaps, strength
-repetitions plus explicit `kg`/`lb` weight, cardio duration plus explicit
-`km`/`mi` distance, a device-local Metric/Imperial preference (Metric by
+repetitions plus explicit `kg`/`lb` weight, calisthenics repetitions without
+weight, cardio duration plus explicit `km`/`mi` distance, a device-local Metric/Imperial preference (Metric by
 default), and read-only completed workouts. The preference derives entry units
 and converts active workout and template target displays while preserving
 recorded units in completed history. It targets a trusted single-user

@@ -47,8 +47,7 @@ export function createWorkout(
       completed: false,
       sets: Array.from(
         {
-          length:
-            entry.exerciseType === 'strength' ? (entry.targetSets ?? 1) : 1,
+          length: entry.exerciseType !== 'cardio' ? (entry.targetSets ?? 1) : 1,
         },
         (_, setPosition) => createSet(setPosition),
       ),

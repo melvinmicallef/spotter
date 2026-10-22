@@ -63,7 +63,9 @@ export function HistoryView({
                             <span>
                               {exercise.exerciseType === 'cardio'
                                 ? formatCardioEffort(set)
-                                : formatStrengthSet(set)}
+                                : exercise.exerciseType === 'calisthenics'
+                                  ? formatCalisthenicsSet(set)
+                                  : formatStrengthSet(set)}
                             </span>
                             {set.notes && <small>{set.notes}</small>}
                           </li>
@@ -142,6 +144,12 @@ function formatStrengthSet(set: Workout['exercises'][number]['sets'][number]) {
   const load =
     set.weight == null ? 'Bodyweight' : `${set.weight} ${set.weightUnit}`;
   return `${load}${set.reps == null ? '' : ` × ${set.reps} reps`}`;
+}
+
+function formatCalisthenicsSet(
+  set: Workout['exercises'][number]['sets'][number],
+) {
+  return set.reps == null ? '— reps' : `${set.reps} reps`;
 }
 
 function formatCardioEffort(set: Workout['exercises'][number]['sets'][number]) {

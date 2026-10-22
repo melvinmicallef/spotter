@@ -130,8 +130,7 @@ Do not infer answers to these questions from the rest of the architecture:
 
 - history export and retention requirements;
 - account and tenancy behavior after the trusted single-user `0.1.x` line;
-- measurement types beyond strength repetitions/weight and cardio
-  duration/distance; and
+- measurement types beyond strength, calisthenics, and cardio; and
 - completed-workout editing in a future release.
 
 The architecture intentionally leaves boundaries where these decisions can be
@@ -163,7 +162,7 @@ introduced without replacing the workout model or synchronization core.
 - `idb` provides the browser repository boundary. Workout and outbox changes
   share one transaction; synchronization is serialized and idempotent.
 - The `0.1.0` product boundary is one active workout per device, explicit
-  strength/cardio exercise types, ISO-weekday templates with optional named
+  strength/calisthenics/cardio exercise types, ISO-weekday templates with optional named
   days, `kg`/`lb` weight and `km`/`mi` distance, read-only completed workouts,
   and one trusted user per deployment without built-in authentication.
 - Exercise demonstrations are validated GIF, PNG, or JPEG uploads of at most

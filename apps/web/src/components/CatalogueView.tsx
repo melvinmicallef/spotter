@@ -509,6 +509,7 @@ function ExerciseEditorPage({
               }
             >
               <option value="strength">Strength</option>
+              <option value="calisthenics">Calisthenics</option>
               <option value="cardio">Cardio</option>
             </select>
           </label>
@@ -729,6 +730,29 @@ function ExerciseTypeIcon({
           strokeLinejoin="round"
           strokeWidth="4"
         />
+      </svg>
+    );
+  }
+
+  if (exerciseType === 'calisthenics') {
+    return (
+      <svg
+        className="exercise-type-icon"
+        viewBox="0 0 48 48"
+        role="img"
+        aria-label="Calisthenics exercise"
+      >
+        <g
+          fill="none"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="3.5"
+        >
+          <path d="M5 9h38M8 9v7M40 9v7" />
+          <path d="m24 22 0 9m0-7-6-7-5 4m11 3 6-7 5 4m-11 7-5 8m5-8 5 8" />
+        </g>
+        <circle cx="24" cy="18" r="3" fill="currentColor" />
       </svg>
     );
   }

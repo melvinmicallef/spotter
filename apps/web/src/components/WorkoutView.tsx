@@ -253,7 +253,7 @@ export function WorkoutView({
       <div className="stack">
         {workout.exercises.map((entry, exerciseIndex) => (
           <article
-            className={`workout-card${entry.exerciseType === 'strength' ? ' workout-strength-card' : ''}${entry.completed ? ' workout-card-completed' : ''}`}
+            className={`workout-card${entry.exerciseType !== 'cardio' ? ' workout-strength-card' : ''}${entry.completed ? ' workout-card-completed' : ''}`}
             key={entry.id}
           >
             {entry.completed ? (
@@ -285,7 +285,7 @@ export function WorkoutView({
               <>
                 <div
                   className={
-                    entry.exerciseType === 'strength'
+                    entry.exerciseType !== 'cardio'
                       ? 'workout-strength-info'
                       : 'workout-card-main'
                   }
@@ -377,6 +377,15 @@ export function WorkoutView({
                   <CardioEfforts
                     entry={entry}
                     distanceUnit={distanceUnit}
+                    onChange={onChange}
+                    actions={actions}
+                  />
+                ) : entry.exerciseType === 'calisthenics' ? (
+                  <CalisthenicsSets
+                    entry={entry}
+                    previousSets={
+                      previousSetsByExercise.get(entry.exerciseId ?? '') ?? []
+                    }
                     onChange={onChange}
                     actions={actions}
                   />
@@ -538,6 +547,97 @@ function StrengthSets({
             );
           })}
           <div className="strength-grid-add">
+            <span className="strength-grid-set-heading">Sets</span>
+            <button
+              className="secondary"
+              type="button"
+              onClick={() =>
+                onChange((current) => actions.addSet(current, entry.id))
+              }
+            >
+              + Add set
+            </button>
+          </div>
+        </div>
+      </div>
+      <details className="workout-effort-notes">
+        <summary>Set notes</summary>
+        <div className="workout-effort-notes-list">
+          {entry.sets.map((set, setIndex) => (
+            <EffortNotes
+              key={set.id}
+              label={`${entry.exerciseName} set ${setIndex + 1} notes`}
+              value={set.notes}
+              onChange={(notes) =>
+                updateEffort(onChange, actions, entry.id, set.id, { notes })
+              }
+            />
+          ))}
+        </div>
+      </details>
+    </div>
+  );
+}
+
+function CalisthenicsSets({
+  entry,
+  previousSets,
+  onChange,
+  actions,
+}: {
+  entry: WorkoutEntry;
+  previousSets: WorkoutSet[];
+  onChange: WorkoutViewProps['onChange'];
+  actions: WorkoutActions;
+}) {
+  return (
+    <div className="workout-strength-sets">
+      <div className="strength-workout-grid-scroll">
+        <div className="strength-workout-grid">
+          {entry.sets.map((set, setIndex) => {
+            const previousSet = previousSets[setIndex];
+            return (
+              <div
+                className="strength-grid-set calisthenics-grid-set"
+                key={set.id}
+              >
+                <div className="strength-grid-set-heading">
+                  <span>Set {setIndex + 1}</span>
+                  <RemoveEffort
+                    label={`Remove ${entry.exerciseName} set ${setIndex + 1}`}
+                    onClick={() =>
+                      onChange((current) =>
+                        actions.removeSet(current, entry.id, set.id),
+                      )
+                    }
+                  />
+                </div>
+                <div className="strength-grid-cell strength-grid-reps">
+                  <input
+                    aria-label={`${entry.exerciseName} repetitions set ${setIndex + 1}`}
+                    placeholder={
+                      previousSet?.reps == null
+                        ? 'Reps'
+                        : String(previousSet.reps)
+                    }
+                    inputMode="numeric"
+                    type="number"
+                    min="0"
+                    value={set.reps ?? ''}
+                    onChange={(event) =>
+                      updateEffort(onChange, actions, entry.id, set.id, {
+                        reps:
+                          event.target.value === ''
+                            ? null
+                            : Number(event.target.value),
+                      })
+                    }
+                  />
+                </div>
+              </div>
+            );
+          })}
+          <div className="strength-grid-add calisthenics-grid-add">
             <span className="strength-grid-set-heading">Sets</span>
             <button
               className="secondary"
