@@ -290,7 +290,20 @@ test('records typed sets, previous values, and an audible interval timer', async
     strengthCard.getByLabel(`${strengthName} repetitions set 1`),
   ).toHaveAttribute('inputmode', 'numeric');
   await strengthCard.getByLabel(`${strengthName} weight set 1`).fill('40');
+  await expect(strengthCard.getByRole('alert')).toContainText(
+    'Enter both weight and reps',
+  );
+  await page.getByRole('button', { name: 'Finish' }).click();
+  await expect(page.getByRole('alertdialog')).toHaveCount(0);
+  await expect(
+    strengthCard.getByRole('button', {
+      name: `Mark ${strengthName} as completed`,
+    }),
+  ).toBeDisabled();
   await strengthCard.getByLabel(`${strengthName} repetitions set 1`).fill('10');
+  await expect(strengthCard.getByRole('alert')).toHaveCount(0);
+  await strengthCard.getByLabel(`${strengthName} weight set 2`).fill('0');
+  await strengthCard.getByLabel(`${strengthName} repetitions set 2`).fill('0');
   await strengthCard.getByRole('button', { name: `+ Add set` }).click();
   await expect(
     strengthCard.getByLabel(`${strengthName} weight set 3`),
@@ -401,6 +414,7 @@ test('records typed sets, previous values, and an audible interval timer', async
     .locator('.history-exercise')
     .filter({ hasText: cardioName });
   await expect(strengthHistory).toContainText('40 kg × 10 reps');
+  await expect(strengthHistory.locator('ol li')).toHaveCount(1);
   await expect(calisthenicsHistory).toContainText('12 reps');
   await expect(cardioHistory).toContainText('0m 20s');
 
@@ -454,17 +468,23 @@ test('records typed sets, previous values, and an audible interval timer', async
     thirdStrength.getByLabel(`${strengthName} weight set 3`),
   ).toHaveCount(0);
   await expect(
-    thirdStrength.getByLabel(`${strengthName} weight set 2`),
+    thirdStrength.getByLabel(`${strengthName} weight set 1`),
   ).toHaveAttribute('placeholder', '100');
   await expect(
-    thirdStrength.getByLabel(`${strengthName} repetitions set 2`),
+    thirdStrength.getByLabel(`${strengthName} repetitions set 1`),
   ).toHaveAttribute('placeholder', '8');
+  await expect(
+    thirdStrength.getByLabel(`${strengthName} weight set 2`),
+  ).toHaveAttribute('placeholder', '110');
+  await expect(
+    thirdStrength.getByLabel(`${strengthName} repetitions set 2`),
+  ).toHaveAttribute('placeholder', '6');
   await page.getByRole('link', { name: 'Settings' }).click();
   await page.getByLabel('Measurement system').selectOption('metric');
   await page.getByRole('link', { name: 'Workout' }).click();
   await expect(thirdStrength.locator('.unit-label').first()).toHaveText('kg');
   await expect(
-    thirdStrength.getByLabel(`${strengthName} weight set 2`),
+    thirdStrength.getByLabel(`${strengthName} weight set 1`),
   ).toHaveAttribute('placeholder', '45.36');
 });
 

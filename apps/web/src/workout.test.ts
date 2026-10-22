@@ -100,10 +100,46 @@ describe('local workout commands', () => {
       },
     );
     workout = finishWorkout(workout);
-    expect(workout.exercises[1]?.sets).toHaveLength(2);
+    expect(workout.exercises[1]?.sets).toHaveLength(1);
     expect(workout.exercises[1]?.sets[0]?.weight).toBe(100);
     expect(workout.status).toBe('completed');
     expect(workout.completedAt).not.toBeNull();
+  });
+
+  it('removes empty and zeroed strength sets before finishing', () => {
+    let workout = createWorkout(template, 1);
+    const exercise = workout.exercises[0]!;
+    const [recordedSet, zeroedSet, emptySet] = exercise.sets;
+    workout = updateSet(workout, exercise.id, recordedSet!.id, {
+      reps: 8,
+      weight: 60,
+    });
+    workout = updateSet(workout, exercise.id, zeroedSet!.id, {
+      reps: 0,
+      weight: 0,
+    });
+
+    const finished = finishWorkout(workout);
+    expect(finished.exercises[0]?.sets).toHaveLength(1);
+    expect(finished.exercises[0]?.sets[0]).toMatchObject({
+      id: recordedSet?.id,
+      position: 0,
+      reps: 8,
+      weight: 60,
+    });
+    expect(finished.exercises[0]?.sets[0]?.id).not.toBe(emptySet?.id);
+  });
+
+  it('rejects a strength set that has only weight or reps', () => {
+    const initial = createWorkout(template, 1);
+    const exercise = initial.exercises[0]!;
+    const partial = updateSet(initial, exercise.id, exercise.sets[0]!.id, {
+      reps: 8,
+    });
+
+    expect(() => finishWorkout(partial)).toThrow(
+      'A strength set needs both weight and reps, or neither.',
+    );
   });
 });
 

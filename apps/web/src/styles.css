@@ -1035,8 +1035,21 @@ small {
 .strength-grid-number-unit input {
   text-align: right;
 }
+.strength-workout-grid input[aria-invalid='true'] {
+  color: var(--danger-text);
+}
 .strength-grid-number-unit .unit-label {
   font-size: 0.67rem;
+}
+.workout-set-validation {
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--notice-border);
+  border-radius: 8px;
+  color: var(--notice-text);
+  background: var(--notice-bg);
+  font-size: 0.78rem;
+  font-weight: 650;
 }
 .strength-grid-add {
   display: grid;

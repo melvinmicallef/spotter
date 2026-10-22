@@ -176,9 +176,48 @@ export function removeSet(
   }));
 }
 
+export function isStrengthSetPartiallyEntered(
+  set: Pick<WorkoutSet, 'reps' | 'weight'>,
+): boolean {
+  const hasReps = set.reps != null && set.reps > 0;
+  const hasWeight = set.weight != null && set.weight > 0;
+  return hasReps !== hasWeight;
+}
+
+export function hasPartiallyFilledStrengthSet(workout: Workout): boolean {
+  return workout.exercises.some(
+    (exercise) =>
+      exercise.exerciseType === 'strength' &&
+      exercise.sets.some(isStrengthSetPartiallyEntered),
+  );
+}
+
 export function finishWorkout(workout: Workout): Workout {
+  if (hasPartiallyFilledStrengthSet(workout))
+    throw new Error('A strength set needs both weight and reps, or neither.');
+
   const now = new Date().toISOString();
-  return { ...workout, status: 'completed', completedAt: now, updatedAt: now };
+  const exercises = workout.exercises.map((exercise) => {
+    if (
+      exercise.exerciseType === 'strength' ||
+      exercise.exerciseType === 'calisthenics'
+    ) {
+      return {
+        ...exercise,
+        sets: exercise.sets
+          .filter((set) => set.reps != null && set.reps > 0)
+          .map((set, position) => ({ ...set, position })),
+      };
+    }
+    return exercise;
+  });
+  return {
+    ...workout,
+    exercises,
+    status: 'completed',
+    completedAt: now,
+    updatedAt: now,
+  };
 }
 
 function createSet(position: number): WorkoutSet {

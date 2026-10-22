@@ -13,6 +13,10 @@ import { weekdayName, WEEKDAYS } from '../weekdays.js';
 import { convertDistance, convertWeight } from '../measurement-system.js';
 import type { DistanceUnit, WeightUnit } from '../measurement-system.js';
 import { activePlanDays } from '../active-duration.js';
+import {
+  hasPartiallyFilledStrengthSet,
+  isStrengthSetPartiallyEntered,
+} from '../workout.js';
 import { ExerciseDetailsModal } from './CatalogueView.js';
 import { ConfirmDialog } from './ConfirmDialog.js';
 import { ExercisePicker } from './ExercisePicker.js';
@@ -99,6 +103,9 @@ export function WorkoutView({
   const exerciseDetails = exercises.find(
     (exercise) => exercise.id === exerciseDetailsId,
   );
+  const invalidStrengthSets = workout
+    ? hasPartiallyFilledStrengthSet(workout)
+    : false;
   const previousSetsByExercise = useMemo(() => {
     const entriesById = new Map<string, WorkoutExercise[]>();
     const entriesByName = new Map<string, WorkoutExercise[]>();
@@ -283,6 +290,7 @@ export function WorkoutView({
             className="danger"
             type="button"
             onClick={() => {
+              if (invalidStrengthSets) return;
               if (workout.exercises.some((entry) => !entry.completed)) {
                 setFinishWarningOpen(true);
               } else {
@@ -450,6 +458,10 @@ export function WorkoutView({
                 <button
                   className="secondary workout-complete-button"
                   type="button"
+                  disabled={
+                    entry.exerciseType === 'strength' &&
+                    entry.sets.some(isStrengthSetPartiallyEntered)
+                  }
                   onClick={() =>
                     onChange((current) =>
                       actions.setExerciseCompleted(current, entry.id, true),
@@ -618,6 +630,7 @@ function StrengthSets({
         <div className="strength-workout-grid">
           {entry.sets.map((set, setIndex) => {
             const previousSet = previousSets[setIndex];
+            const invalidSet = isStrengthSetPartiallyEntered(set);
             return (
               <div className="strength-grid-set" key={set.id}>
                 <div className="strength-grid-set-heading">
@@ -649,6 +662,12 @@ function StrengthSets({
                       inputMode="decimal"
                       type="number"
                       min="0"
+                      aria-invalid={invalidSet}
+                      aria-describedby={
+                        invalidSet
+                          ? `strength-set-error-${entry.id}`
+                          : undefined
+                      }
                       value={displayWeight(
                         set.weight,
                         set.weightUnit,
@@ -678,6 +697,10 @@ function StrengthSets({
                     inputMode="numeric"
                     type="number"
                     min="0"
+                    aria-invalid={invalidSet}
+                    aria-describedby={
+                      invalidSet ? `strength-set-error-${entry.id}` : undefined
+                    }
                     value={set.reps ?? ''}
                     onChange={(event) =>
                       updateEffort(onChange, actions, entry.id, set.id, {
@@ -706,6 +729,15 @@ function StrengthSets({
           </div>
         </div>
       </div>
+      {entry.sets.some(isStrengthSetPartiallyEntered) && (
+        <p
+          className="workout-set-validation"
+          id={`strength-set-error-${entry.id}`}
+          role="alert"
+        >
+          Enter both weight and reps for a set, or clear both fields.
+        </p>
+      )}
     </div>
   );
 }
