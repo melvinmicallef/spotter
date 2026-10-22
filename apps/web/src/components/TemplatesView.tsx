@@ -14,6 +14,7 @@ import type { DistanceUnit } from '../measurement-system.js';
 import { ConfirmDialog } from './ConfirmDialog.js';
 import { ExercisePicker } from './ExercisePicker.js';
 import { pathForTemplate, templateRouteFromPath } from '../routes.js';
+import { swapTemplateDays } from '../template-days.js';
 import { WEEKDAYS } from '../weekdays.js';
 
 interface TemplatesViewProps {
@@ -396,6 +397,8 @@ function TemplateEditor({
 }) {
   const [draft, setDraft] = useState<WorkoutTemplateInput>(initial);
   const [pickerDay, setPickerDay] = useState<DayOfWeek>();
+  const [firstSwapDay, setFirstSwapDay] = useState<DayOfWeek | ''>('');
+  const [secondSwapDay, setSecondSwapDay] = useState<DayOfWeek | ''>('');
 
   function updateEntry(
     index: number,
@@ -417,6 +420,16 @@ function TemplateEditor({
       ...draft,
       dayNames: name.trim() ? [...otherDays, { dayOfWeek, name }] : otherDays,
     });
+  }
+
+  function swapSelectedDays() {
+    if (!firstSwapDay || !secondSwapDay || firstSwapDay === secondSwapDay)
+      return;
+    setDraft((current) =>
+      swapTemplateDays(current, firstSwapDay, secondSwapDay),
+    );
+    setFirstSwapDay('');
+    setSecondSwapDay('');
   }
 
   function move(day: DayOfWeek, dayIndex: number, direction: -1 | 1) {
@@ -476,6 +489,69 @@ function TemplateEditor({
               }
             />
           </label>
+          <div className="template-day-swap-controls">
+            <div className="template-day-swap-copy">
+              <h3>Swap workout days</h3>
+              <p>
+                Swap all exercises and their optional day names between two
+                weekdays.
+              </p>
+            </div>
+            <label>
+              First day
+              <select
+                aria-label="First day to swap"
+                value={firstSwapDay}
+                onChange={(event) =>
+                  setFirstSwapDay(
+                    event.target.value === ''
+                      ? ''
+                      : (Number(event.target.value) as DayOfWeek),
+                  )
+                }
+              >
+                <option value="">Choose a day</option>
+                {WEEKDAYS.map((day) => (
+                  <option key={day.value} value={day.value}>
+                    {day.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Second day
+              <select
+                aria-label="Second day to swap"
+                value={secondSwapDay}
+                onChange={(event) =>
+                  setSecondSwapDay(
+                    event.target.value === ''
+                      ? ''
+                      : (Number(event.target.value) as DayOfWeek),
+                  )
+                }
+              >
+                <option value="">Choose a day</option>
+                {WEEKDAYS.map((day) => (
+                  <option key={day.value} value={day.value}>
+                    {day.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              className="secondary"
+              type="button"
+              disabled={
+                !firstSwapDay ||
+                !secondSwapDay ||
+                firstSwapDay === secondSwapDay
+              }
+              onClick={swapSelectedDays}
+            >
+              Swap days
+            </button>
+          </div>
           <div className="week-grid">
             {WEEKDAYS.map((day) => {
               const entries = draft.exercises

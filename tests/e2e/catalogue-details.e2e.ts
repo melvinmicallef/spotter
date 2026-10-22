@@ -209,6 +209,18 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
   await page.reload();
   await expect(page.getByLabel('Template name')).toHaveValue(planName);
   const template = page.locator('.template-card');
+  await page.setViewportSize({ width: 390, height: 844 });
+  const swapControlsBounds = await template
+    .locator('.template-day-swap-controls')
+    .boundingBox();
+  expect(swapControlsBounds).not.toBeNull();
+  expect(swapControlsBounds!.x + swapControlsBounds!.width).toBeLessThanOrEqual(
+    390,
+  );
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(390);
+  await page.setViewportSize({ width: 1280, height: 720 });
   await template.getByLabel(`${today} workout name`).fill('Chest & Back');
 
   await template.getByLabel(`Add exercise to ${today}`).click();
@@ -243,7 +255,63 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
   await template
     .getByLabel(`${cardioName} target distance on ${today}`)
     .fill('5');
+
+  const firstSwapDay = template.getByLabel('First day to swap');
+  const secondSwapDay = template.getByLabel('Second day to swap');
+  const swapDaysButton = template.getByRole('button', { name: 'Swap days' });
+  await expect(swapDaysButton).toBeDisabled();
+  await firstSwapDay.selectOption({ label: today });
+  await secondSwapDay.selectOption({ label: today });
+  await expect(swapDaysButton).toBeDisabled();
+  await secondSwapDay.selectOption({ label: otherDay });
+  await swapDaysButton.click();
+  await expect(
+    template.getByLabel(`${strengthName} target reps on ${today}`),
+  ).toHaveCount(0);
+  await expect(
+    template.getByLabel(`${strengthName} target reps on ${otherDay}`),
+  ).toHaveValue('10');
+  await expect(template.getByLabel(`${today} workout name`)).toHaveValue('');
+  await expect(template.getByLabel(`${otherDay} workout name`)).toHaveValue(
+    'Chest & Back',
+  );
+
   await template.getByRole('button', { name: 'Save weekly template' }).click();
+  await expect(page).toHaveURL(/\/templates\/[0-9a-f-]+$/);
+  const swappedOtherDay = page
+    .locator('.template-details-week .template-day')
+    .filter({
+      has: page.getByRole('heading', { name: `${otherDay} · Chest & Back` }),
+    });
+  await expect(swappedOtherDay).toContainText(strengthName);
+  await expect(swappedOtherDay).toContainText(cardioName);
+  const swappedToday = page
+    .locator('.template-details-week .template-day')
+    .filter({ has: page.getByRole('heading', { name: today, exact: true }) });
+  await expect(swappedToday).toContainText(cardioName);
+  await expect(swappedToday).not.toContainText(strengthName);
+
+  await page.getByRole('button', { name: `Edit ${planName}` }).click();
+  const reopenedTemplate = page.locator('.template-card');
+  await expect(
+    reopenedTemplate.getByLabel(`${strengthName} target reps on ${otherDay}`),
+  ).toHaveValue('10');
+  await reopenedTemplate
+    .getByLabel('First day to swap')
+    .selectOption({ label: today });
+  await reopenedTemplate
+    .getByLabel('Second day to swap')
+    .selectOption({ label: otherDay });
+  await reopenedTemplate.getByRole('button', { name: 'Swap days' }).click();
+  await expect(
+    reopenedTemplate.getByLabel(`${today} workout name`),
+  ).toHaveValue('Chest & Back');
+  await expect(
+    reopenedTemplate.getByLabel(`${otherDay} workout name`),
+  ).toHaveValue('');
+  await reopenedTemplate
+    .getByRole('button', { name: 'Save weekly template' })
+    .click();
   await expect(page).toHaveURL(/\/templates\/[0-9a-f-]+$/);
 
   await page.getByRole('link', { name: 'Workout' }).click();

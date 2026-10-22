@@ -91,6 +91,8 @@ deletion behavior.
   templates.
 - Multiple exercises on each ISO weekday.
 - Type-appropriate initial targets and optional weekday titles.
+- Swap full exercise lists between weekdays, preserving targets and moving
+  optional day titles with their exercises, including swaps with rest days.
 - Template read model suitable for caching and workout snapshot creation.
 - Tests for ordering, duplication, validation, and deletion dependencies.
 

@@ -168,7 +168,8 @@ introduced without replacing the workout model or synchronization core.
   share one transaction; synchronization is serialized and idempotent.
 - The current `0.2.0` product contract includes one active workout per device,
   strength/calisthenics/cardio types, ISO-weekday templates with optional named
-  days, any unfinished day selectable with today as the default, device-local
+  days and full day swaps that move exercises, targets, and names together,
+  any unfinished day selectable with today as the default, device-local
   completed-day markers that reset Monday midnight, confirmed workout
   cancellation that does not consume a day, device-local Metric/Imperial units,
   duration and interval cardio, previous-set hints, collapsible completed

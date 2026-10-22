@@ -1184,6 +1184,39 @@ small {
 .template-day-name-field input {
   min-width: 0;
 }
+.template-day-swap-controls {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr) minmax(130px, 0.55fr) minmax(130px, 0.55fr)
+    auto;
+  align-items: end;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-deep);
+}
+.template-day-swap-copy h3,
+.template-day-swap-copy p {
+  margin: 0;
+}
+.template-day-swap-copy p {
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+.template-day-swap-controls > label {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 5px;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+}
+.template-day-swap-controls select {
+  width: 100%;
+  min-width: 0;
+}
 .week-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -2038,6 +2071,12 @@ small {
   .exercise-details-hero {
     grid-template-columns: 1fr;
   }
+  .template-day-swap-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .template-day-swap-copy {
+    grid-column: 1 / -1;
+  }
   .workout-card.workout-strength-card {
     grid-template-columns: minmax(130px, 0.8fr) minmax(0, 1.2fr);
     gap: 10px;
@@ -2049,6 +2088,15 @@ small {
   }
 }
 @media (max-width: 540px) {
+  .template-day-swap-controls {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .template-day-swap-copy {
+    grid-column: auto;
+  }
+  .template-day-swap-controls > button {
+    width: 100%;
+  }
   .workout-active-page > .section-heading {
     align-items: flex-start;
     flex-direction: column;

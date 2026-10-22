@@ -193,6 +193,8 @@ While online, a user can:
 - add multiple exercises to any day of the week from a visual picker that shows
   demonstration images and filters by exercise name or muscle;
 - assign an optional name to each weekday, such as "Legs" or "Chest & Back";
+- swap all exercises between any two weekdays; exercise targets and optional
+  day names move with the exercises, including when one weekday is a rest day;
 - remove and reorder exercises within each day; and
 - configure type-appropriate initial targets, with repetitions shown before
   sets for strength and calisthenics exercises; and

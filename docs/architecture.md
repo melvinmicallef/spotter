@@ -203,6 +203,11 @@ associated muscle and renders uploaded demonstration images from their existing
 media URLs; choosing an exercise only updates the template draft until the user
 saves it through the online template API.
 
+The template editor can swap the full exercise lists between any two weekdays,
+including a rest day. Each exercise's targets and optional day names move with
+its weekday assignment in the draft; the existing template update API persists
+the saved draft as one operation.
+
 The template catalogue is a compact list. Selecting a template opens a
 read-only weekly-plan detail page; editing and deletion are explicit actions on
 that page, and the full weekly editor is isolated on its own route.
