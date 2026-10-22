@@ -44,6 +44,7 @@ export function createWorkout(
       targetDurationSeconds: entry.targetDurationSeconds,
       targetDistance: entry.targetDistance,
       targetDistanceUnit: entry.targetDistanceUnit,
+      completed: false,
       sets: Array.from(
         {
           length:
@@ -69,6 +70,7 @@ export function addExercise(workout: Workout, exercise: Exercise): Workout {
     targetDurationSeconds: null,
     targetDistance: null,
     targetDistanceUnit: 'km',
+    completed: false,
     sets: [createSet(0)],
   };
   return touch({ ...workout, exercises: [...workout.exercises, entry] });
@@ -89,6 +91,17 @@ export function updateExerciseNotes(
   return updateExercise(workout, workoutExerciseId, (exercise) => ({
     ...exercise,
     notes,
+  }));
+}
+
+export function setExerciseCompleted(
+  workout: Workout,
+  workoutExerciseId: string,
+  completed: boolean,
+): Workout {
+  return updateExercise(workout, workoutExerciseId, (exercise) => ({
+    ...exercise,
+    completed,
   }));
 }
 

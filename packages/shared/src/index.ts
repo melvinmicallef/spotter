@@ -268,6 +268,7 @@ export const workoutExerciseSchema = z
       .default(null),
     targetDistance: z.number().positive().max(100_000).nullable().default(null),
     targetDistanceUnit: distanceUnitSchema.default('km'),
+    completed: z.boolean().optional(),
     sets: z.array(workoutSetSchema).max(200),
   })
   .superRefine((exercise, context) => {

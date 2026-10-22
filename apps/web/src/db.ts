@@ -49,7 +49,7 @@ interface SpotterDatabaseSchema extends DBSchema {
 let databasePromise: Promise<IDBPDatabase<SpotterDatabaseSchema>> | undefined;
 
 function database() {
-  databasePromise ??= openDB<SpotterDatabaseSchema>('spotter', 6, {
+  databasePromise ??= openDB<SpotterDatabaseSchema>('spotter', 7, {
     async upgrade(db, oldVersion, _newVersion, transaction) {
       if (oldVersion < 1) {
         const workouts = db.createObjectStore('workouts', { keyPath: 'id' });
@@ -151,6 +151,19 @@ function database() {
             normalizeTemplate(template, new Map(), exerciseReferences),
           );
         }
+        const workoutStore = transaction.objectStore('workouts');
+        for (const workout of await workoutStore.getAll()) {
+          await workoutStore.put(normalizeWorkout(workout));
+        }
+        const outboxStore = transaction.objectStore('outbox');
+        for (const operation of await outboxStore.getAll()) {
+          await outboxStore.put({
+            ...operation,
+            workout: normalizeWorkout(operation.workout),
+          });
+        }
+      }
+      if (oldVersion < 7) {
         const workoutStore = transaction.objectStore('workouts');
         for (const workout of await workoutStore.getAll()) {
           await workoutStore.put(normalizeWorkout(workout));
@@ -376,6 +389,7 @@ function normalizeWorkout(workout: Workout): Workout {
     templateDayName: workout.templateDayName ?? null,
     exercises: workout.exercises.map((exercise) => ({
       ...exercise,
+      completed: exercise.completed ?? false,
       exerciseType: exercise.exerciseType ?? 'strength',
       referenceUrl: exercise.referenceUrl ?? null,
       targetDurationSeconds: exercise.targetDurationSeconds ?? null,

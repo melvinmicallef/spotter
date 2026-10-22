@@ -53,6 +53,8 @@ data to log a workout without a network connection. While offline, a user can:
   device-local current-week day swap, or resume an in-progress workout;
 - record sets, repetitions, and weight for strength exercises;
 - record duration and distance for cardio exercises;
+- mark finished exercises complete to collapse them while keeping progress
+  available to resume;
 - record notes and completion state; and
 - finish a workout.
 

@@ -606,6 +606,7 @@ export class SpotterStore {
           ),
           targetDistance: nullableNumber(exercise.target_distance),
           targetDistanceUnit: exercise.target_distance_unit as 'km' | 'mi',
+          completed: Boolean(exercise.completed),
           sets,
         };
       });
@@ -795,8 +796,8 @@ export class SpotterStore {
       `INSERT INTO workout_exercises
        (id, workout_id, exercise_id, exercise_name, exercise_type, reference_url, position,
         notes, target_sets, target_reps, target_duration_seconds,
-        target_distance, target_distance_unit)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        target_distance, target_distance_unit, completed)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     );
     const insertSet = this.database.prepare(
       `INSERT INTO workout_sets
@@ -824,6 +825,7 @@ export class SpotterStore {
         exercise.targetDurationSeconds,
         exercise.targetDistance,
         exercise.targetDistanceUnit,
+        Number(exercise.completed ?? false),
       );
       for (const set of exercise.sets) {
         insertSet.run(

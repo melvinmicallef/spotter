@@ -44,6 +44,11 @@ interface WorkoutViewProps {
       setId: string,
       patch: Partial<WorkoutSet>,
     ) => Workout;
+    setExerciseCompleted: (
+      workout: Workout,
+      exerciseId: string,
+      completed: boolean,
+    ) => Workout;
     finish: (workout: Workout) => Workout;
   };
 }
@@ -248,102 +253,145 @@ export function WorkoutView({
       <div className="stack">
         {workout.exercises.map((entry, exerciseIndex) => (
           <article
-            className={`workout-card${entry.exerciseType === 'strength' ? ' workout-strength-card' : ''}`}
+            className={`workout-card${entry.exerciseType === 'strength' ? ' workout-strength-card' : ''}${entry.completed ? ' workout-card-completed' : ''}`}
             key={entry.id}
           >
-            <div
-              className={
-                entry.exerciseType === 'strength'
-                  ? 'workout-strength-info'
-                  : 'workout-card-main'
-              }
-            >
-              <header>
-                <div>
+            {entry.completed ? (
+              <div className="workout-completed-summary">
+                <div className="workout-completed-info">
                   <span className="exercise-index">{exerciseIndex + 1}</span>
                   <strong>{entry.exerciseName}</strong>
                   <small className="type-badge">{entry.exerciseType}</small>
-                  {entry.referenceUrl && (
-                    <a
-                      className="workout-reference-link"
-                      href={entry.referenceUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Reference ↗
-                    </a>
-                  )}
+                  <span className="workout-completed-badge">Completed</span>
+                  <span className="workout-completed-count">
+                    {entry.sets.length}{' '}
+                    {entry.exerciseType === 'cardio' ? 'efforts' : 'sets'}
+                  </span>
                 </div>
-                <div className="inline-actions">
-                  <button
-                    className="icon-button"
-                    type="button"
-                    aria-label={`Move ${entry.exerciseName} up`}
-                    onClick={() =>
-                      onChange((current) =>
-                        actions.moveExercise(current, exerciseIndex, -1),
-                      )
-                    }
-                  >
-                    ↑
-                  </button>
-                  <button
-                    className="icon-button"
-                    type="button"
-                    aria-label={`Move ${entry.exerciseName} down`}
-                    onClick={() =>
-                      onChange((current) =>
-                        actions.moveExercise(current, exerciseIndex, 1),
-                      )
-                    }
-                  >
-                    ↓
-                  </button>
-                  <button
-                    className="icon-button danger-text"
-                    type="button"
-                    aria-label={`Remove ${entry.exerciseName}`}
-                    onClick={() =>
-                      onChange((current) =>
-                        actions.removeExercise(current, entry.id),
-                      )
-                    }
-                  >
-                    ×
-                  </button>
-                </div>
-              </header>
-              <TargetSummary exercise={entry} distanceUnit={distanceUnit} />
-              <button
-                className="secondary workout-guide-button"
-                type="button"
-                disabled={
-                  !exercises.some((item) => item.id === entry.exerciseId)
-                }
-                onClick={() => setExerciseDetailsId(entry.exerciseId)}
-                aria-label={`How to do ${entry.exerciseName}`}
-              >
-                How to do it
-              </button>
-            </div>
-
-            {entry.exerciseType === 'cardio' ? (
-              <CardioEfforts
-                entry={entry}
-                distanceUnit={distanceUnit}
-                onChange={onChange}
-                actions={actions}
-              />
+                <button
+                  className="secondary workout-reopen-button"
+                  type="button"
+                  onClick={() =>
+                    onChange((current) =>
+                      actions.setExerciseCompleted(current, entry.id, false),
+                    )
+                  }
+                  aria-label={`Reopen ${entry.exerciseName}`}
+                >
+                  Reopen
+                </button>
+              </div>
             ) : (
-              <StrengthSets
-                entry={entry}
-                previousSets={
-                  previousSetsByExercise.get(entry.exerciseId ?? '') ?? []
-                }
-                weightUnit={weightUnit}
-                onChange={onChange}
-                actions={actions}
-              />
+              <>
+                <div
+                  className={
+                    entry.exerciseType === 'strength'
+                      ? 'workout-strength-info'
+                      : 'workout-card-main'
+                  }
+                >
+                  <header>
+                    <div>
+                      <span className="exercise-index">
+                        {exerciseIndex + 1}
+                      </span>
+                      <strong>{entry.exerciseName}</strong>
+                      <small className="type-badge">{entry.exerciseType}</small>
+                      {entry.referenceUrl && (
+                        <a
+                          className="workout-reference-link"
+                          href={entry.referenceUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Reference ↗
+                        </a>
+                      )}
+                    </div>
+                    <div className="inline-actions">
+                      <button
+                        className="icon-button"
+                        type="button"
+                        aria-label={`Move ${entry.exerciseName} up`}
+                        onClick={() =>
+                          onChange((current) =>
+                            actions.moveExercise(current, exerciseIndex, -1),
+                          )
+                        }
+                      >
+                        ↑
+                      </button>
+                      <button
+                        className="icon-button"
+                        type="button"
+                        aria-label={`Move ${entry.exerciseName} down`}
+                        onClick={() =>
+                          onChange((current) =>
+                            actions.moveExercise(current, exerciseIndex, 1),
+                          )
+                        }
+                      >
+                        ↓
+                      </button>
+                      <button
+                        className="icon-button danger-text"
+                        type="button"
+                        aria-label={`Remove ${entry.exerciseName}`}
+                        onClick={() =>
+                          onChange((current) =>
+                            actions.removeExercise(current, entry.id),
+                          )
+                        }
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </header>
+                  <TargetSummary exercise={entry} distanceUnit={distanceUnit} />
+                  <button
+                    className="secondary workout-guide-button"
+                    type="button"
+                    disabled={
+                      !exercises.some((item) => item.id === entry.exerciseId)
+                    }
+                    onClick={() => setExerciseDetailsId(entry.exerciseId)}
+                    aria-label={`How to do ${entry.exerciseName}`}
+                  >
+                    How to do it
+                  </button>
+                  <button
+                    className="secondary workout-complete-button"
+                    type="button"
+                    onClick={() =>
+                      onChange((current) =>
+                        actions.setExerciseCompleted(current, entry.id, true),
+                      )
+                    }
+                    aria-label={`Mark ${entry.exerciseName} as completed`}
+                  >
+                    ✓ Mark complete
+                  </button>
+                </div>
+
+                {entry.exerciseType === 'cardio' ? (
+                  <CardioEfforts
+                    entry={entry}
+                    distanceUnit={distanceUnit}
+                    onChange={onChange}
+                    actions={actions}
+                  />
+                ) : (
+                  <StrengthSets
+                    entry={entry}
+                    previousSets={
+                      previousSetsByExercise.get(entry.exerciseId ?? '') ?? []
+                    }
+                    weightUnit={weightUnit}
+                    onChange={onChange}
+                    actions={actions}
+                  />
+                )}
+              </>
             )}
           </article>
         ))}

@@ -852,6 +852,46 @@ small {
   align-items: start;
   gap: 16px;
 }
+.workout-completed-summary {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.workout-card.workout-strength-card .workout-completed-summary {
+  grid-column: 1 / -1;
+}
+.workout-completed-info {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.workout-completed-info strong {
+  overflow-wrap: anywhere;
+}
+.workout-completed-badge {
+  border-radius: 999px;
+  padding: 4px 8px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+.workout-completed-count {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+.workout-complete-button,
+.workout-reopen-button {
+  flex: 0 0 auto;
+  padding: 8px 11px;
+}
+.workout-complete-button {
+  align-self: flex-start;
+}
 .workout-strength-info,
 .workout-card-main {
   display: flex;

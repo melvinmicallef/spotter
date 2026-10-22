@@ -46,6 +46,7 @@ import {
   moveExercise,
   removeExercise,
   removeSet,
+  setExerciseCompleted,
   updateSet,
 } from './workout.js';
 
@@ -431,6 +432,7 @@ export function App() {
               addSet,
               removeSet,
               updateSet,
+              setExerciseCompleted,
               finish: finishWorkout,
             }}
           />

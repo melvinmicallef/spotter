@@ -195,6 +195,8 @@ A user can:
   week without changing the template;
 - resume the current in-progress workout;
 - add, remove, and reorder workout exercises;
+- mark individual exercises complete to collapse them and reopen them when
+  needed;
 - add, edit, and remove sets;
 - display strength weights and repetitions in a compact grid, with controls to
   add or remove each exercise's sets;
@@ -234,8 +236,9 @@ exercise entry, or set.
 
 The interface must show whether the application is offline, whether changes
 are waiting to synchronize, and whether the last synchronization failed.
-Closing or refreshing the PWA must not discard acknowledged local workout
-changes.
+Each workout edit, including typed measurements and exercise completion, is
+saved to IndexedDB with its outbox operation. Closing or refreshing the PWA must
+not discard saved local workout changes.
 
 The initial conflict policy is deliberately narrow:
 

@@ -298,6 +298,14 @@ export const migrations = [
       INSERT INTO app_settings (id, stretching_poster_id) VALUES (1, NULL);
     `,
   },
+  {
+    version: 10,
+    name: 'workout_exercise_completion',
+    sql: `
+      ALTER TABLE workout_exercises ADD COLUMN completed INTEGER NOT NULL DEFAULT 0
+        CHECK (completed IN (0, 1));
+    `,
+  },
 ] as const;
 
 export type SpotterDatabase = Database.Database;

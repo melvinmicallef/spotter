@@ -106,6 +106,7 @@ snapshot for any populated day.
   template, with a device-local current-ISO-week day swap.
 - Resume an in-progress workout.
 - Add, remove, and reorder workout exercises.
+- Mark and collapse completed exercises, with an option to reopen them.
 - Add, edit, and remove sets.
 - Display strength weight/repetition values in a compact grid with per-exercise
   controls to add or remove sets.
@@ -137,6 +138,8 @@ snapshot-safe historical display.
 - Stores for workouts, outbox operations, cached exercises, cached muscles,
   cached templates, and synchronization metadata.
 - Local-first workout command layer: IndexedDB is updated before UI success.
+- Persist typed workout values and exercise completion in the local workout
+  snapshot and synchronization outbox as each change is made.
 - Atomic local workout mutation and outbox write.
 - Client-generated UUIDs for offline-created records and operations.
 - Connectivity and synchronization status UI.

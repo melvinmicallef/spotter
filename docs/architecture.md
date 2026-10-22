@@ -273,6 +273,9 @@ exposes them read-only; there are no muscle mutation routes.
 Historical workout rows store snapshots of mutable labels, exercise type,
 template day and its optional name, and targets needed for display. Foreign-key
 behavior must not allow a catalogue deletion to erase workout history.
+Each workout exercise also stores a completion flag so an in-progress exercise
+can be collapsed and remain collapsed after the workout is reopened. This state
+is included in the local workout/outbox snapshot and synchronized to SQLite.
 
 The production database path is configured through an environment variable and
 defaults to `/data/spotter.sqlite`. The container documentation must call out
