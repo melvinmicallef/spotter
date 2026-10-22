@@ -782,6 +782,12 @@ interface TimerEvent {
   number?: number;
 }
 
+interface TimerRun {
+  status: 'idle' | 'running' | 'paused' | 'complete';
+  elapsedMs: number;
+  startedAt: number | null;
+}
+
 function IntervalTimer({
   entry,
   recordedResult,
@@ -801,15 +807,16 @@ function IntervalTimer({
     0,
   );
   const timerEvents = useMemo(() => buildTimerEvents(stages), [stages]);
-  const [run, setRun] = useState<{
-    status: 'idle' | 'running' | 'paused' | 'complete';
-    elapsedMs: number;
-    startedAt: number | null;
-  }>({ status: 'idle', elapsedMs: 0, startedAt: null });
+  const checkpointKey = `spotter-interval-timer:${entry.id}`;
+  const [run, setRun] = useState<TimerRun>(() =>
+    restoreTimerRun(checkpointKey),
+  );
   const [displayElapsedMs, setDisplayElapsedMs] = useState(0);
+  const [soundReady, setSoundReady] = useState(false);
   const audioContext = useRef<AudioContext | null>(null);
   const playedEvents = useRef(new Set<number>());
   const lastElapsedMs = useRef(0);
+
   useEffect(() => {
     if (run.status !== 'running' || run.startedAt == null) return;
     const startedAt = run.startedAt;
@@ -836,6 +843,7 @@ function IntervalTimer({
       lastElapsedMs.current = elapsedMs;
       if (elapsedMs >= totalMs) {
         window.clearInterval(interval);
+        clearTimerCheckpoint(checkpointKey);
         setRun({ status: 'complete', elapsedMs: totalMs, startedAt: null });
         if (recordedResult) {
           const durationSeconds =
@@ -852,6 +860,7 @@ function IntervalTimer({
     return () => window.clearInterval(interval);
   }, [
     actions,
+    checkpointKey,
     entry,
     onChange,
     recordedResult,
@@ -873,25 +882,31 @@ function IntervalTimer({
     : null;
 
   function start() {
-    let context = audioContext.current;
-    if (context == null && typeof window.AudioContext !== 'undefined') {
-      context = new window.AudioContext();
-      audioContext.current = context;
-    }
-    if (context?.state === 'suspended') void context.resume();
+    activateAudio();
     const now = performance.now();
     if (run.status === 'paused') {
       lastElapsedMs.current = run.elapsedMs;
+      saveTimerCheckpoint(checkpointKey, {
+        status: 'running',
+        elapsedMs: run.elapsedMs,
+        startedAtWallMs: Date.now(),
+      });
       setRun({ ...run, status: 'running', startedAt: now });
       return;
     }
     playedEvents.current.clear();
     lastElapsedMs.current = -1;
     setDisplayElapsedMs(0);
+    saveTimerCheckpoint(checkpointKey, {
+      status: 'running',
+      elapsedMs: 0,
+      startedAtWallMs: Date.now(),
+    });
     setRun({ status: 'running', elapsedMs: 0, startedAt: now });
   }
 
   function reset() {
+    clearTimerCheckpoint(checkpointKey);
     setRun({ status: 'idle', elapsedMs: 0, startedAt: null });
     setDisplayElapsedMs(0);
     playedEvents.current.clear();
@@ -904,6 +919,11 @@ function IntervalTimer({
       run.elapsedMs +
         (run.startedAt == null ? 0 : performance.now() - run.startedAt),
     );
+    saveTimerCheckpoint(checkpointKey, {
+      status: 'paused',
+      elapsedMs: nowElapsed,
+      startedAtWallMs: null,
+    });
     setRun({ status: 'paused', elapsedMs: nowElapsed, startedAt: null });
     setDisplayElapsedMs(nowElapsed);
     lastElapsedMs.current = nowElapsed;
@@ -963,6 +983,17 @@ function IntervalTimer({
                   : 'Start interval timer'}
             </button>
           )}
+          {run.status === 'running' &&
+            !soundReady &&
+            typeof window.AudioContext !== 'undefined' && (
+              <button
+                className="secondary"
+                type="button"
+                onClick={activateAudio}
+              >
+                Enable beeps
+              </button>
+            )}
           {run.status !== 'idle' && (
             <button className="secondary" type="button" onClick={reset}>
               Reset
@@ -972,6 +1003,85 @@ function IntervalTimer({
       </div>
     </div>
   );
+
+  function activateAudio() {
+    try {
+      let context = audioContext.current;
+      if (context == null && typeof window.AudioContext !== 'undefined') {
+        context = new window.AudioContext();
+        audioContext.current = context;
+      }
+      if (context?.state === 'suspended') {
+        void context
+          .resume()
+          .then(() => setSoundReady(context?.state === 'running'))
+          .catch(() => setSoundReady(false));
+      } else {
+        setSoundReady(context?.state === 'running');
+      }
+    } catch {
+      setSoundReady(false);
+    }
+  }
+}
+
+function restoreTimerRun(key: string): TimerRun {
+  const idle: TimerRun = { status: 'idle', elapsedMs: 0, startedAt: null };
+  try {
+    const saved = localStorage.getItem(key);
+    if (!saved) return idle;
+    const checkpoint = JSON.parse(saved) as {
+      status?: unknown;
+      elapsedMs?: unknown;
+      startedAtWallMs?: unknown;
+    };
+    const elapsedMs = Number(checkpoint.elapsedMs);
+    if (!Number.isFinite(elapsedMs) || elapsedMs < 0) return idle;
+    if (checkpoint.status === 'paused') {
+      return { status: 'paused', elapsedMs, startedAt: null };
+    }
+    if (
+      checkpoint.status === 'running' &&
+      typeof checkpoint.startedAtWallMs === 'number' &&
+      Number.isFinite(checkpoint.startedAtWallMs)
+    ) {
+      const elapsedSinceStart = Math.max(
+        0,
+        Date.now() - checkpoint.startedAtWallMs,
+      );
+      return {
+        status: 'running',
+        elapsedMs,
+        startedAt: performance.now() - elapsedSinceStart,
+      };
+    }
+  } catch {
+    return idle;
+  }
+  return idle;
+}
+
+function saveTimerCheckpoint(
+  key: string,
+  checkpoint: {
+    status: 'running' | 'paused';
+    elapsedMs: number;
+    startedAtWallMs: number | null;
+  },
+) {
+  try {
+    localStorage.setItem(key, JSON.stringify(checkpoint));
+  } catch {
+    // The timer continues if local browser storage is unavailable.
+  }
+}
+
+function clearTimerCheckpoint(key: string) {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    // The timer continues if local browser storage is unavailable.
+  }
 }
 
 function buildIntervalStages(entry: WorkoutEntry): IntervalStage[] {

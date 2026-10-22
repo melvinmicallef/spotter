@@ -158,6 +158,10 @@ and records total work time when it completes. A device-local Metric/Imperial
 Settings preference controls weight entry and display, and cardio distance
 uses `km`/`mi` derived from that preference. Saved weighted values retain
 their recorded unit.
+The browser keeps a small numeric interval-timer checkpoint keyed by workout
+exercise so a running or paused timer can resume after a refresh on that device.
+The finished duration is written through the normal IndexedDB workout and
+outbox path; the checkpoint is temporary interface state, not workout storage.
 The persistence model retains nullable columns for both measurement families so
 migrations and historical reads remain straightforward, while the client shows
 and writes only the fields valid for the snapshot type.

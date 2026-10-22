@@ -218,7 +218,7 @@ A user can:
 - record repetitions without weight for calisthenics exercises;
 - record cardio duration as minutes and seconds, or run the configured
   interval timer with audible five-to-one countdown and stage-transition
-  beeps;
+  beeps; resume its saved countdown after a refresh on the same device;
 - record optional distance for cardio exercises;
 - open an exercise guide modal with its demonstration, instructions, comments,
   reference link, and target muscles;
