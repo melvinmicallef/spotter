@@ -890,7 +890,9 @@ small {
   padding: 8px 11px;
 }
 .workout-complete-button {
-  align-self: flex-start;
+  grid-column: 1 / -1;
+  align-self: flex-end;
+  justify-self: end;
 }
 .workout-strength-info,
 .workout-card-main {
@@ -1015,6 +1017,7 @@ small {
   display: grid;
   flex: 0 0 94px;
   grid-template-rows: 27px 1fr 1fr;
+  border-right: 1px solid var(--border-strong);
   text-align: center;
 }
 .calisthenics-grid-add {
@@ -1022,7 +1025,6 @@ small {
 }
 .strength-grid-add .strength-grid-set-heading {
   justify-content: center;
-  border-right: 1px solid var(--border-strong);
 }
 .strength-grid-add button {
   grid-row: 2 / 4;

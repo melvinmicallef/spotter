@@ -12,6 +12,7 @@ import { weekdayName, WEEKDAYS } from '../weekdays.js';
 import { convertDistance, convertWeight } from '../measurement-system.js';
 import type { DistanceUnit, WeightUnit } from '../measurement-system.js';
 import { ExerciseDetailsModal } from './CatalogueView.js';
+import { ExercisePicker } from './ExercisePicker.js';
 
 interface WorkoutViewProps {
   workout?: Workout;
@@ -73,6 +74,7 @@ export function WorkoutView({
   const [exerciseDetailsId, setExerciseDetailsId] = useState<string | null>(
     null,
   );
+  const [exercisePickerOpen, setExercisePickerOpen] = useState(false);
   const exerciseDetails = exercises.find(
     (exercise) => exercise.id === exerciseDetailsId,
   );
@@ -229,27 +231,6 @@ export function WorkoutView({
         </div>
       </div>
 
-      <label className="field compact">
-        Add exercise
-        <select
-          value=""
-          onChange={(event) => {
-            const exercise = exercises.find(
-              (item) => item.id === event.target.value,
-            );
-            if (exercise)
-              onChange((current) => actions.addExercise(current, exercise));
-          }}
-        >
-          <option value="">Choose from exercises…</option>
-          {exercises.map((exercise) => (
-            <option key={exercise.id} value={exercise.id}>
-              {exercise.name} ({exercise.exerciseType})
-            </option>
-          ))}
-        </select>
-      </label>
-
       <div className="stack">
         {workout.exercises.map((entry, exerciseIndex) => (
           <article
@@ -360,18 +341,6 @@ export function WorkoutView({
                   >
                     How to do it
                   </button>
-                  <button
-                    className="secondary workout-complete-button"
-                    type="button"
-                    onClick={() =>
-                      onChange((current) =>
-                        actions.setExerciseCompleted(current, entry.id, true),
-                      )
-                    }
-                    aria-label={`Mark ${entry.exerciseName} as completed`}
-                  >
-                    ✓ Mark complete
-                  </button>
                 </div>
 
                 {entry.exerciseType === 'cardio' ? (
@@ -401,15 +370,49 @@ export function WorkoutView({
                     actions={actions}
                   />
                 )}
+                <button
+                  className="secondary workout-complete-button"
+                  type="button"
+                  onClick={() =>
+                    onChange((current) =>
+                      actions.setExerciseCompleted(current, entry.id, true),
+                    )
+                  }
+                  aria-label={`Mark ${entry.exerciseName} as completed`}
+                >
+                  ✓ Mark complete
+                </button>
               </>
             )}
           </article>
         ))}
       </div>
+      <button
+        className="secondary full"
+        type="button"
+        onClick={() => setExercisePickerOpen(true)}
+      >
+        + Add exercise
+      </button>
       {exerciseDetails && (
         <ExerciseDetailsModal
           exercise={exerciseDetails}
           onClose={() => setExerciseDetailsId(null)}
+        />
+      )}
+      {exercisePickerOpen && (
+        <ExercisePicker
+          contextLabel="workout"
+          exercises={exercises}
+          getAddedCount={(exerciseId) =>
+            workout.exercises.filter(
+              (entry) => entry.exerciseId === exerciseId,
+            ).length
+          }
+          onAdd={(exercise) =>
+            onChange((current) => actions.addExercise(current, exercise))
+          }
+          onClose={() => setExercisePickerOpen(false)}
         />
       )}
     </section>
