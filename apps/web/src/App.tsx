@@ -14,7 +14,6 @@ import { api } from './api.js';
 import { ExercisesView } from './components/CatalogueView.js';
 import { HistoryView } from './components/HistoryView.js';
 import { MusclesView } from './components/MusclesView.js';
-import { PwaUpdate } from './components/PwaUpdate.js';
 import { SettingsView } from './components/SettingsView.js';
 import { StatusBar } from './components/StatusBar.js';
 import { StretchingView } from './components/StretchingView.js';
@@ -533,7 +532,6 @@ export function App() {
           onClick={() => navigate('settings')}
         />
       </nav>
-      <PwaUpdate />
     </div>
   );
 }

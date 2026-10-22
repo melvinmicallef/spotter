@@ -7,27 +7,60 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'prompt',
-      includeAssets: ['spotter.svg'],
+      includeAssets: [
+        'spotter.svg',
+        'spotter-maskable.svg',
+        'spotter-192.png',
+        'spotter-512.png',
+        'spotter-maskable-512.png',
+      ],
       manifest: {
         name: 'Spotter Workout Tracker',
         short_name: 'Spotter',
         description: 'Offline-first workout tracking',
+        id: '/',
         theme_color: '#07100d',
         background_color: '#07100d',
         display: 'standalone',
         start_url: '/',
+        scope: '/',
+        prefer_related_applications: false,
         icons: [
+          {
+            src: '/spotter-192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any',
+          },
+          {
+            src: '/spotter-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any',
+          },
+          {
+            src: '/spotter-maskable-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
           {
             src: '/spotter.svg',
             sizes: 'any',
             type: 'image/svg+xml',
-            purpose: 'any maskable',
+            purpose: 'any',
+          },
+          {
+            src: '/spotter-maskable.svg',
+            sizes: 'any',
+            type: 'image/svg+xml',
+            purpose: 'maskable',
           },
         ],
       },
       workbox: {
         navigateFallback: '/index.html',
-        globPatterns: ['**/*.{js,css,html,svg}'],
+        globPatterns: ['**/*.{js,css,html}'],
         runtimeCaching: [
           {
             urlPattern: ({ url }) => url.pathname.startsWith('/api/media/'),

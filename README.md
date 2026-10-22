@@ -187,6 +187,17 @@ Then open `http://localhost:3000`. The host directory mounted at `/data` retains
 `spotter.sqlite`, its WAL files, and uploaded media when the container is
 replaced.
 
+### Install on Android
+
+Open Spotter in Chrome on Android through HTTPS. If Spotter runs on another
+computer or server, put an HTTPS reverse proxy in front of it and open that
+HTTPS address on the phone. The plain HTTP address is suitable for local
+development on the same device, but a LAN address such as
+`http://192.168.1.20:3000` is not a secure origin and cannot be installed as a
+PWA. Tap Spotter's **Install** action when it appears, or open Chrome's menu
+and choose **Install app** or **Add to Home screen**. The app manifest includes
+192px and 512px PNG icons and a maskable icon for Android.
+
 The application currently targets a trusted, single-user deployment. Put an
 authentication-aware reverse proxy in front of it before exposing it to an
 untrusted network.

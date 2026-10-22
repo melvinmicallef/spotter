@@ -55,6 +55,12 @@ be treated as the source of truth for workout data; that belongs in IndexedDB.
 Separating these concerns makes service-worker upgrades safer and keeps workout
 records queryable by application code.
 
+The PWA manifest provides standalone display, a root start URL and scope,
+192px and 512px PNG icons, and a separate maskable Android icon. The client
+captures Chromium's install prompt when the browser exposes it. Production
+deployments opened on another device must use HTTPS for browser installation;
+localhost is suitable only when the browser is on the same development device.
+
 The light/dark appearance choice is a device-only preference stored in
 `localStorage`, separate from workout and synchronization state. A small inline
 bootstrap in the HTML applies the saved theme (or the operating-system

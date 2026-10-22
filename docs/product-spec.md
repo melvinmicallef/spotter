@@ -87,6 +87,14 @@ saved efforts and history retain their recorded units.
 
 ## Functional requirements
 
+### Installable PWA
+
+Spotter provides a web app manifest with standalone display, a root start URL,
+192px and 512px PNG icons, and a maskable Android icon. On browsers that expose
+an installation prompt, the client provides an Install action. A remote
+deployment must be opened over HTTPS for browser installation; localhost is
+reserved for development on the same device.
+
 ### Stretching poster
 
 Settings allows the user to upload one GIF, PNG, or JPEG stretching poster up
