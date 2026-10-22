@@ -364,6 +364,8 @@ export function App() {
             online={online}
             exercises={exercises}
             templates={templates}
+            routePath={pathname}
+            onNavigate={navigatePath}
             onRefresh={refreshOnlineReferences}
             onError={setMessage}
           />

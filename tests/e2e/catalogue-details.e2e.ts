@@ -156,23 +156,33 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
   await expect(disposableRow).toHaveCount(0);
 
   await page.getByRole('link', { name: 'Templates' }).click();
-  await page.getByLabel('New weekly template name').fill(planName);
+  await page.getByRole('button', { name: 'Add template' }).click();
+  await expect(page).toHaveURL(/\/templates\/new$/);
+  await page.getByLabel('Template name').fill(planName);
   await page.getByRole('button', { name: 'Create template' }).click();
-  const template = page.locator('.template-card').filter({
-    has: page.getByLabel(`${planName} name`),
-  });
-  await expect(template.getByText('Active', { exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/\/templates\/[0-9a-f-]+$/);
+  await expect(page.getByRole('heading', { name: planName })).toBeVisible();
+  await expect(page.getByText('Active', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: '← Templates' }).click();
 
-  await page.getByLabel('New weekly template name').fill(disposablePlanName);
+  await page.getByRole('button', { name: 'Add template' }).click();
+  await page.getByLabel('Template name').fill(disposablePlanName);
   await page.getByRole('button', { name: 'Create template' }).click();
-  const disposableTemplate = page.locator('.template-card').filter({
-    has: page.getByLabel(`${disposablePlanName} name`),
-  });
   page.once('dialog', (dialog) => dialog.accept());
-  await disposableTemplate
+  await page
     .getByRole('button', { name: `Delete ${disposablePlanName}` })
     .click();
-  await expect(disposableTemplate).toHaveCount(0);
+  await expect(page).toHaveURL(/\/templates$/);
+
+  const templateRow = page
+    .locator('button.template-library-row')
+    .filter({ hasText: planName });
+  await templateRow.click();
+  await page.getByRole('button', { name: `Edit ${planName}` }).click();
+  await expect(page).toHaveURL(/\/templates\/[0-9a-f-]+\/edit$/);
+  await page.reload();
+  await expect(page.getByLabel('Template name')).toHaveValue(planName);
+  const template = page.locator('.template-card');
 
   await template.getByLabel(`Add exercise to ${today}`).click();
   let picker = page.getByRole('dialog', { name: 'Choose exercises' });
@@ -207,6 +217,7 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
     .getByLabel(`${cardioName} target distance on ${today}`)
     .fill('5');
   await template.getByRole('button', { name: 'Save weekly template' }).click();
+  await expect(page).toHaveURL(/\/templates\/[0-9a-f-]+$/);
 
   await page.getByRole('link', { name: 'Workout' }).click();
   await expect(page.getByRole('button', { name: /^Start Monday/ })).toHaveCount(

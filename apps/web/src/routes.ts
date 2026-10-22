@@ -7,6 +7,12 @@ export type ExerciseRoute =
   | { kind: 'details'; exerciseId: string }
   | { kind: 'edit'; exerciseId: string };
 
+export type TemplateRoute =
+  | { kind: 'list' }
+  | { kind: 'create' }
+  | { kind: 'details'; templateId: string }
+  | { kind: 'edit'; templateId: string };
+
 const VIEW_PATHS: Record<View, string> = {
   workout: '/workout',
   history: '/history',
@@ -22,6 +28,7 @@ export function pathForView(view: View): string {
 export function viewFromPath(pathname: string): View {
   const normalized = normalizePath(pathname);
   if (normalized.startsWith('/exercises/')) return 'exercises';
+  if (normalized.startsWith('/templates/')) return 'templates';
   const match = Object.entries(VIEW_PATHS).find(
     ([, path]) => path === normalized,
   );
@@ -51,6 +58,33 @@ export function exerciseRouteFromPath(pathname: string): ExerciseRoute {
   }
   if (segments.length === 3 && isUuid(segments[1]) && segments[2] === 'edit') {
     return { kind: 'edit', exerciseId: segments[1] };
+  }
+  return { kind: 'list' };
+}
+
+export function pathForTemplate(route: TemplateRoute): string {
+  switch (route.kind) {
+    case 'list':
+      return '/templates';
+    case 'create':
+      return '/templates/new';
+    case 'details':
+      return `/templates/${route.templateId}`;
+    case 'edit':
+      return `/templates/${route.templateId}/edit`;
+  }
+}
+
+export function templateRouteFromPath(pathname: string): TemplateRoute {
+  const segments = normalizePath(pathname).split('/').filter(Boolean);
+  if (segments[0] !== 'templates') return { kind: 'list' };
+  if (segments.length === 1) return { kind: 'list' };
+  if (segments.length === 2 && segments[1] === 'new') return { kind: 'create' };
+  if (segments.length === 2 && isUuid(segments[1])) {
+    return { kind: 'details', templateId: segments[1] };
+  }
+  if (segments.length === 3 && isUuid(segments[1]) && segments[2] === 'edit') {
+    return { kind: 'edit', templateId: segments[1] };
   }
   return { kind: 'list' };
 }

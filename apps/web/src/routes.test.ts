@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest';
 import {
   exerciseRouteFromPath,
   pathForExercise,
+  pathForTemplate,
   pathForView,
+  templateRouteFromPath,
   viewFromPath,
 } from './routes.js';
 
@@ -31,6 +33,11 @@ describe('top-level routes', () => {
     expect(viewFromPath(`/exercises/${exerciseId}`)).toBe('exercises');
     expect(viewFromPath(`/exercises/${exerciseId}/edit`)).toBe('exercises');
   });
+
+  it('keeps template detail routes in the template section', () => {
+    expect(viewFromPath(`/templates/${exerciseId}`)).toBe('templates');
+    expect(viewFromPath(`/templates/${exerciseId}/edit`)).toBe('templates');
+  });
 });
 
 describe('exercise routes', () => {
@@ -50,6 +57,28 @@ describe('exercise routes', () => {
       kind: 'list',
     });
     expect(exerciseRouteFromPath(`/exercises/${exerciseId}/unknown`)).toEqual({
+      kind: 'list',
+    });
+  });
+});
+
+describe('template routes', () => {
+  it.each([
+    [{ kind: 'list' }, '/templates'],
+    [{ kind: 'create' }, '/templates/new'],
+    [{ kind: 'details', templateId: exerciseId }, `/templates/${exerciseId}`],
+    [{ kind: 'edit', templateId: exerciseId }, `/templates/${exerciseId}/edit`],
+  ] as const)('round-trips $kind', (route, path) => {
+    expect(pathForTemplate(route)).toBe(path);
+    expect(templateRouteFromPath(path)).toEqual(route);
+    expect(templateRouteFromPath(`${path}/`)).toEqual(route);
+  });
+
+  it('falls back to the list for malformed template paths', () => {
+    expect(templateRouteFromPath('/templates/not-a-uuid')).toEqual({
+      kind: 'list',
+    });
+    expect(templateRouteFromPath(`/templates/${exerciseId}/unknown`)).toEqual({
       kind: 'list',
     });
   });

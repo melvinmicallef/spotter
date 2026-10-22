@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import type {
   DayOfWeek,
@@ -8,28 +8,166 @@ import type {
 } from '@spotter/shared';
 
 import { api } from '../api.js';
+import { pathForTemplate, templateRouteFromPath } from '../routes.js';
 import { WEEKDAYS } from '../weekdays.js';
 
 interface TemplatesViewProps {
   online: boolean;
   exercises: Exercise[];
   templates: WorkoutTemplate[];
+  routePath: string;
+  onNavigate: (path: string) => void;
   onRefresh: () => Promise<void>;
   onError: (message: string) => void;
 }
 
 export function TemplatesView(props: TemplatesViewProps) {
-  const [name, setName] = useState('');
+  const screen = templateRouteFromPath(props.routePath);
+  const selectedTemplate =
+    'templateId' in screen
+      ? props.templates.find((template) => template.id === screen.templateId)
+      : undefined;
 
-  async function run(action: () => Promise<unknown>) {
+  async function run<T>(
+    action: () => Promise<T>,
+    onSuccess?: (result: T) => void,
+  ) {
     try {
-      await action();
+      const result = await action();
       await props.onRefresh();
+      onSuccess?.(result);
     } catch (error) {
       props.onError(
         error instanceof Error ? error.message : 'Template update failed',
       );
     }
+  }
+
+  const offlineNotice = !props.online && (
+    <p className="notice">
+      Template changes need a connection. Cached templates can still start
+      workouts.
+    </p>
+  );
+
+  if (screen.kind === 'create') {
+    return (
+      <TemplateEditor
+        key="new-template"
+        title="Create template"
+        submitLabel="Create template"
+        online={props.online}
+        exercises={props.exercises}
+        initial={{
+          name: '',
+          isActive: false,
+          notes: null,
+          exercises: [],
+        }}
+        notice={offlineNotice}
+        onCancel={() => props.onNavigate(pathForTemplate({ kind: 'list' }))}
+        onSubmit={(draft) =>
+          void run(
+            () => api.createTemplate(draft),
+            (createdTemplate) => {
+              props.onNavigate(
+                pathForTemplate({
+                  kind: 'details',
+                  templateId: createdTemplate.id,
+                }),
+              );
+            },
+          )
+        }
+      />
+    );
+  }
+
+  if (screen.kind === 'edit' && selectedTemplate) {
+    return (
+      <TemplateEditor
+        key={selectedTemplate.id}
+        title={`Edit ${selectedTemplate.name}`}
+        submitLabel="Save weekly template"
+        online={props.online}
+        exercises={props.exercises}
+        initial={toInput(selectedTemplate)}
+        notice={offlineNotice}
+        onCancel={() =>
+          props.onNavigate(
+            pathForTemplate({
+              kind: 'details',
+              templateId: selectedTemplate.id,
+            }),
+          )
+        }
+        onSubmit={(draft) =>
+          void run(
+            () => api.updateTemplate(selectedTemplate.id, draft),
+            () =>
+              props.onNavigate(
+                pathForTemplate({
+                  kind: 'details',
+                  templateId: selectedTemplate.id,
+                }),
+              ),
+          )
+        }
+      />
+    );
+  }
+
+  if (screen.kind === 'details' && selectedTemplate) {
+    return (
+      <TemplateDetails
+        template={selectedTemplate}
+        exercises={props.exercises}
+        online={props.online}
+        notice={offlineNotice}
+        onBack={() => props.onNavigate(pathForTemplate({ kind: 'list' }))}
+        onEdit={() =>
+          props.onNavigate(
+            pathForTemplate({
+              kind: 'edit',
+              templateId: selectedTemplate.id,
+            }),
+          )
+        }
+        onSetActive={() =>
+          void run(() =>
+            api.updateTemplate(selectedTemplate.id, {
+              ...toInput(selectedTemplate),
+              isActive: true,
+            }),
+          )
+        }
+        onDuplicate={() =>
+          void run(
+            () => api.duplicateTemplate(selectedTemplate.id),
+            (duplicate) =>
+              props.onNavigate(
+                pathForTemplate({
+                  kind: 'details',
+                  templateId: duplicate.id,
+                }),
+              ),
+          )
+        }
+        onDelete={() => {
+          if (
+            !window.confirm(
+              `Delete "${selectedTemplate.name}"? This cannot be undone.`,
+            )
+          ) {
+            return;
+          }
+          void run(
+            () => api.deleteTemplate(selectedTemplate.id),
+            () => props.onNavigate(pathForTemplate({ kind: 'list' })),
+          );
+        }}
+      />
+    );
   }
 
   return (
@@ -39,65 +177,199 @@ export function TemplatesView(props: TemplatesViewProps) {
           <span className="eyebrow">WEEKLY PLANS</span>
           <h2>Templates</h2>
         </div>
-      </div>
-      {!props.online && (
-        <p className="notice">
-          Template changes need a connection. Cached templates can still start
-          workouts.
-        </p>
-      )}
-      <fieldset disabled={!props.online}>
-        <form
-          className="inline-form"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (!name.trim()) return;
-            void run(async () => {
-              await api.createTemplate({
-                name,
-                isActive: false,
-                notes: null,
-                exercises: [],
-              });
-              setName('');
-            });
-          }}
+        <button
+          type="button"
+          disabled={!props.online}
+          onClick={() => props.onNavigate(pathForTemplate({ kind: 'create' }))}
         >
-          <input
-            aria-label="New weekly template name"
-            placeholder="New weekly template name"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-          />
-          <button type="submit">Create template</button>
-        </form>
-        <div className="stack">
+          Add template
+        </button>
+      </div>
+      {offlineNotice}
+      {props.templates.length === 0 ? (
+        <p className="empty-state">
+          No templates yet. Add your first template.
+        </p>
+      ) : (
+        <div className="template-library-list">
           {props.templates.map((template) => (
-            <TemplateCard
+            <button
+              className="template-library-row"
+              type="button"
               key={`${template.id}-${template.updatedAt}`}
-              template={template}
-              exercises={props.exercises}
-              run={run}
-            />
+              onClick={() =>
+                props.onNavigate(
+                  pathForTemplate({
+                    kind: 'details',
+                    templateId: template.id,
+                  }),
+                )
+              }
+            >
+              <span className="template-library-copy">
+                <span className="template-library-title">
+                  {template.name}
+                  {template.isActive && (
+                    <span className="active-badge">Active</span>
+                  )}
+                </span>
+                <span className="template-library-summary">
+                  {templateSummary(template)}
+                </span>
+              </span>
+              <span className="exercise-row-chevron" aria-hidden="true">
+                ›
+              </span>
+            </button>
           ))}
         </div>
-      </fieldset>
+      )}
     </section>
   );
 }
 
-function TemplateCard({
+function TemplateDetails({
   template,
   exercises,
-  run,
+  online,
+  notice,
+  onBack,
+  onEdit,
+  onSetActive,
+  onDuplicate,
+  onDelete,
 }: {
   template: WorkoutTemplate;
   exercises: Exercise[];
-  run: (action: () => Promise<unknown>) => Promise<void>;
+  online: boolean;
+  notice: ReactNode;
+  onBack: () => void;
+  onEdit: () => void;
+  onSetActive: () => void;
+  onDuplicate: () => void;
+  onDelete: () => void;
 }) {
-  const [draft, setDraft] = useState<WorkoutTemplateInput>(() =>
-    toInput(template),
+  return (
+    <section className="page-section template-details-page">
+      <button
+        className="text-button back-button"
+        type="button"
+        onClick={onBack}
+      >
+        ← Templates
+      </button>
+      {notice}
+      <div className="exercise-details-heading template-details-heading">
+        <div>
+          <span className="eyebrow">WEEKLY TEMPLATE</span>
+          <h2>{template.name}</h2>
+        </div>
+        <div className="exercise-detail-actions">
+          <button
+            className="icon-button exercise-action-button"
+            type="button"
+            aria-label={`Edit ${template.name}`}
+            disabled={!online}
+            onClick={onEdit}
+          >
+            <PencilIcon />
+          </button>
+          <button
+            className="icon-button exercise-action-button danger-text"
+            type="button"
+            aria-label={`Delete ${template.name}`}
+            disabled={!online}
+            onClick={onDelete}
+          >
+            <TrashIcon />
+          </button>
+        </div>
+      </div>
+      <div className="inline-actions template-details-actions">
+        {template.isActive ? (
+          <span className="active-badge">Active</span>
+        ) : (
+          <button
+            className="secondary"
+            type="button"
+            disabled={!online}
+            onClick={onSetActive}
+          >
+            Set active
+          </button>
+        )}
+        <button
+          className="secondary"
+          type="button"
+          disabled={!online}
+          onClick={onDuplicate}
+        >
+          Duplicate
+        </button>
+      </div>
+      {template.notes && (
+        <p className="template-details-notes">{template.notes}</p>
+      )}
+      <div className="week-grid template-details-week">
+        {WEEKDAYS.map((day) => {
+          const entries = template.exercises.filter(
+            (entry) => entry.dayOfWeek === day.value,
+          );
+          return (
+            <section className="template-day" key={day.value}>
+              <header>
+                <h3>{day.label}</h3>
+                <small>
+                  {entries.length} exercise{entries.length === 1 ? '' : 's'}
+                </small>
+              </header>
+              <div className="stack tight">
+                {entries.map((entry, index) => {
+                  const exercise = exercises.find(
+                    (item) => item.id === entry.exerciseId,
+                  );
+                  return (
+                    <div className="template-detail-entry" key={entry.id}>
+                      <strong>
+                        {index + 1}. {exercise?.name ?? entry.exerciseName}
+                      </strong>
+                      <small>{templateTargetSummary(entry, exercise)}</small>
+                      {entry.notes && <p>{entry.notes}</p>}
+                    </div>
+                  );
+                })}
+                {entries.length === 0 && (
+                  <small className="template-day-empty">Rest day</small>
+                )}
+              </div>
+            </section>
+          );
+        })}
+      </div>
+    </section>
   );
+}
+
+function TemplateEditor({
+  title,
+  submitLabel,
+  online,
+  exercises,
+  initial,
+  notice,
+  onCancel,
+  onSubmit,
+}: {
+  title: string;
+  submitLabel: string;
+  online: boolean;
+  exercises: Exercise[];
+  initial: WorkoutTemplateInput;
+  notice: ReactNode;
+  onCancel: () => void;
+  onSubmit: (draft: WorkoutTemplateInput) => void;
+}) {
+  const [draft, setDraft] = useState<WorkoutTemplateInput>(initial);
   const [pickerDay, setPickerDay] = useState<DayOfWeek>();
 
   function updateEntry(
@@ -129,287 +401,269 @@ function TemplateCard({
   }
 
   return (
-    <article className="form-card template-card">
-      <div className="template-title-row">
-        <input
-          aria-label={`${template.name} name`}
-          value={draft.name}
-          onChange={(event) => setDraft({ ...draft, name: event.target.value })}
-        />
-        {template.isActive ? (
-          <span className="active-badge">Active</span>
-        ) : (
-          <button
-            className="secondary"
-            type="button"
-            onClick={() =>
-              void run(() =>
-                api.updateTemplate(template.id, {
-                  ...draft,
-                  isActive: true,
-                }),
-              )
-            }
-          >
-            Set active
-          </button>
-        )}
-      </div>
-      <textarea
-        aria-label={`${template.name} notes`}
-        placeholder="Weekly template notes"
-        value={draft.notes ?? ''}
-        onChange={(event) =>
-          setDraft({ ...draft, notes: event.target.value || null })
-        }
-      />
-
-      <div className="week-grid">
-        {WEEKDAYS.map((day) => {
-          const entries = draft.exercises
-            .map((entry, index) => ({ entry, index }))
-            .filter(({ entry }) => entry.dayOfWeek === day.value);
-          return (
-            <section className="template-day" key={day.value}>
-              <header>
-                <h3>{day.label}</h3>
-                <small>
-                  {entries.length} exercise{entries.length === 1 ? '' : 's'}
-                </small>
-              </header>
-              <div className="stack tight">
-                {entries.map(({ entry, index }, dayIndex) => {
-                  const exercise = exercises.find(
-                    (item) => item.id === entry.exerciseId,
-                  );
-                  return (
-                    <div
-                      className="template-entry"
-                      key={entry.id ?? `${entry.exerciseId}-${index}`}
-                    >
-                      <div className="template-entry-heading">
-                        <span>
-                          <strong>{dayIndex + 1}.</strong>{' '}
-                          {exercise?.name ?? 'Unavailable exercise'}
-                          <small className="type-badge">
-                            {exercise?.exerciseType ?? 'strength'}
-                          </small>
-                        </span>
-                        <div className="inline-actions">
-                          <button
-                            className="icon-button"
-                            type="button"
-                            aria-label={`Move ${exercise?.name ?? 'exercise'} up on ${day.label}`}
-                            onClick={() => move(day.value, dayIndex, -1)}
-                          >
-                            ↑
-                          </button>
-                          <button
-                            className="icon-button"
-                            type="button"
-                            aria-label={`Move ${exercise?.name ?? 'exercise'} down on ${day.label}`}
-                            onClick={() => move(day.value, dayIndex, 1)}
-                          >
-                            ↓
-                          </button>
-                          <button
-                            className="icon-button danger-text"
-                            type="button"
-                            aria-label={`Remove ${exercise?.name ?? 'exercise'} from ${day.label}`}
-                            onClick={() =>
-                              setDraft({
-                                ...draft,
-                                exercises: draft.exercises.filter(
-                                  (_, entryIndex) => entryIndex !== index,
-                                ),
-                              })
-                            }
-                          >
-                            ×
-                          </button>
-                        </div>
-                      </div>
-                      {exercise?.exerciseType === 'cardio' ? (
-                        <div className="target-fields">
-                          <label>
-                            Target minutes
-                            <input
-                              aria-label={`${exercise.name} target minutes on ${day.label}`}
-                              type="number"
-                              min="1"
-                              value={
-                                entry.targetDurationSeconds == null
-                                  ? ''
-                                  : entry.targetDurationSeconds / 60
-                              }
-                              onChange={(event) =>
-                                updateEntry(index, {
-                                  targetDurationSeconds: event.target.value
-                                    ? Math.round(
-                                        Number(event.target.value) * 60,
-                                      )
-                                    : null,
-                                })
-                              }
-                            />
-                          </label>
-                          <label>
-                            Target distance
-                            <input
-                              aria-label={`${exercise.name} target distance on ${day.label}`}
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              value={entry.targetDistance ?? ''}
-                              onChange={(event) =>
-                                updateEntry(index, {
-                                  targetDistance: event.target.value
-                                    ? Number(event.target.value)
-                                    : null,
-                                })
-                              }
-                            />
-                          </label>
-                          <label>
-                            Unit
-                            <select
-                              aria-label={`${exercise.name} distance unit on ${day.label}`}
-                              value={entry.targetDistanceUnit}
-                              onChange={(event) =>
-                                updateEntry(index, {
-                                  targetDistanceUnit: event.target.value as
-                                    'km' | 'mi',
-                                })
-                              }
-                            >
-                              <option value="km">km</option>
-                              <option value="mi">mi</option>
-                            </select>
-                          </label>
-                        </div>
-                      ) : (
-                        <div className="target-fields">
-                          <label>
-                            Target sets
-                            <input
-                              aria-label={`${exercise?.name ?? 'Exercise'} target sets on ${day.label}`}
-                              type="number"
-                              min="1"
-                              value={entry.targetSets ?? ''}
-                              onChange={(event) =>
-                                updateEntry(index, {
-                                  targetSets: event.target.value
-                                    ? Number(event.target.value)
-                                    : null,
-                                })
-                              }
-                            />
-                          </label>
-                          <label>
-                            Target reps
-                            <input
-                              aria-label={`${exercise?.name ?? 'Exercise'} target reps on ${day.label}`}
-                              type="number"
-                              min="1"
-                              value={entry.targetReps ?? ''}
-                              onChange={(event) =>
-                                updateEntry(index, {
-                                  targetReps: event.target.value
-                                    ? Number(event.target.value)
-                                    : null,
-                                })
-                              }
-                            />
-                          </label>
-                        </div>
-                      )}
-                      <textarea
-                        aria-label={`${exercise?.name ?? 'Exercise'} template notes on ${day.label}`}
-                        placeholder="Exercise notes"
-                        value={entry.notes ?? ''}
-                        onChange={(event) =>
-                          updateEntry(index, {
-                            notes: event.target.value || null,
-                          })
-                        }
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-              <button
-                className="secondary full"
-                type="button"
-                aria-label={`Add exercise to ${day.label}`}
-                onClick={() => setPickerDay(day.value)}
-              >
-                + Add exercise
-              </button>
-            </section>
-          );
-        })}
-      </div>
-
-      {pickerDay && (
-        <ExercisePicker
-          day={pickerDay}
-          exercises={exercises}
-          entries={draft.exercises}
-          onAdd={(exercise) =>
-            setDraft((current) => ({
-              ...current,
-              exercises: [
-                ...current.exercises,
-                {
-                  exerciseId: exercise.id,
-                  dayOfWeek: pickerDay,
-                  notes: null,
-                  targetSets: null,
-                  targetReps: null,
-                  targetDurationSeconds: null,
-                  targetDistance: null,
-                  targetDistanceUnit: 'km',
-                },
-              ],
-            }))
-          }
-          onClose={() => setPickerDay(undefined)}
-        />
-      )}
-
-      <div className="inline-actions">
-        <button
-          type="button"
-          onClick={() => void run(() => api.updateTemplate(template.id, draft))}
-        >
-          Save weekly template
-        </button>
-        <button
-          className="secondary"
-          type="button"
-          onClick={() => void run(() => api.duplicateTemplate(template.id))}
-        >
-          Duplicate
-        </button>
-        <button
-          className="secondary danger-text"
-          type="button"
-          aria-label={`Delete ${template.name}`}
-          onClick={() => {
-            if (
-              !window.confirm(
-                `Delete "${template.name}"? This cannot be undone.`,
-              )
-            ) {
-              return;
-            }
-            void run(() => api.deleteTemplate(template.id));
+    <section className="page-section template-editor-page">
+      <button
+        className="text-button back-button"
+        type="button"
+        onClick={onCancel}
+      >
+        ← Back
+      </button>
+      <span className="eyebrow">WEEKLY PLANS</span>
+      <h2>{title}</h2>
+      {notice}
+      <fieldset disabled={!online}>
+        <form
+          className="form-card template-card"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (!draft.name.trim()) return;
+            onSubmit({ ...draft, name: draft.name.trim() });
           }}
         >
-          Delete
-        </button>
-      </div>
-    </article>
+          <label className="field">
+            Template name
+            <input
+              required
+              value={draft.name}
+              onChange={(event) =>
+                setDraft({ ...draft, name: event.target.value })
+              }
+            />
+          </label>
+          <label className="field">
+            Notes (optional)
+            <textarea
+              placeholder="Weekly template notes"
+              value={draft.notes ?? ''}
+              onChange={(event) =>
+                setDraft({ ...draft, notes: event.target.value || null })
+              }
+            />
+          </label>
+
+          <div className="week-grid">
+            {WEEKDAYS.map((day) => {
+              const entries = draft.exercises
+                .map((entry, index) => ({ entry, index }))
+                .filter(({ entry }) => entry.dayOfWeek === day.value);
+              return (
+                <section className="template-day" key={day.value}>
+                  <header>
+                    <h3>{day.label}</h3>
+                    <small>
+                      {entries.length} exercise{entries.length === 1 ? '' : 's'}
+                    </small>
+                  </header>
+                  <div className="stack tight">
+                    {entries.map(({ entry, index }, dayIndex) => {
+                      const exercise = exercises.find(
+                        (item) => item.id === entry.exerciseId,
+                      );
+                      return (
+                        <div
+                          className="template-entry"
+                          key={entry.id ?? `${entry.exerciseId}-${index}`}
+                        >
+                          <div className="template-entry-heading">
+                            <span>
+                              <strong>{dayIndex + 1}.</strong>{' '}
+                              {exercise?.name ?? 'Unavailable exercise'}
+                              <small className="type-badge">
+                                {exercise?.exerciseType ?? 'strength'}
+                              </small>
+                            </span>
+                            <div className="inline-actions">
+                              <button
+                                className="icon-button"
+                                type="button"
+                                aria-label={`Move ${exercise?.name ?? 'exercise'} up on ${day.label}`}
+                                onClick={() => move(day.value, dayIndex, -1)}
+                              >
+                                ↑
+                              </button>
+                              <button
+                                className="icon-button"
+                                type="button"
+                                aria-label={`Move ${exercise?.name ?? 'exercise'} down on ${day.label}`}
+                                onClick={() => move(day.value, dayIndex, 1)}
+                              >
+                                ↓
+                              </button>
+                              <button
+                                className="icon-button danger-text"
+                                type="button"
+                                aria-label={`Remove ${exercise?.name ?? 'exercise'} from ${day.label}`}
+                                onClick={() =>
+                                  setDraft({
+                                    ...draft,
+                                    exercises: draft.exercises.filter(
+                                      (_, entryIndex) => entryIndex !== index,
+                                    ),
+                                  })
+                                }
+                              >
+                                ×
+                              </button>
+                            </div>
+                          </div>
+                          {exercise?.exerciseType === 'cardio' ? (
+                            <div className="target-fields">
+                              <label>
+                                Target minutes
+                                <input
+                                  aria-label={`${exercise.name} target minutes on ${day.label}`}
+                                  type="number"
+                                  min="1"
+                                  value={
+                                    entry.targetDurationSeconds == null
+                                      ? ''
+                                      : entry.targetDurationSeconds / 60
+                                  }
+                                  onChange={(event) =>
+                                    updateEntry(index, {
+                                      targetDurationSeconds: event.target.value
+                                        ? Math.round(
+                                            Number(event.target.value) * 60,
+                                          )
+                                        : null,
+                                    })
+                                  }
+                                />
+                              </label>
+                              <label>
+                                Target distance
+                                <input
+                                  aria-label={`${exercise.name} target distance on ${day.label}`}
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  value={entry.targetDistance ?? ''}
+                                  onChange={(event) =>
+                                    updateEntry(index, {
+                                      targetDistance: event.target.value
+                                        ? Number(event.target.value)
+                                        : null,
+                                    })
+                                  }
+                                />
+                              </label>
+                              <label>
+                                Unit
+                                <select
+                                  aria-label={`${exercise.name} distance unit on ${day.label}`}
+                                  value={entry.targetDistanceUnit}
+                                  onChange={(event) =>
+                                    updateEntry(index, {
+                                      targetDistanceUnit: event.target.value as
+                                        'km' | 'mi',
+                                    })
+                                  }
+                                >
+                                  <option value="km">km</option>
+                                  <option value="mi">mi</option>
+                                </select>
+                              </label>
+                            </div>
+                          ) : (
+                            <div className="target-fields">
+                              <label>
+                                Target sets
+                                <input
+                                  aria-label={`${exercise?.name ?? 'Exercise'} target sets on ${day.label}`}
+                                  type="number"
+                                  min="1"
+                                  value={entry.targetSets ?? ''}
+                                  onChange={(event) =>
+                                    updateEntry(index, {
+                                      targetSets: event.target.value
+                                        ? Number(event.target.value)
+                                        : null,
+                                    })
+                                  }
+                                />
+                              </label>
+                              <label>
+                                Target reps
+                                <input
+                                  aria-label={`${exercise?.name ?? 'Exercise'} target reps on ${day.label}`}
+                                  type="number"
+                                  min="1"
+                                  value={entry.targetReps ?? ''}
+                                  onChange={(event) =>
+                                    updateEntry(index, {
+                                      targetReps: event.target.value
+                                        ? Number(event.target.value)
+                                        : null,
+                                    })
+                                  }
+                                />
+                              </label>
+                            </div>
+                          )}
+                          <textarea
+                            aria-label={`${exercise?.name ?? 'Exercise'} template notes on ${day.label}`}
+                            placeholder="Exercise notes"
+                            value={entry.notes ?? ''}
+                            onChange={(event) =>
+                              updateEntry(index, {
+                                notes: event.target.value || null,
+                              })
+                            }
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <button
+                    className="secondary full"
+                    type="button"
+                    aria-label={`Add exercise to ${day.label}`}
+                    onClick={() => setPickerDay(day.value)}
+                  >
+                    + Add exercise
+                  </button>
+                </section>
+              );
+            })}
+          </div>
+
+          {pickerDay && (
+            <ExercisePicker
+              day={pickerDay}
+              exercises={exercises}
+              entries={draft.exercises}
+              onAdd={(exercise) =>
+                setDraft((current) => ({
+                  ...current,
+                  exercises: [
+                    ...current.exercises,
+                    {
+                      exerciseId: exercise.id,
+                      dayOfWeek: pickerDay,
+                      notes: null,
+                      targetSets: null,
+                      targetReps: null,
+                      targetDurationSeconds: null,
+                      targetDistance: null,
+                      targetDistanceUnit: 'km',
+                    },
+                  ],
+                }))
+              }
+              onClose={() => setPickerDay(undefined)}
+            />
+          )}
+
+          <div className="inline-actions template-editor-actions">
+            <button className="secondary" type="button" onClick={onCancel}>
+              Cancel
+            </button>
+            <button type="submit">{submitLabel}</button>
+          </div>
+        </form>
+      </fieldset>
+    </section>
   );
 }
 
@@ -565,6 +819,53 @@ function ExercisePicker({
         </button>
       </section>
     </div>
+  );
+}
+
+function templateSummary(template: WorkoutTemplate): string {
+  const exerciseCount = template.exercises.length;
+  const dayCount = new Set(
+    template.exercises.map((exercise) => exercise.dayOfWeek),
+  ).size;
+  return `${exerciseCount} exercise${exerciseCount === 1 ? '' : 's'} across ${dayCount} day${dayCount === 1 ? '' : 's'}`;
+}
+
+function templateTargetSummary(
+  entry: WorkoutTemplate['exercises'][number],
+  exercise: Exercise | undefined,
+): string {
+  const parts: string[] = [];
+  if ((exercise?.exerciseType ?? entry.exerciseType) === 'cardio') {
+    if (entry.targetDurationSeconds != null) {
+      parts.push(`${entry.targetDurationSeconds / 60} min`);
+    }
+    if (entry.targetDistance != null) {
+      parts.push(`${entry.targetDistance} ${entry.targetDistanceUnit}`);
+    }
+  } else {
+    if (entry.targetSets != null) {
+      parts.push(`${entry.targetSets} set${entry.targetSets === 1 ? '' : 's'}`);
+    }
+    if (entry.targetReps != null) {
+      parts.push(`${entry.targetReps} rep${entry.targetReps === 1 ? '' : 's'}`);
+    }
+  }
+  return parts.join(' · ') || 'No targets set';
+}
+
+function PencilIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M4 20h4l11-11-4-4L4 16v4Zm13-17 4 4-2 2-4-4 2-2Z" />
+    </svg>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M8 4h8l1 2h4v2H3V6h4l1-2Zm-2 6h12l-1 10H7L6 10Zm3 2v6h2v-6H9Zm4 0v6h2v-6h-2Z" />
+    </svg>
   );
 }
 
