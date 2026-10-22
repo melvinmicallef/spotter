@@ -170,8 +170,10 @@ weekday are supported, and the template editor can swap full workout days,
 including their exercises, targets, and names. Template-wide notes are no
 longer part of the template editor. History shows exercise names,
 opens completed-workout details, and supports online set-value and set-count
-edits without changing a workout's exercise list. Strength exercise details
-include Epley estimated one-rep max and training-volume graphs by workout date.
+edits without changing a workout's exercise list. Interval history has a
+dedicated editor for its prep, work, rest, rounds, and recorded work time.
+Strength exercise details include Epley estimated one-rep max and
+training-volume graphs by workout date.
 
 ## Run the production image
 

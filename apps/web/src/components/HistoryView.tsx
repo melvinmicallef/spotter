@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import type { Workout, WorkoutSet } from '@spotter/shared';
+import type { Workout, WorkoutExercise, WorkoutSet } from '@spotter/shared';
 
 import { convertDistance, convertWeight } from '../measurement-system.js';
 import type { DistanceUnit, WeightUnit } from '../measurement-system.js';
@@ -190,13 +190,57 @@ function HistoryDetailsPage({
     );
   }
 
+  function changeIntervalSettings(
+    exerciseId: string,
+    patch: Partial<
+      Pick<
+        WorkoutExercise,
+        | 'intervalPrepSeconds'
+        | 'intervalWorkSeconds'
+        | 'intervalRestSeconds'
+        | 'intervalIterations'
+      >
+    >,
+  ) {
+    setDraft((current) =>
+      current
+        ? {
+            ...current,
+            exercises: current.exercises.map((exercise) =>
+              exercise.id === exerciseId ? { ...exercise, ...patch } : exercise,
+            ),
+          }
+        : current,
+    );
+  }
+
+  function changeIntervalWorkDuration(
+    exerciseId: string,
+    durationSeconds: number | null,
+  ) {
+    setDraft((current) => {
+      if (!current) return current;
+      return {
+        ...current,
+        exercises: current.exercises.map((exercise) => {
+          if (exercise.id !== exerciseId) return exercise;
+          const result = exercise.sets[0] ?? createIntervalResultSet();
+          return {
+            ...exercise,
+            sets: [{ ...result, position: 0, durationSeconds }],
+          };
+        }),
+      };
+    });
+  }
+
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!draft) return;
     setSaving(true);
     setSaveError(null);
     try {
-      const updated = await onSaveWorkout(draft);
+      const updated = await onSaveWorkout(normalizeIntervalResults(draft));
       setSavedWorkout(updated);
       setDraft(null);
     } catch (error) {
@@ -257,7 +301,7 @@ function HistoryDetailsPage({
                 ? 'Connect to edit workout history'
                 : !canEdit
                   ? 'Sync this workout before editing it'
-                  : 'Edit recorded sets'
+                  : 'Edit recorded workout values'
             }
             onClick={() => {
               setDraft(currentWorkout);
@@ -283,165 +327,162 @@ function HistoryDetailsPage({
           className="history-workout-exercises"
           onSubmit={(event) => void save(event)}
         >
-          {currentWorkout.exercises.map((exercise) => (
-            <article
-              className="card history-exercise history-edit-exercise"
-              key={exercise.id}
-            >
-              <header>
-                <div>
-                  <h3>{exercise.exerciseName}</h3>
-                  <small className="type-badge">{exercise.exerciseType}</small>
-                </div>
-                {!(
-                  exercise.exerciseType === 'cardio' &&
-                  exercise.cardioMode === 'interval'
-                ) && (
-                  <span className="history-edit-count">
-                    {exercise.sets.length}{' '}
-                    {exercise.sets.length === 1 ? 'set' : 'sets'}
-                  </span>
-                )}
-              </header>
-              <div className="history-edit-set-list">
-                {exercise.sets.map((set, setIndex) => (
-                  <div
-                    className={`history-edit-set ${exercise.exerciseType}-edit-set${exercise.exerciseType === 'cardio' && exercise.cardioMode === 'interval' ? ' interval-cardio-edit-set' : ''}`}
-                    key={set.id}
-                  >
-                    <strong>
-                      {exercise.exerciseType === 'cardio' &&
-                      exercise.cardioMode === 'interval'
-                        ? 'Work total'
-                        : `Set ${setIndex + 1}`}
-                    </strong>
-                    {exercise.exerciseType === 'cardio' ? (
-                      <>
-                        <label>
-                          {exercise.cardioMode === 'interval'
-                            ? 'Work duration (seconds)'
-                            : 'Duration (seconds)'}
-                          <input
-                            inputMode="numeric"
-                            type="number"
-                            min="0"
-                            value={set.durationSeconds ?? ''}
-                            onChange={(event) =>
-                              changeSet(exercise.id, set.id, {
-                                durationSeconds: inputNumber(
-                                  event.target.value,
-                                ),
-                              })
-                            }
-                          />
-                        </label>
-                        {exercise.cardioMode !== 'interval' && (
-                          <label>
-                            Distance ({distanceUnit})
-                            <input
-                              inputMode="decimal"
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              value={
-                                convertDistance(
-                                  set.distance,
-                                  set.distanceUnit,
-                                  distanceUnit,
-                                ) ?? ''
-                              }
-                              onChange={(event) =>
-                                changeSet(exercise.id, set.id, {
-                                  distance: inputNumber(event.target.value),
-                                  distanceUnit,
-                                })
-                              }
-                            />
-                          </label>
-                        )}
-                      </>
-                    ) : (
-                      <>
-                        {exercise.exerciseType === 'strength' && (
-                          <label>
-                            Weight ({weightUnit})
-                            <input
-                              inputMode="decimal"
-                              type="number"
-                              min="0"
-                              step="0.1"
-                              value={
-                                convertWeight(
-                                  set.weight,
-                                  set.weightUnit,
-                                  weightUnit,
-                                ) ?? ''
-                              }
-                              onChange={(event) =>
-                                changeSet(exercise.id, set.id, {
-                                  weight: inputNumber(event.target.value),
-                                  weightUnit,
-                                })
-                              }
-                            />
-                          </label>
-                        )}
-                        <label>
-                          Reps
-                          <input
-                            inputMode="numeric"
-                            type="number"
-                            min="0"
-                            value={set.reps ?? ''}
-                            onChange={(event) =>
-                              changeSet(exercise.id, set.id, {
-                                reps: inputNumber(event.target.value),
-                              })
-                            }
-                          />
-                        </label>
-                      </>
-                    )}
-                    {!(
-                      exercise.exerciseType === 'cardio' &&
-                      exercise.cardioMode === 'interval'
-                    ) && (
-                      <button
-                        className="icon-button danger-text history-remove-set"
-                        type="button"
-                        aria-label={`Remove ${exercise.exerciseName} set ${setIndex + 1}`}
-                        onClick={() =>
-                          setDraft((current) =>
-                            current
-                              ? removeSet(current, exercise.id, set.id)
-                              : current,
-                          )
-                        }
-                      >
-                        ×
-                      </button>
-                    )}
+          {currentWorkout.exercises.map((exercise) => {
+            const interval = isIntervalCardio(exercise);
+            return (
+              <article
+                className="card history-exercise history-edit-exercise"
+                key={exercise.id}
+              >
+                <header>
+                  <div>
+                    <h3>{exercise.exerciseName}</h3>
+                    <small className="type-badge">
+                      {exercise.exerciseType}
+                    </small>
                   </div>
-                ))}
-              </div>
-              {!(
-                exercise.exerciseType === 'cardio' &&
-                exercise.cardioMode === 'interval'
-              ) && (
-                <button
-                  className="secondary history-add-set"
-                  type="button"
-                  onClick={() =>
-                    setDraft((current) =>
-                      current ? addSet(current, exercise.id) : current,
-                    )
-                  }
-                >
-                  + Add set
-                </button>
-              )}
-            </article>
-          ))}
+                  {!interval && (
+                    <span className="history-edit-count">
+                      {exercise.sets.length}{' '}
+                      {exercise.sets.length === 1 ? 'set' : 'sets'}
+                    </span>
+                  )}
+                </header>
+                {interval ? (
+                  <IntervalHistoryEditor
+                    exercise={exercise}
+                    onChangeSettings={(patch) =>
+                      changeIntervalSettings(exercise.id, patch)
+                    }
+                    onChangeWorkDuration={(durationSeconds) =>
+                      changeIntervalWorkDuration(exercise.id, durationSeconds)
+                    }
+                  />
+                ) : (
+                  <>
+                    <div className="history-edit-set-list">
+                      {exercise.sets.map((set, setIndex) => (
+                        <div
+                          className={`history-edit-set ${exercise.exerciseType}-edit-set`}
+                          key={set.id}
+                        >
+                          <strong>Set {setIndex + 1}</strong>
+                          {exercise.exerciseType === 'cardio' ? (
+                            <>
+                              <label>
+                                Duration (seconds)
+                                <input
+                                  inputMode="numeric"
+                                  type="number"
+                                  min="0"
+                                  value={set.durationSeconds ?? ''}
+                                  onChange={(event) =>
+                                    changeSet(exercise.id, set.id, {
+                                      durationSeconds: inputNumber(
+                                        event.target.value,
+                                      ),
+                                    })
+                                  }
+                                />
+                              </label>
+                              <label>
+                                Distance ({distanceUnit})
+                                <input
+                                  inputMode="decimal"
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  value={
+                                    convertDistance(
+                                      set.distance,
+                                      set.distanceUnit,
+                                      distanceUnit,
+                                    ) ?? ''
+                                  }
+                                  onChange={(event) =>
+                                    changeSet(exercise.id, set.id, {
+                                      distance: inputNumber(event.target.value),
+                                      distanceUnit,
+                                    })
+                                  }
+                                />
+                              </label>
+                            </>
+                          ) : (
+                            <>
+                              {exercise.exerciseType === 'strength' && (
+                                <label>
+                                  Weight ({weightUnit})
+                                  <input
+                                    inputMode="decimal"
+                                    type="number"
+                                    min="0"
+                                    step="0.1"
+                                    value={
+                                      convertWeight(
+                                        set.weight,
+                                        set.weightUnit,
+                                        weightUnit,
+                                      ) ?? ''
+                                    }
+                                    onChange={(event) =>
+                                      changeSet(exercise.id, set.id, {
+                                        weight: inputNumber(event.target.value),
+                                        weightUnit,
+                                      })
+                                    }
+                                  />
+                                </label>
+                              )}
+                              <label>
+                                Reps
+                                <input
+                                  inputMode="numeric"
+                                  type="number"
+                                  min="0"
+                                  value={set.reps ?? ''}
+                                  onChange={(event) =>
+                                    changeSet(exercise.id, set.id, {
+                                      reps: inputNumber(event.target.value),
+                                    })
+                                  }
+                                />
+                              </label>
+                            </>
+                          )}
+                          <button
+                            className="icon-button danger-text history-remove-set"
+                            type="button"
+                            aria-label={`Remove ${exercise.exerciseName} set ${setIndex + 1}`}
+                            onClick={() =>
+                              setDraft((current) =>
+                                current
+                                  ? removeSet(current, exercise.id, set.id)
+                                  : current,
+                              )
+                            }
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <button
+                      className="secondary history-add-set"
+                      type="button"
+                      onClick={() =>
+                        setDraft((current) =>
+                          current ? addSet(current, exercise.id) : current,
+                        )
+                      }
+                    >
+                      + Add set
+                    </button>
+                  </>
+                )}
+              </article>
+            );
+          })}
         </form>
       ) : (
         <div className="history-workout-exercises">
@@ -450,47 +491,175 @@ function HistoryDetailsPage({
               {currentWorkout.notes}
             </article>
           )}
-          {currentWorkout.exercises.map((exercise) => (
-            <article className="card history-exercise" key={exercise.id}>
-              <header>
-                <h3>{exercise.exerciseName}</h3>
-                <small className="type-badge">{exercise.exerciseType}</small>
-              </header>
-              {exercise.notes && <p>{exercise.notes}</p>}
-              {exercise.exerciseType === 'cardio' && (
-                <p className="history-cardio-target">
-                  {exercise.cardioMode === 'interval'
-                    ? `Interval · ${exercise.intervalIterations ?? 0} rounds · Prep ${formatClock(exercise.intervalPrepSeconds ?? 0)} · Work ${formatClock(exercise.intervalWorkSeconds ?? 0)} · Rest ${formatClock(exercise.intervalRestSeconds ?? 0)}`
-                    : exercise.targetDurationSeconds == null
-                      ? null
-                      : `Duration target · ${formatClock(exercise.targetDurationSeconds)}`}
-                </p>
-              )}
-              <ol>
-                {exercise.sets.map((set, index) => (
-                  <li key={set.id}>
-                    <span>
-                      {exercise.exerciseType === 'cardio' &&
-                      exercise.cardioMode === 'interval'
-                        ? 'Work total · '
-                        : `Set ${index + 1} · `}
-                    </span>
-                    <span>
-                      {exercise.exerciseType === 'cardio'
-                        ? formatCardioEffort(set, exercise.cardioMode)
-                        : exercise.exerciseType === 'calisthenics'
-                          ? formatCalisthenicsSet(set)
-                          : formatStrengthSet(set)}
-                    </span>
-                    {set.notes && <small>{set.notes}</small>}
-                  </li>
-                ))}
-              </ol>
-            </article>
-          ))}
+          {currentWorkout.exercises.map((exercise) => {
+            const interval = isIntervalCardio(exercise);
+            const intervalWorkSeconds = interval
+              ? totalIntervalWorkSeconds(exercise.sets)
+              : null;
+            return (
+              <article className="card history-exercise" key={exercise.id}>
+                <header>
+                  <h3>{exercise.exerciseName}</h3>
+                  <small className="type-badge">{exercise.exerciseType}</small>
+                </header>
+                {exercise.notes && <p>{exercise.notes}</p>}
+                {exercise.exerciseType === 'cardio' && (
+                  <p className="history-cardio-target">
+                    {interval
+                      ? `Interval · ${exercise.intervalIterations ?? 0} rounds · Prep ${formatClock(exercise.intervalPrepSeconds ?? 0)} · Work ${formatClock(exercise.intervalWorkSeconds ?? 0)} · Rest ${formatClock(exercise.intervalRestSeconds ?? 0)}`
+                      : exercise.targetDurationSeconds == null
+                        ? null
+                        : `Duration target · ${formatClock(exercise.targetDurationSeconds)}`}
+                  </p>
+                )}
+                {interval ? (
+                  <p className="history-interval-result">
+                    Total work time ·{' '}
+                    {intervalWorkSeconds == null
+                      ? 'No result'
+                      : formatDuration(intervalWorkSeconds)}
+                  </p>
+                ) : (
+                  <ol>
+                    {exercise.sets.map((set, index) => (
+                      <li key={set.id}>
+                        <span>{`Set ${index + 1} · `}</span>
+                        <span>
+                          {exercise.exerciseType === 'cardio'
+                            ? formatCardioEffort(set)
+                            : exercise.exerciseType === 'calisthenics'
+                              ? formatCalisthenicsSet(set)
+                              : formatStrengthSet(set)}
+                        </span>
+                        {set.notes && <small>{set.notes}</small>}
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </article>
+            );
+          })}
         </div>
       )}
     </section>
+  );
+}
+
+function IntervalHistoryEditor({
+  exercise,
+  onChangeSettings,
+  onChangeWorkDuration,
+}: {
+  exercise: WorkoutExercise;
+  onChangeSettings: (
+    patch: Partial<
+      Pick<
+        WorkoutExercise,
+        | 'intervalPrepSeconds'
+        | 'intervalWorkSeconds'
+        | 'intervalRestSeconds'
+        | 'intervalIterations'
+      >
+    >,
+  ) => void;
+  onChangeWorkDuration: (durationSeconds: number | null) => void;
+}) {
+  return (
+    <div className="history-interval-editor">
+      <div className="history-interval-settings">
+        <strong>Interval settings</strong>
+        <label>
+          Prep time (seconds)
+          <input
+            aria-label={`${exercise.exerciseName} prep time in history`}
+            inputMode="numeric"
+            type="number"
+            min="0"
+            max={7 * 24 * 60 * 60}
+            value={exercise.intervalPrepSeconds ?? 0}
+            onChange={(event) =>
+              onChangeSettings({
+                intervalPrepSeconds: boundedInteger(
+                  event.target.value,
+                  0,
+                  7 * 24 * 60 * 60,
+                ),
+              })
+            }
+          />
+        </label>
+        <label>
+          Work time (seconds)
+          <input
+            aria-label={`${exercise.exerciseName} work time in history`}
+            inputMode="numeric"
+            type="number"
+            min="1"
+            max={7 * 24 * 60 * 60}
+            value={exercise.intervalWorkSeconds ?? 30}
+            onChange={(event) =>
+              onChangeSettings({
+                intervalWorkSeconds: boundedInteger(
+                  event.target.value,
+                  1,
+                  7 * 24 * 60 * 60,
+                ),
+              })
+            }
+          />
+        </label>
+        <label>
+          Rest time (seconds)
+          <input
+            aria-label={`${exercise.exerciseName} rest time in history`}
+            inputMode="numeric"
+            type="number"
+            min="0"
+            max={7 * 24 * 60 * 60}
+            value={exercise.intervalRestSeconds ?? 30}
+            onChange={(event) =>
+              onChangeSettings({
+                intervalRestSeconds: boundedInteger(
+                  event.target.value,
+                  0,
+                  7 * 24 * 60 * 60,
+                ),
+              })
+            }
+          />
+        </label>
+        <label>
+          Rounds
+          <input
+            aria-label={`${exercise.exerciseName} rounds in history`}
+            inputMode="numeric"
+            type="number"
+            min="1"
+            max="999"
+            value={exercise.intervalIterations ?? 8}
+            onChange={(event) =>
+              onChangeSettings({
+                intervalIterations: boundedInteger(event.target.value, 1, 999),
+              })
+            }
+          />
+        </label>
+      </div>
+      <label className="history-interval-work-duration">
+        Total work time (seconds)
+        <input
+          aria-label={`${exercise.exerciseName} total work time in history`}
+          inputMode="numeric"
+          type="number"
+          min="0"
+          max={7 * 24 * 60 * 60}
+          value={totalIntervalWorkSeconds(exercise.sets) ?? ''}
+          onChange={(event) =>
+            onChangeWorkDuration(inputIntegerOrNull(event.target.value))
+          }
+        />
+      </label>
+    </div>
   );
 }
 
@@ -535,17 +704,76 @@ function formatCalisthenicsSet(set: WorkoutSet) {
   return set.reps == null ? '— reps' : `${set.reps} reps`;
 }
 
-function formatCardioEffort(
-  set: WorkoutSet,
-  cardioMode?: 'duration' | 'interval',
-) {
+function formatCardioEffort(set: WorkoutSet) {
   const measurements = [
     set.durationSeconds == null ? null : formatDuration(set.durationSeconds),
-    cardioMode === 'interval' || set.distance == null
-      ? null
-      : `${set.distance} ${set.distanceUnit}`,
+    set.distance == null ? null : `${set.distance} ${set.distanceUnit}`,
   ].filter(Boolean);
   return measurements.length > 0 ? measurements.join(' · ') : 'No result';
+}
+
+function isIntervalCardio(exercise: WorkoutExercise) {
+  return (
+    exercise.exerciseType === 'cardio' && exercise.cardioMode === 'interval'
+  );
+}
+
+function totalIntervalWorkSeconds(sets: WorkoutSet[]) {
+  const durations = sets
+    .map((set) => set.durationSeconds)
+    .filter((duration): duration is number => duration != null);
+  return durations.length > 0
+    ? durations.reduce((total, duration) => total + duration, 0)
+    : null;
+}
+
+function normalizeIntervalResults(workout: Workout): Workout {
+  return {
+    ...workout,
+    exercises: workout.exercises.map((exercise) => {
+      if (!isIntervalCardio(exercise) || exercise.sets.length === 0)
+        return exercise;
+      const result = exercise.sets[0]!;
+      return {
+        ...exercise,
+        sets: [
+          {
+            ...result,
+            position: 0,
+            durationSeconds: totalIntervalWorkSeconds(exercise.sets),
+            distance: null,
+          },
+        ],
+      };
+    }),
+  };
+}
+
+function createIntervalResultSet(): WorkoutSet {
+  return {
+    id: crypto.randomUUID(),
+    position: 0,
+    reps: null,
+    weight: null,
+    weightUnit: 'kg',
+    durationSeconds: null,
+    distance: null,
+    distanceUnit: 'km',
+    notes: null,
+    completed: true,
+  };
+}
+
+function boundedInteger(value: string, min: number, max: number) {
+  if (value === '') return min;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return min;
+  return Math.max(min, Math.min(max, Math.floor(parsed)));
+}
+
+function inputIntegerOrNull(value: string) {
+  if (value === '') return null;
+  return boundedInteger(value, 0, 7 * 24 * 60 * 60);
 }
 
 function inputNumber(value: string): number | null {

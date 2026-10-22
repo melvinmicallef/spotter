@@ -457,6 +457,33 @@ export class SpotterStore {
         );
       }
 
+      const intervalSettingKeys = [
+        'intervalPrepSeconds',
+        'intervalWorkSeconds',
+        'intervalRestSeconds',
+        'intervalIterations',
+      ] as const;
+      for (const edited of input.exercises) {
+        const original = workout.exercises.find(
+          (exercise) => exercise.id === edited.id,
+        )!;
+        const providedIntervalSettings = intervalSettingKeys.filter(
+          (key) => edited[key] !== undefined,
+        );
+        if (
+          providedIntervalSettings.length > 0 &&
+          (original.exerciseType !== 'cardio' ||
+            original.cardioMode !== 'interval' ||
+            providedIntervalSettings.length !== intervalSettingKeys.length)
+        ) {
+          throw new AppError(
+            400,
+            'INVALID_INTERVAL_SETTINGS',
+            'Interval history edits must include all four settings for an interval exercise',
+          );
+        }
+      }
+
       const existingSetOwner = new Map(
         workout.exercises.flatMap((exercise) =>
           exercise.sets.map((set) => [set.id, exercise.id] as const),
@@ -521,10 +548,24 @@ export class SpotterStore {
           duration_seconds, distance, distance_unit, notes, completed)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       );
+      const updateIntervalSettings = this.database.prepare(
+        `UPDATE workout_exercises SET interval_prep_seconds = ?,
+         interval_work_seconds = ?, interval_rest_seconds = ?,
+         interval_iterations = ? WHERE id = ?`,
+      );
       for (const edited of input.exercises) {
         const original = workout.exercises.find(
           (exercise) => exercise.id === edited.id,
         )!;
+        if (edited.intervalPrepSeconds !== undefined) {
+          updateIntervalSettings.run(
+            edited.intervalPrepSeconds,
+            edited.intervalWorkSeconds,
+            edited.intervalRestSeconds,
+            edited.intervalIterations,
+            edited.id,
+          );
+        }
         const originalSets = new Map(original.sets.map((set) => [set.id, set]));
         deleteSets.run(edited.id);
         edited.sets.forEach((set, position) => {

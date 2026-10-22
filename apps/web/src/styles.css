@@ -1613,9 +1613,6 @@ small {
 .history-edit-set.calisthenics-edit-set {
   grid-template-columns: 52px minmax(0, 1fr) 36px;
 }
-.history-edit-set.interval-cardio-edit-set {
-  grid-template-columns: 82px minmax(0, 1fr);
-}
 .history-edit-set > strong {
   align-self: center;
   color: var(--text-muted);
@@ -1638,6 +1635,42 @@ small {
 }
 .history-add-set {
   align-self: flex-start;
+}
+.history-interval-editor {
+  display: grid;
+  gap: 12px;
+}
+.history-interval-settings {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  align-items: end;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-deep);
+}
+.history-interval-settings > strong {
+  grid-column: 1 / -1;
+}
+.history-interval-settings > label,
+.history-interval-work-duration {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+.history-interval-settings input,
+.history-interval-work-duration input {
+  width: 100%;
+}
+.history-interval-work-duration {
+  max-width: 260px;
+}
+.history-interval-result {
+  color: var(--text-secondary);
+  font-weight: 700;
 }
 .history-edit-error {
   color: var(--notice-text);

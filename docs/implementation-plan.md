@@ -134,7 +134,8 @@ snapshot for any populated day.
 - Finish a workout and view history.
 - Show exercise names in the history list and open completed workout details.
 - Edit historical set counts and measurements online without changing the
-  workout's exercise entries or order.
+  workout's exercise entries or order. Edit interval settings and total work
+  time without presenting interval results as sets.
 - Show dated Epley estimated one-rep max and total training volume charts on
   weighted strength exercise details.
 - Historical display remains valid after catalogue or template changes.
@@ -144,7 +145,8 @@ snapshot for any populated day.
 - Single or multiple active workouts.
 - Launch measurement types and unit behavior.
 - Completed-history edits are online-only and cannot change exercise entries or
-  their order; this policy is recorded in the product specification.
+  their order. Interval history edits use interval settings and a single total
+  work-time result instead of set controls.
 
 ### Exit gate
 

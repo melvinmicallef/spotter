@@ -105,9 +105,10 @@ work stages skipped early. Before starting, the timer shows the planned total
 duration calculated as prep + (work × iterations) + (rest × (iterations − 1)).
 Duration cardio results can include distance with
 explicit `km` or `mi` units; interval results do not include distance. History
-shows interval settings and recorded work duration and allows editing that
-duration without a distance field. The UI must show only the fields that apply
-to the exercise type. Weight and distance entry use the units derived from the
+shows interval settings and recorded work duration. Its editor changes prep,
+work, rest, rounds, and the total recorded work time without exposing set or
+distance fields. The UI must show only the fields that apply to the exercise
+type. Weight and distance entry use the units derived from the
 Metric or Imperial system selected in device Settings.
 Changing that preference converts displayed active-workout and template target
 values while saved efforts and history retain their recorded units.
@@ -256,8 +257,9 @@ A user can:
   and exercise names;
 - open a completed workout's details page and edit its recorded set count,
   repetitions, weight, duration, or distance without adding, removing, or
-  reordering its exercise entries. Interval cardio keeps one work-total record
-  and allows editing its duration without distance;
+  reordering its exercise entries. Interval cardio has a dedicated history
+  editor for its prep, work, rest, rounds, and total recorded work time, with no
+  set-count or distance fields;
 - view a strength exercise's progress over workout dates using Epley estimated
   one-rep max and total training volume (weight × repetitions summed across
   sets); and
@@ -268,8 +270,9 @@ required reference data have been loaded at least once.
 Deleting history is online-only. Pending workout changes must synchronize before
 deletion so an older outbox operation cannot recreate the deleted workout.
 Completed-history edits are also online-only and require pending workout changes
-to synchronize first. They can change only set values and set counts; exercise
-entries and their snapshots remain fixed.
+to synchronize first. They can change set values and set counts for strength,
+calisthenics, and duration cardio. Interval cardio edits its timer settings and
+recorded total work time. Exercise entries and their snapshots remain fixed.
 
 ## Offline contract
 

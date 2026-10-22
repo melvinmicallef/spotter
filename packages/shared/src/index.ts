@@ -537,6 +537,25 @@ export const completedWorkoutEditSchema = z
           .object({
             id: uuidSchema,
             sets: z.array(completedWorkoutSetEditSchema).max(200),
+            intervalPrepSeconds: z
+              .number()
+              .int()
+              .min(0)
+              .max(7 * 24 * 60 * 60)
+              .optional(),
+            intervalWorkSeconds: z
+              .number()
+              .int()
+              .positive()
+              .max(7 * 24 * 60 * 60)
+              .optional(),
+            intervalRestSeconds: z
+              .number()
+              .int()
+              .min(0)
+              .max(7 * 24 * 60 * 60)
+              .optional(),
+            intervalIterations: z.number().int().positive().max(999).optional(),
           })
           .strict(),
       )

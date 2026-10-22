@@ -471,6 +471,15 @@ export function App() {
     const updatedWorkout = await api.updateCompletedWorkout(workout.id, {
       exercises: workout.exercises.map((exercise) => ({
         id: exercise.id,
+        ...(exercise.exerciseType === 'cardio' &&
+        exercise.cardioMode === 'interval'
+          ? {
+              intervalPrepSeconds: exercise.intervalPrepSeconds ?? 0,
+              intervalWorkSeconds: exercise.intervalWorkSeconds ?? 30,
+              intervalRestSeconds: exercise.intervalRestSeconds ?? 30,
+              intervalIterations: exercise.intervalIterations ?? 8,
+            }
+          : {}),
         sets: exercise.sets.map((set) => ({
           id: set.id,
           reps: set.reps,

@@ -48,7 +48,7 @@ baseline.
 | Offline database       | IndexedDB                                                                                            |
 | Offline writes         | Active workout tracking, including starting, resuming, recording, and finishing                      |
 | Offline reference data | Cached read-only muscles, exercises, and templates needed to log a workout                           |
-| Completed history      | Online set-value and set-count edits; exercise entries and snapshots remain fixed                    |
+| Completed history      | Online set edits; interval timer and work edits; fixed exercise roster                               |
 | Online-only writes     | Creating, editing, reordering, or deleting exercises and templates                                   |
 | Muscle catalogue       | Built-in ExRx leaf muscles grouped under non-selectable parent headings                              |
 | Synchronization        | Durable outbox, client-generated IDs, idempotent server application, automatic retry after reconnect |
@@ -176,7 +176,8 @@ introduced without replacing the workout model or synchronization core.
   duration cardio with optional distance, interval cardio with a skippable
   stage timer and distance-free history, previous-set hints, collapsible
   completed exercises, a shared stretching poster, and history detail pages
-  with online set-value editing. History edits cannot change exercise entries
+  with online editing. Interval history uses its timer settings and total work
+  time instead of set controls. History edits cannot change exercise entries
   or their order. Strength exercise details show dated Epley estimated one-rep
   max and training-volume charts. The deployment remains trusted and
   single-user without built-in authentication.

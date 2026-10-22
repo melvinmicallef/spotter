@@ -472,10 +472,11 @@ repetitions without weight, duration cardio with optional distance, and
 interval timers that record work duration without distance. Metric is the
 device-local default. Settings converts active entry and template target
 displays while preserving recorded units in completed history. Completed
-history supports online set-value and set-count edits only after pending outbox
-work has synchronized; exercise entries and their order remain fixed. Strength
-exercise details graph Epley estimated one-rep max and total training volume by
-workout date. Workout entries retain their progress locally, including
+history supports online set-value and set-count edits for strength,
+calisthenics, and duration cardio, plus interval setting and total-work edits,
+only after pending outbox work has synchronized; exercise entries and their
+order remain fixed. Strength exercise details graph Epley estimated one-rep max
+and total training volume by workout date. Workout entries retain their progress locally, including
 completion state and interval timer checkpoints. The deployment remains
 trusted and single-user without built-in authentication; the API layer remains
 the boundary for adding actor and ownership context later.
