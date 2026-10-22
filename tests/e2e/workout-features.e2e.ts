@@ -106,7 +106,7 @@ test('records typed sets, previous values, and an audible interval timer', async
           targetReps: null,
           targetDurationSeconds: null,
           cardioMode: 'duration',
-          targetDistance: null,
+          targetDistance: 2.5,
           targetDistanceUnit: 'km',
         },
         {
@@ -228,6 +228,9 @@ test('records typed sets, previous values, and an audible interval timer', async
     `${cardioName} cardio mode on ${todayName}`,
   );
   await cardioMode.selectOption('interval');
+  await expect(
+    templateCard.getByLabel(`${cardioName} target distance on ${todayName}`),
+  ).toHaveCount(0);
   await templateCard
     .getByLabel(`${cardioName} prep time on ${todayName} seconds`)
     .fill('20');
@@ -254,6 +257,7 @@ test('records typed sets, previous values, and an audible interval timer', async
       intervalWorkSeconds: number | null;
       intervalRestSeconds: number | null;
       intervalIterations: number | null;
+      targetDistance: number | null;
     }>;
   }>;
   const savedInterval = savedTemplates
@@ -265,6 +269,7 @@ test('records typed sets, previous values, and an audible interval timer', async
     intervalWorkSeconds: 20,
     intervalRestSeconds: 0,
     intervalIterations: 1,
+    targetDistance: null,
   });
 
   await page.getByRole('link', { name: 'Workout' }).click();
@@ -282,6 +287,7 @@ test('records typed sets, previous values, and an audible interval timer', async
   const cardioCard = page
     .locator('article.workout-card')
     .filter({ hasText: cardioName });
+  await expect(cardioCard.locator('.target-summary')).not.toContainText('km');
 
   await expect(
     strengthCard.getByLabel(`${strengthName} weight set 1`),

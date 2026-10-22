@@ -90,13 +90,14 @@ not change the workout's history.
 
 A strength effort supports repetitions and optional weight with explicit `kg`
 or `lb` units. A calisthenics effort supports repetitions without a weight
-field. A duration cardio entry stores one duration in seconds and optional
-distance. An interval plan stores its prep, work, and rest durations and
-iteration count with both the template entry and workout snapshot. The workout
-timer beeps for the last five seconds of each stage and when a stage changes;
-finishing the timer records total work time. Cardio results retain duration
-and distance with explicit `km` or `mi` units. The UI must show only the fields
-that apply to the exercise type. Weight and distance entry use the units
+field. A duration cardio entry stores one duration in seconds and an optional
+target distance. An interval plan stores prep, work, and rest durations plus
+iteration count in the template entry and workout snapshot; interval plans have
+no target distance. The workout timer beeps for the last five seconds of each
+stage and when a stage changes; finishing the timer records total work time.
+Cardio results retain duration and distance with explicit `km` or `mi` units,
+including distance recorded as an interval result. The UI must show only the
+fields that apply to the exercise type. Weight and distance entry use the units
 derived from the Metric or Imperial system selected in device Settings.
 Changing that preference converts displayed active-workout and template target
 values while saved efforts and history retain their recorded units.

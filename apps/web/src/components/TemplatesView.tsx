@@ -573,6 +573,10 @@ function TemplateEditor({
                                         cardioMode === 'duration'
                                           ? entry.targetDurationSeconds
                                           : null,
+                                      targetDistance:
+                                        cardioMode === 'duration'
+                                          ? entry.targetDistance
+                                          : null,
                                       intervalPrepSeconds:
                                         cardioMode === 'interval'
                                           ? (entry.intervalPrepSeconds ?? 0)
@@ -665,31 +669,34 @@ function TemplateEditor({
                                   </label>
                                 </>
                               )}
-                              <label>
-                                Target distance ({distanceUnit})
-                                <input
-                                  aria-label={`${exercise.name} target distance on ${day.label}`}
-                                  inputMode="decimal"
-                                  type="number"
-                                  min="0"
-                                  step="0.01"
-                                  value={
-                                    convertDistance(
-                                      entry.targetDistance,
-                                      entry.targetDistanceUnit,
-                                      distanceUnit,
-                                    ) ?? ''
-                                  }
-                                  onChange={(event) =>
-                                    updateEntry(index, {
-                                      targetDistance: event.target.value
-                                        ? Number(event.target.value)
-                                        : null,
-                                      targetDistanceUnit: distanceUnit,
-                                    })
-                                  }
-                                />
-                              </label>
+                              {(entry.cardioMode ?? 'duration') ===
+                                'duration' && (
+                                <label>
+                                  Target distance ({distanceUnit})
+                                  <input
+                                    aria-label={`${exercise.name} target distance on ${day.label}`}
+                                    inputMode="decimal"
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    value={
+                                      convertDistance(
+                                        entry.targetDistance,
+                                        entry.targetDistanceUnit,
+                                        distanceUnit,
+                                      ) ?? ''
+                                    }
+                                    onChange={(event) =>
+                                      updateEntry(index, {
+                                        targetDistance: event.target.value
+                                          ? Number(event.target.value)
+                                          : null,
+                                        targetDistanceUnit: distanceUnit,
+                                      })
+                                    }
+                                  />
+                                </label>
+                              )}
                             </div>
                           ) : (
                             <div className="target-fields">
@@ -820,7 +827,7 @@ function templateTargetSummary(
     } else if (entry.targetDurationSeconds != null) {
       parts.push(`${formatTimer(entry.targetDurationSeconds)}`);
     }
-    if (entry.targetDistance != null) {
+    if (entry.cardioMode !== 'interval' && entry.targetDistance != null) {
       parts.push(
         `${convertDistance(entry.targetDistance, entry.targetDistanceUnit, distanceUnit)} ${distanceUnit}`,
       );

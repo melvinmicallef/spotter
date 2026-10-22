@@ -581,21 +581,23 @@ function TargetSummary({
   distanceUnit: DistanceUnit;
 }) {
   if (exercise.exerciseType === 'cardio') {
+    const targetDistance =
+      exercise.cardioMode === 'interval' ? null : exercise.targetDistance;
     const target =
       exercise.cardioMode === 'interval'
         ? `Interval · Prep ${formatClock(exercise.intervalPrepSeconds ?? 0)} · Work ${formatClock(exercise.intervalWorkSeconds ?? 0)} · Rest ${formatClock(exercise.intervalRestSeconds ?? 0)} × ${exercise.intervalIterations ?? 0}`
         : exercise.targetDurationSeconds == null
           ? null
           : formatClock(exercise.targetDurationSeconds);
-    if (target == null && exercise.targetDistance == null) return null;
+    if (target == null && targetDistance == null) return null;
     return (
       <p className="target-summary">
         Target:{' '}
         {[
           target,
-          exercise.targetDistance == null
+          targetDistance == null
             ? null
-            : `${convertDistance(exercise.targetDistance, exercise.targetDistanceUnit, distanceUnit)} ${distanceUnit}`,
+            : `${convertDistance(targetDistance, exercise.targetDistanceUnit, distanceUnit)} ${distanceUnit}`,
         ]
           .filter(Boolean)
           .join(' · ')}
