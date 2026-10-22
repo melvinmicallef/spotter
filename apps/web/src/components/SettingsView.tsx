@@ -103,11 +103,6 @@ export function SettingsView({
       <article className="card settings-card settings-stretching-card">
         <div className="stretching-setting-content">
           <h3>Stretching poster</h3>
-          <p>
-            Upload one image to display on the Stretching page from Today. Image
-            changes need a connection; a saved image can be viewed offline once
-            it has loaded on this device.
-          </p>
           {stretchingPoster && (
             <div className="stretching-poster-preview">
               <img src={stretchingPoster.url} alt="Current stretching poster" />
