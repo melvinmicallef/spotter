@@ -99,9 +99,13 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
   await page.getByRole('button', { name: 'Create exercise' }).click();
 
   await expect(page).toHaveURL(/\/exercises\/[0-9a-f-]+$/);
-  await expect(page.getByRole('heading', { name: strengthName })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: strengthName, exact: true }),
+  ).toBeVisible();
   await page.reload();
-  await expect(page.getByRole('heading', { name: strengthName })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: strengthName, exact: true }),
+  ).toBeVisible();
   await page.getByRole('button', { name: '← Exercises' }).click();
 
   const strengthRow = page
@@ -117,7 +121,9 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
     strengthRow.getByRole('img', { name: `${strengthName} demonstration` }),
   ).toHaveCSS('object-fit', 'contain');
   await strengthRow.click();
-  await expect(page.getByRole('heading', { name: strengthName })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: strengthName, exact: true }),
+  ).toBeVisible();
   await expect(page.getByText('Primary muscles').locator('..')).toContainText(
     primaryName,
   );
@@ -166,8 +172,11 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
     .click();
   await expect(disposableRow).toHaveCount(0);
 
+  const addTemplateButton = page.getByRole('button', { name: 'Add template' });
   await page.getByRole('link', { name: 'Templates' }).click();
-  await page.getByRole('button', { name: 'Add template' }).click();
+  await expect(page).toHaveURL(/\/templates$/);
+  await expect(addTemplateButton).toBeEnabled();
+  await addTemplateButton.click();
   await expect(page).toHaveURL(/\/templates\/new$/);
   await page.getByLabel('Template name').fill(planName);
   await page.getByRole('button', { name: 'Create template' }).click();
@@ -175,8 +184,10 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
   await expect(page.getByRole('heading', { name: planName })).toBeVisible();
   await expect(page.getByText('Active', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: '← Templates' }).click();
+  await expect(page).toHaveURL(/\/templates$/);
+  await expect(addTemplateButton).toBeEnabled();
 
-  await page.getByRole('button', { name: 'Add template' }).click();
+  await addTemplateButton.click();
   await page.getByLabel('Template name').fill(disposablePlanName);
   await page.getByRole('button', { name: 'Create template' }).click();
   await page
@@ -264,12 +275,26 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
   await page.getByLabel(`${cardioName} duration minutes`).fill('31');
   await page.getByLabel(`${cardioName} distance`).fill('5.2');
   await page.getByRole('button', { name: 'Finish' }).click();
+  const finishWarning = page.getByRole('alertdialog');
+  await expect(finishWarning).toContainText(
+    '1 exercise is not marked complete',
+  );
+  await finishWarning.getByRole('button', { name: 'Finish anyway' }).click();
 
   await page.getByRole('link', { name: 'History' }).click();
-  const history = page.locator('details').filter({ hasText: planName });
-  await history.locator('summary').click();
-  await expect(history).toContainText('52.5 kg × 10 reps');
-  await expect(history).toContainText('31 min · 5.2 km');
+  const historyRow = page
+    .locator('.history-entry')
+    .filter({ hasText: planName });
+  await expect(historyRow).toContainText(strengthName);
+  await historyRow.locator('.history-open-button').click();
+  const strengthHistory = page
+    .locator('.history-exercise')
+    .filter({ hasText: strengthName });
+  const cardioHistory = page
+    .locator('.history-exercise')
+    .filter({ hasText: cardioName });
+  await expect(strengthHistory).toContainText('52.5 kg × 10 reps');
+  await expect(cardioHistory).toContainText('31m 0s · 5.2 km');
 });
 
 async function createExercise(
@@ -281,7 +306,7 @@ async function createExercise(
   await page.getByLabel('Exercise name').fill(name);
   await page.getByLabel('Exercise type').selectOption(type);
   await page.getByRole('button', { name: 'Create exercise' }).click();
-  await expect(page.getByRole('heading', { name })).toBeVisible();
+  await expect(page.getByRole('heading', { name, exact: true })).toBeVisible();
   await page.getByRole('button', { name: '← Exercises' }).click();
   await expect(
     page.locator('button.exercise-library-row').filter({ hasText: name }),

@@ -291,16 +291,19 @@ test('installs its shell and synchronizes one offline workout after reload', asy
 
   await page.getByRole('button', { name: 'Finish' }).click();
   await page.getByRole('link', { name: 'History' }).click();
-  const historyEntry = page
-    .locator('details')
+  const historyRow = page
+    .locator('.history-entry')
     .filter({ hasText: `Offline week ${suffix}` });
-  await historyEntry.locator('summary').click();
-  await expect(historyEntry).toContainText('42.5 kg × 8 reps');
-  await expect(historyEntry).toContainText(exerciseName);
+  await expect(historyRow).toContainText(exerciseName);
+  await historyRow.locator('.history-open-button').click();
+  const historyDetails = page
+    .locator('.history-exercise')
+    .filter({ hasText: exerciseName });
+  await expect(historyDetails).toContainText('42.5 kg × 8 reps');
+  await expect(page).toHaveURL(/\/history\/[0-9a-f-]+$/);
 
   await page.reload();
-  await page.getByRole('link', { name: 'History' }).click();
-  await expect(historyEntry).toBeVisible();
+  await expect(historyDetails).toBeVisible();
 
   let acknowledgementDropped = false;
   await page.route('**/api/sync', async (route) => {
@@ -350,6 +353,10 @@ test('installs its shell and synchronizes one offline workout after reload', asy
     ],
   });
 
+  await page.getByRole('button', { name: '← History' }).click();
+  const historyEntry = page
+    .locator('.history-entry')
+    .filter({ hasText: `Offline week ${suffix}` });
   const deleteButton = page.getByRole('button', {
     name: new RegExp(`Delete workout Offline week ${suffix}`),
   });

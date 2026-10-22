@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import type { DayOfWeek } from '@spotter/shared';
 
 const WEEKDAYS = [
@@ -340,16 +341,26 @@ test('records typed sets, previous values, and an audible interval timer', async
   await currentStrength
     .getByRole('button', { name: `Reopen ${strengthName}` })
     .click();
-  await page.getByRole('button', { name: 'Finish' }).click();
+  await finishIncompleteWorkout(page);
 
   await page.getByRole('link', { name: 'History' }).click();
-  const firstHistory = page
-    .locator('details')
+  const firstHistoryRow = page
+    .locator('.history-entry')
     .filter({ hasText: templateName });
-  await firstHistory.locator('summary').click();
-  await expect(firstHistory).toContainText('40 kg × 10 reps');
-  await expect(firstHistory).toContainText('12 reps');
-  await expect(firstHistory).toContainText('0m 20s');
+  await expect(firstHistoryRow).toBeVisible();
+  await firstHistoryRow.locator('.history-open-button').click();
+  const strengthHistory = page
+    .locator('.history-exercise')
+    .filter({ hasText: strengthName });
+  const calisthenicsHistory = page
+    .locator('.history-exercise')
+    .filter({ hasText: calisthenicsName });
+  const cardioHistory = page
+    .locator('.history-exercise')
+    .filter({ hasText: cardioName });
+  await expect(strengthHistory).toContainText('40 kg × 10 reps');
+  await expect(calisthenicsHistory).toContainText('12 reps');
+  await expect(cardioHistory).toContainText('0m 20s');
 
   await page.getByRole('link', { name: 'Workout' }).click();
   await page.getByRole('link', { name: 'Settings' }).click();
@@ -387,7 +398,7 @@ test('records typed sets, previous values, and an audible interval timer', async
     .filter({ hasText: cardioName });
   await expect(secondCardio).toContainText('Distance (mi)');
   await secondCardio.getByLabel(`${cardioName} distance`).fill('3.1');
-  await page.getByRole('button', { name: 'Finish' }).click();
+  await finishIncompleteWorkout(page);
 
   await page.getByRole('button', { name: "Start today's workout" }).click();
   const thirdStrength = page
@@ -410,3 +421,10 @@ test('records typed sets, previous values, and an audible interval timer', async
     thirdStrength.getByLabel(`${strengthName} weight set 2`),
   ).toHaveAttribute('placeholder', '45.36');
 });
+
+async function finishIncompleteWorkout(page: Page) {
+  await page.getByRole('button', { name: 'Finish' }).click();
+  const warning = page.getByRole('alertdialog');
+  await expect(warning).toContainText('not marked complete');
+  await warning.getByRole('button', { name: 'Finish anyway' }).click();
+}
