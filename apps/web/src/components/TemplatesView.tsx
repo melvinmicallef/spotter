@@ -394,7 +394,17 @@ function TemplateCard({
         <button
           className="secondary danger-text"
           type="button"
-          onClick={() => void run(() => api.deleteTemplate(template.id))}
+          aria-label={`Delete ${template.name}`}
+          onClick={() => {
+            if (
+              !window.confirm(
+                `Delete "${template.name}"? This cannot be undone.`,
+              )
+            ) {
+              return;
+            }
+            void run(() => api.deleteTemplate(template.id));
+          }}
         >
           Delete
         </button>

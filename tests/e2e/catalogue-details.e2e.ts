@@ -24,6 +24,7 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
   const cardioName = `Tempo run ${suffix}`;
   const disposableName = `Disposable ${suffix}`;
   const planName = `Detailed plan ${suffix}`;
+  const disposablePlanName = `Disposable plan ${suffix}`;
   const jsDay = new Date().getDay();
   const todayIndex = jsDay === 0 ? 6 : jsDay - 1;
   const today = WEEKDAYS[todayIndex]!;
@@ -161,6 +162,17 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
     has: page.getByLabel(`${planName} name`),
   });
   await expect(template.getByText('Active', { exact: true })).toBeVisible();
+
+  await page.getByLabel('New weekly template name').fill(disposablePlanName);
+  await page.getByRole('button', { name: 'Create template' }).click();
+  const disposableTemplate = page.locator('.template-card').filter({
+    has: page.getByLabel(`${disposablePlanName} name`),
+  });
+  page.once('dialog', (dialog) => dialog.accept());
+  await disposableTemplate
+    .getByRole('button', { name: `Delete ${disposablePlanName}` })
+    .click();
+  await expect(disposableTemplate).toHaveCount(0);
 
   await template.getByLabel(`Add exercise to ${today}`).click();
   let picker = page.getByRole('dialog', { name: 'Choose exercises' });

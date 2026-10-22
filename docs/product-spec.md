@@ -140,6 +140,7 @@ While online, a user can:
 
 Template mutations are unavailable offline. A cached template can be used to
 start a workout if all data required for its workout snapshot is available.
+Deleting a weekly template requires explicit confirmation.
 
 ### Workout tracking
 
