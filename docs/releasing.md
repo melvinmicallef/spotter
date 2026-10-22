@@ -22,9 +22,11 @@ and the implementation-plan test matrix have passed.
 - Strings that merely start with `v` but are not valid Semantic Versions fail
   before registry login or image publication.
 
-The release workflow is the only automation that pushes images. The validation
-workflow runs `npm run check` and a non-publishing Docker build for every branch
-push and pull request.
+The release workflow is the only automation that pushes images. Its read-only
+validation job runs `npm run check` and validates the release metadata before a
+separate package-write job can authenticate to GHCR. The ordinary validation
+workflow also runs the checks and a non-publishing Docker build for every
+branch push and pull request.
 
 ## Release candidate checklist
 

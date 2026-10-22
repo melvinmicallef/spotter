@@ -15,16 +15,20 @@ permissions:
   contents: read
 
 jobs:
-  publish:
+  validate:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write
+    outputs:
+      app_version: ${{ steps.release.outputs.app_version }}
+      image_tag: ${{ steps.release.outputs.image_tag }}
+      is_prerelease: ${{ steps.release.outputs.is_prerelease }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+          cache: npm
       - id: release
         name: Validate and normalize release metadata
         env:
@@ -33,6 +37,19 @@ jobs:
           RELEASE_SHA: ${{ github.sha }}
           RELEASE_MANUAL_IMAGE_TAG: ${{ inputs.image_tag }}
         run: node scripts/release-metadata.mjs
+      - name: Install dependencies from lockfile
+        run: npm ci
+      - name: Validate release source
+        run: npm run check
+
+  publish:
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
         with:
@@ -46,15 +63,17 @@ jobs:
           flavor: latest=false
           tags: |
             type=semver,pattern={{version}},enable=${{ github.event_name == 'push' }}
-            type=semver,pattern={{major}}.{{minor}},enable=${{ github.event_name == 'push' && steps.release.outputs.is_prerelease == 'false' }}
-            type=raw,value=latest,enable=${{ github.event_name == 'push' && steps.release.outputs.is_prerelease == 'false' }}
-            type=raw,value=${{ steps.release.outputs.image_tag }},enable=${{ github.event_name == 'workflow_dispatch' }}
+            type=semver,pattern={{major}}.{{minor}},enable=${{ github.event_name == 'push' && needs.validate.outputs.is_prerelease == 'false' }}
+            type=raw,value=latest,enable=${{ github.event_name == 'push' && needs.validate.outputs.is_prerelease == 'false' }}
+            type=raw,value=${{ needs.validate.outputs.image_tag }},enable=${{ github.event_name == 'workflow_dispatch' }}
       - uses: docker/build-push-action@v6
         with:
           context: .
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           build-args: |
-            APP_VERSION=${{ steps.release.outputs.app_version }}
+            APP_VERSION=${{ needs.validate.outputs.app_version }}
             GIT_COMMIT=${{ github.sha }}

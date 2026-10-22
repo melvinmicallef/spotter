@@ -318,7 +318,10 @@ on:
 
 It uses GitHub's short-lived workflow token, grants only `contents: read` and
 `packages: write`, builds with Docker Buildx, and publishes to
-`ghcr.io/melvinmicallef/spotter`.
+`ghcr.io/melvinmicallef/spotter`. A read-only validation job runs the repository
+checks and resolves release metadata first. Only the dependent publication job
+receives package-write permission and logs into GHCR. Buildx uses the GitHub
+Actions cache without changing image contents or tags.
 
 The broad `v*` trigger is guarded by a tested strict SemVer validator before
 registry login or publication. The first release tag is `v0.1.0`; it produces
