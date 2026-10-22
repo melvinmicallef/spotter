@@ -6,6 +6,9 @@ interface ConfirmDialogProps {
   confirmLabel: string;
   onConfirm: () => void;
   onCancel: () => void;
+  eyebrow?: string;
+  cancelLabel?: string;
+  closeLabel?: string;
 }
 
 export function ConfirmDialog({
@@ -14,6 +17,9 @@ export function ConfirmDialog({
   confirmLabel,
   onConfirm,
   onCancel,
+  eyebrow = 'CONFIRM DELETION',
+  cancelLabel = 'Cancel',
+  closeLabel = 'Cancel deletion',
 }: ConfirmDialogProps) {
   useEffect(() => {
     function closeOnEscape(event: KeyboardEvent) {
@@ -39,13 +45,13 @@ export function ConfirmDialog({
       >
         <header>
           <div>
-            <span className="eyebrow">CONFIRM DELETION</span>
+            <span className="eyebrow">{eyebrow}</span>
             <h2 id="confirm-dialog-title">{title}</h2>
           </div>
           <button
             className="icon-button"
             type="button"
-            aria-label="Cancel deletion"
+            aria-label={closeLabel}
             onClick={onCancel}
           >
             ×
@@ -54,7 +60,7 @@ export function ConfirmDialog({
         <p id="confirm-dialog-message">{message}</p>
         <div className="confirm-dialog-actions">
           <button className="secondary" type="button" onClick={onCancel}>
-            Cancel
+            {cancelLabel}
           </button>
           <button className="danger" type="button" onClick={onConfirm}>
             {confirmLabel}

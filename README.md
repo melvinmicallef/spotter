@@ -63,7 +63,8 @@ data to log a workout without a network connection. While offline, a user can:
 - mark finished exercises complete to collapse them while keeping progress
   available to resume;
 - record completion state; and
-- finish a workout.
+- finish a workout, with a warning and a choice to continue when exercises are
+  still incomplete.
 
 Creating or editing exercises and templates requires a connection.
 The interface will disable those actions while offline and explain that they

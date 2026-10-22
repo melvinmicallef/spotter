@@ -225,7 +225,8 @@ A user can:
 - record optional distance for cardio exercises;
 - open an exercise guide modal with its demonstration, instructions, comments,
   reference link, and target muscles;
-- finish a workout;
+- finish a workout, with a warning and an option to continue if exercises are
+  still incomplete;
 - view workout history with the local weekday and full date, template name,
   and exercise names;
 - open a completed workout's details page and edit its recorded set count,

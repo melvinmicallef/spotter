@@ -13,6 +13,7 @@ import { weekdayName, WEEKDAYS } from '../weekdays.js';
 import { convertDistance, convertWeight } from '../measurement-system.js';
 import type { DistanceUnit, WeightUnit } from '../measurement-system.js';
 import { ExerciseDetailsModal } from './CatalogueView.js';
+import { ConfirmDialog } from './ConfirmDialog.js';
 import { ExercisePicker } from './ExercisePicker.js';
 
 interface WorkoutViewProps {
@@ -76,6 +77,7 @@ export function WorkoutView({
     null,
   );
   const [exercisePickerOpen, setExercisePickerOpen] = useState(false);
+  const [finishWarningOpen, setFinishWarningOpen] = useState(false);
   const exerciseDetails = exercises.find(
     (exercise) => exercise.id === exerciseDetailsId,
   );
@@ -236,7 +238,13 @@ export function WorkoutView({
           <button
             className="danger"
             type="button"
-            onClick={() => onChange(actions.finish)}
+            onClick={() => {
+              if (workout.exercises.some((entry) => !entry.completed)) {
+                setFinishWarningOpen(true);
+              } else {
+                onChange(actions.finish);
+              }
+            }}
           >
             Finish
           </button>
@@ -439,12 +447,35 @@ export function WorkoutView({
           onClose={() => setExercisePickerOpen(false)}
         />
       )}
+      {finishWarningOpen && (
+        <ConfirmDialog
+          eyebrow="WORKOUT INCOMPLETE"
+          title="Some exercises aren't complete"
+          message={incompleteExerciseMessage(workout)}
+          confirmLabel="Finish anyway"
+          cancelLabel="Keep working"
+          closeLabel="Keep working"
+          onCancel={() => setFinishWarningOpen(false)}
+          onConfirm={() => {
+            setFinishWarningOpen(false);
+            onChange(actions.finish);
+          }}
+        />
+      )}
     </section>
   );
 }
 
 type WorkoutEntry = Workout['exercises'][number];
 type WorkoutActions = WorkoutViewProps['actions'];
+
+function incompleteExerciseMessage(workout: Workout) {
+  const incompleteCount = workout.exercises.filter(
+    (exercise) => !exercise.completed,
+  ).length;
+  const exerciseWord = incompleteCount === 1 ? 'exercise is' : 'exercises are';
+  return `${incompleteCount} ${exerciseWord} not marked complete. You can keep working or finish the workout anyway.`;
+}
 
 function WorkoutExerciseTitle({
   name,
