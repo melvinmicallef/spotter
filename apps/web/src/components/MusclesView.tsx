@@ -1,105 +1,103 @@
-import { useState } from 'react';
-
 import type { Muscle } from '@spotter/shared';
 
-import { api } from '../api.js';
-
 interface MusclesViewProps {
-  online: boolean;
   muscles: Muscle[];
-  onRefresh: () => Promise<void>;
-  onError: (message: string) => void;
 }
 
-export function MusclesView(props: MusclesViewProps) {
-  const [name, setName] = useState('');
-
-  async function run(action: () => Promise<unknown>) {
-    try {
-      await action();
-      await props.onRefresh();
-    } catch (error) {
-      props.onError(
-        error instanceof Error ? error.message : 'Muscle update failed',
-      );
-    }
-  }
+export function MusclesView({ muscles }: MusclesViewProps) {
+  const groups = groupMuscles(muscles);
 
   return (
     <section className="page-section">
       <div className="section-heading">
         <div>
-          <span className="eyebrow">ONLINE LIBRARY</span>
+          <span className="eyebrow">BUILT-IN REFERENCE</span>
           <h2>Muscles</h2>
         </div>
       </div>
-      {!props.online && (
-        <p className="notice">Muscle changes need a connection.</p>
-      )}
-      <fieldset disabled={!props.online}>
-        <form
-          className="inline-form"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (!name.trim()) return;
-            void run(async () => {
-              await api.createMuscle({ name });
-              setName('');
-            });
-          }}
+      <p className="catalogue-intro">
+        Exercise targets use the selectable leaf muscles from the{' '}
+        <a
+          href="https://exrx.net/Lists/Directory"
+          target="_blank"
+          rel="noreferrer"
         >
-          <input
-            aria-label="New muscle name"
-            placeholder="e.g. Hamstrings"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-          />
-          <button type="submit">Add muscle</button>
-        </form>
-        <div className="stack tight">
-          {props.muscles.map((muscle) => (
-            <MuscleRow
-              key={`${muscle.id}-${muscle.updatedAt}`}
-              muscle={muscle}
-              run={run}
-            />
-          ))}
-        </div>
-      </fieldset>
+          ExRx Exercise &amp; Muscle Directory
+        </a>
+        . Group headings organize the catalogue and cannot be assigned.
+      </p>
+      <div className="muscle-directory">
+        {groups.map(([group, entries]) => (
+          <section className="muscle-directory-group" key={group}>
+            <h3 className="muscle-tree-parent">{group}</h3>
+            <ul className="muscle-tree-children">
+              {muscleTree(entries).map((node) =>
+                node.kind === 'muscle' ? (
+                  <MuscleLeaf muscle={node.muscle} key={node.muscle.id} />
+                ) : (
+                  <li className="muscle-tree-branch" key={node.name}>
+                    <span>{node.name}</span>
+                    <ul>
+                      {node.muscles.map((muscle) => (
+                        <MuscleLeaf muscle={muscle} key={muscle.id} />
+                      ))}
+                    </ul>
+                  </li>
+                ),
+              )}
+            </ul>
+          </section>
+        ))}
+      </div>
     </section>
   );
 }
 
-function MuscleRow({
-  muscle,
-  run,
-}: {
-  muscle: Muscle;
-  run: (action: () => Promise<unknown>) => Promise<void>;
-}) {
-  const [name, setName] = useState(muscle.name);
+function MuscleLeaf({ muscle }: { muscle: Muscle }) {
   return (
-    <div className="list-row">
-      <input
-        aria-label={`${muscle.name} name`}
-        value={name}
-        onChange={(event) => setName(event.target.value)}
-      />
-      <button
-        className="secondary"
-        type="button"
-        onClick={() => void run(() => api.updateMuscle(muscle.id, { name }))}
+    <li className="muscle-tree-leaf">
+      <a
+        href={muscle.referenceUrl ?? undefined}
+        target="_blank"
+        rel="noreferrer"
       >
-        Save
-      </button>
-      <button
-        className="icon-button danger-text"
-        type="button"
-        aria-label={`Delete ${muscle.name}`}
-        onClick={() => void run(() => api.deleteMuscle(muscle.id))}
-      >
-        ×
-      </button>
-    </div>
+        {muscle.name}
+        <span aria-hidden="true">↗</span>
+      </a>
+    </li>
   );
+}
+
+function groupMuscles(muscles: Muscle[]) {
+  const groups = new Map<string, Muscle[]>();
+  for (const muscle of muscles) {
+    const entries = groups.get(muscle.group) ?? [];
+    entries.push(muscle);
+    groups.set(muscle.group, entries);
+  }
+  return [...groups.entries()];
+}
+
+type MuscleTreeNode =
+  | { kind: 'muscle'; muscle: Muscle }
+  | { kind: 'subgroup'; name: string; muscles: Muscle[] };
+
+function muscleTree(muscles: Muscle[]): MuscleTreeNode[] {
+  const nodes: MuscleTreeNode[] = [];
+  const subgroups = new Map<string, Muscle[]>();
+  for (const muscle of muscles) {
+    if (!muscle.subgroup) {
+      nodes.push({ kind: 'muscle', muscle });
+      continue;
+    }
+    const subgroup = subgroups.get(muscle.subgroup);
+    if (subgroup) {
+      subgroup.push(muscle);
+      continue;
+    }
+    const entries = [muscle];
+    subgroups.set(muscle.subgroup, entries);
+    nodes.push({ kind: 'subgroup', name: muscle.subgroup, muscles: entries });
+  }
+  return nodes;
 }

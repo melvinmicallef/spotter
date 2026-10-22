@@ -203,6 +203,16 @@ export function WorkoutView({
                 <span className="exercise-index">{exerciseIndex + 1}</span>
                 <strong>{entry.exerciseName}</strong>
                 <small className="type-badge">{entry.exerciseType}</small>
+                {entry.referenceUrl && (
+                  <a
+                    className="workout-reference-link"
+                    href={entry.referenceUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Reference ↗
+                  </a>
+                )}
               </div>
               <div className="inline-actions">
                 <button

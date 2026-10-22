@@ -15,9 +15,11 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
   page,
 }) => {
   const suffix = crypto.randomUUID().slice(0, 8);
-  const primaryName = `Chest ${suffix}`;
-  const secondaryName = `Triceps ${suffix}`;
-  const secondaryTwoName = `Shoulders ${suffix}`;
+  const primaryName = 'Sternal';
+  const secondaryName = 'Triceps Brachii';
+  const secondaryTwoName = 'Anterior';
+  const referenceUrl =
+    'https://exrx.net/WeightExercises/PectoralSternal/BBBenchPress';
   const strengthName = `Image press ${suffix}`;
   const cardioName = `Tempo run ${suffix}`;
   const disposableName = `Disposable ${suffix}`;
@@ -43,11 +45,12 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
     .toEqual({ x: 0, width: 1280, viewport: 1280 });
 
   await page.getByRole('button', { name: 'Muscles' }).click();
-  for (const name of [primaryName, secondaryName, secondaryTwoName]) {
-    await page.getByLabel('New muscle name').fill(name);
-    await page.getByRole('button', { name: 'Add muscle' }).click();
-    await expect(page.getByLabel(`${name} name`)).toBeVisible();
-  }
+  await expect(page.getByRole('heading', { name: 'Chest' })).toBeVisible();
+  await expect(page.getByText('Pectoralis Major').first()).toBeVisible();
+  await expect(
+    page.getByText(primaryName, { exact: true }).first(),
+  ).toBeVisible();
+  await expect(page.getByLabel('New muscle name')).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Exercises' }).click();
   await page.getByRole('button', { name: 'Add exercise' }).click();
@@ -56,15 +59,18 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
     .getByLabel('Preparation')
     .fill('Set the bench and plant both feet');
   await page.getByLabel('Execution').fill('Control the descent');
+  await page.getByLabel('Reference website (optional)').fill(referenceUrl);
   await page.getByLabel('Muscle to add').selectOption({ label: secondaryName });
   await page.getByLabel('Muscle role').selectOption('secondary');
   await page.getByRole('button', { name: 'Add muscle' }).click();
   await page
     .getByLabel('Muscle to add')
-    .selectOption({ label: secondaryTwoName });
+    .selectOption({ label: `Deltoid › ${secondaryTwoName}` });
   await page.getByLabel('Muscle role').selectOption('secondary');
   await page.getByRole('button', { name: 'Add muscle' }).click();
-  await page.getByLabel('Muscle to add').selectOption({ label: primaryName });
+  await page
+    .getByLabel('Muscle to add')
+    .selectOption({ label: `Pectoralis Major › ${primaryName}` });
   await page.getByLabel('Muscle role').selectOption('primary');
   await page.getByRole('button', { name: 'Add muscle' }).click();
   const assignedMuscles = page.getByLabel('Assigned muscles');
@@ -116,6 +122,9 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
     page.getByText('Set the bench and plant both feet'),
   ).toBeVisible();
   await expect(page.getByText('Control the descent')).toBeVisible();
+  await expect(
+    page.getByRole('link', { name: 'Open exercise reference' }),
+  ).toHaveAttribute('href', referenceUrl);
   await page.getByRole('button', { name: `Edit ${strengthName}` }).click();
   await page.getByLabel('Preparation').fill('Retract the shoulder blades');
   await page.getByLabel('Execution').fill('Pause at the bottom');
@@ -183,6 +192,9 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
     page.getByRole('button', { name: "Start today's workout" }),
   ).toBeEnabled();
   await page.getByRole('button', { name: "Start today's workout" }).click();
+  await expect(
+    page.getByRole('link', { name: 'Reference' }).first(),
+  ).toHaveAttribute('href', referenceUrl);
   await page.getByLabel(`${strengthName} weight set 1`).fill('52.5');
   await page.getByLabel(`${strengthName} repetitions set 1`).fill('10');
   await page.getByLabel(`${strengthName} set 1 complete`).check();

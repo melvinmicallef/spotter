@@ -3,6 +3,8 @@ import { dirname } from 'node:path';
 
 import Database from 'better-sqlite3';
 
+import { BUILT_IN_MUSCLES } from '@spotter/shared';
+
 export const migrations = [
   {
     version: 1,
@@ -212,6 +214,50 @@ export const migrations = [
       WHERE instructions IS NOT NULL;
     `,
   },
+  {
+    version: 6,
+    name: 'built_in_muscle_hierarchy_and_exercise_references',
+    sql: `
+      ALTER TABLE exercise_muscles RENAME TO exercise_muscles_v6;
+      ALTER TABLE muscles RENAME TO muscles_v6;
+
+      CREATE TABLE muscles (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL COLLATE NOCASE,
+        group_name TEXT NOT NULL,
+        subgroup_name TEXT,
+        reference_url TEXT,
+        is_builtin INTEGER NOT NULL DEFAULT 0 CHECK (is_builtin IN (0, 1)),
+        group_order INTEGER NOT NULL DEFAULT 999,
+        muscle_order INTEGER NOT NULL DEFAULT 999,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      CREATE UNIQUE INDEX muscles_hierarchy_idx
+        ON muscles(group_name, COALESCE(subgroup_name, ''), name COLLATE NOCASE);
+      INSERT INTO muscles
+        (id, name, group_name, subgroup_name, reference_url, is_builtin,
+         group_order, muscle_order, created_at, updated_at)
+      SELECT id, name, 'Legacy', NULL, NULL, 0, 999, 999, created_at, updated_at
+      FROM muscles_v6;
+
+      CREATE TABLE exercise_muscles (
+        exercise_id TEXT NOT NULL REFERENCES exercises(id) ON DELETE CASCADE,
+        muscle_id TEXT NOT NULL REFERENCES muscles(id) ON DELETE RESTRICT,
+        role TEXT NOT NULL CHECK (role IN ('primary', 'secondary')),
+        PRIMARY KEY (exercise_id, muscle_id)
+      );
+      INSERT INTO exercise_muscles (exercise_id, muscle_id, role)
+      SELECT exercise_id, muscle_id, role FROM exercise_muscles_v6;
+      DROP TABLE exercise_muscles_v6;
+      DROP TABLE muscles_v6;
+
+      ALTER TABLE workout_exercises ADD COLUMN reference_url TEXT;
+      UPDATE app_metadata
+      SET value = CAST(CAST(value AS INTEGER) + 1 AS TEXT)
+      WHERE key = 'reference_revision';
+    `,
+  },
 ] as const;
 
 export type SpotterDatabase = Database.Database;
@@ -223,7 +269,42 @@ export function openDatabase(path: string): SpotterDatabase {
   database.pragma('busy_timeout = 5000');
   if (path !== ':memory:') database.pragma('journal_mode = WAL');
   migrate(database);
+  seedBuiltInMuscles(database);
   return database;
+}
+
+function seedBuiltInMuscles(database: SpotterDatabase) {
+  const timestamp = '2026-10-21T00:00:00.000Z';
+  const upsert = database.prepare(`
+    INSERT INTO muscles
+      (id, name, group_name, subgroup_name, reference_url, is_builtin,
+       group_order, muscle_order, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      name = excluded.name,
+      group_name = excluded.group_name,
+      subgroup_name = excluded.subgroup_name,
+      reference_url = excluded.reference_url,
+      is_builtin = 1,
+      group_order = excluded.group_order,
+      muscle_order = excluded.muscle_order,
+      updated_at = excluded.updated_at
+  `);
+  database.transaction(() => {
+    for (const muscle of BUILT_IN_MUSCLES) {
+      upsert.run(
+        muscle.id,
+        muscle.name,
+        muscle.group,
+        muscle.subgroup,
+        muscle.referenceUrl,
+        muscle.groupOrder,
+        muscle.muscleOrder,
+        timestamp,
+        timestamp,
+      );
+    }
+  })();
 }
 
 function migrate(database: SpotterDatabase) {

@@ -2,7 +2,6 @@ import {
   apiErrorSchema,
   exerciseSchema,
   exerciseMediaSchema,
-  muscleSchema,
   referenceDataSchema,
   syncResponseSchema,
   workoutSchema,
@@ -12,8 +11,6 @@ import type {
   Exercise,
   ExerciseInput,
   ExerciseMedia,
-  Muscle,
-  MuscleInput,
   ReferenceData,
   SyncBatch,
   SyncResponse,
@@ -72,25 +69,6 @@ export const api = {
     return syncResponseSchema.parse(
       await request('/sync', { method: 'POST', body: JSON.stringify(batch) }),
     );
-  },
-  async createMuscle(input: MuscleInput): Promise<Muscle> {
-    return muscleSchema.parse(
-      await request('/muscles', {
-        method: 'POST',
-        body: JSON.stringify(input),
-      }),
-    );
-  },
-  async updateMuscle(id: string, input: MuscleInput): Promise<Muscle> {
-    return muscleSchema.parse(
-      await request(`/muscles/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(input),
-      }),
-    );
-  },
-  async deleteMuscle(id: string): Promise<void> {
-    await request(`/muscles/${id}`, { method: 'DELETE' });
   },
   async createExercise(input: ExerciseInput): Promise<Exercise> {
     return exerciseSchema.parse(

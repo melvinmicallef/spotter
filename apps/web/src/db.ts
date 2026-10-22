@@ -49,7 +49,7 @@ interface SpotterDatabaseSchema extends DBSchema {
 let databasePromise: Promise<IDBPDatabase<SpotterDatabaseSchema>> | undefined;
 
 function database() {
-  databasePromise ??= openDB<SpotterDatabaseSchema>('spotter', 5, {
+  databasePromise ??= openDB<SpotterDatabaseSchema>('spotter', 6, {
     async upgrade(db, oldVersion, _newVersion, transaction) {
       if (oldVersion < 1) {
         const workouts = db.createObjectStore('workouts', { keyPath: 'id' });
@@ -128,6 +128,39 @@ function database() {
         const exerciseStore = transaction.objectStore('exercises');
         for (const exercise of await exerciseStore.getAll()) {
           await exerciseStore.put(normalizeExercise(exercise));
+        }
+      }
+      if (oldVersion < 6) {
+        const muscleStore = transaction.objectStore('muscles');
+        for (const muscle of await muscleStore.getAll()) {
+          await muscleStore.put(normalizeMuscle(muscle));
+        }
+        const exerciseStore = transaction.objectStore('exercises');
+        for (const exercise of await exerciseStore.getAll()) {
+          await exerciseStore.put(normalizeExercise(exercise));
+        }
+        const templateStore = transaction.objectStore('templates');
+        const exerciseReferences = new Map(
+          (await exerciseStore.getAll()).map((exercise) => [
+            exercise.id,
+            exercise.referenceUrl,
+          ]),
+        );
+        for (const template of await templateStore.getAll()) {
+          await templateStore.put(
+            normalizeTemplate(template, new Map(), exerciseReferences),
+          );
+        }
+        const workoutStore = transaction.objectStore('workouts');
+        for (const workout of await workoutStore.getAll()) {
+          await workoutStore.put(normalizeWorkout(workout));
+        }
+        const outboxStore = transaction.objectStore('outbox');
+        for (const operation of await outboxStore.getAll()) {
+          await outboxStore.put({
+            ...operation,
+            workout: normalizeWorkout(operation.workout),
+          });
         }
       }
     },
@@ -240,7 +273,11 @@ export const localRepository = {
       db.getAll('exercises'),
       db.getAll('templates'),
     ]);
-    return { muscles, exercises, templates };
+    return {
+      muscles: muscles.map(normalizeMuscle),
+      exercises: exercises.map(normalizeExercise),
+      templates,
+    };
   },
 
   async weekSchedule(
@@ -283,6 +320,7 @@ function normalizeExercise(exercise: Exercise): Exercise {
     exerciseType: exercise.exerciseType ?? 'strength',
     preparation: exercise.preparation ?? null,
     execution: exercise.execution ?? legacyInstructions ?? null,
+    referenceUrl: exercise.referenceUrl ?? exercise.source?.url ?? null,
   };
   delete (normalized as typeof normalized & { instructions?: unknown })
     .instructions;
@@ -292,6 +330,7 @@ function normalizeExercise(exercise: Exercise): Exercise {
 function normalizeTemplate(
   template: WorkoutTemplate,
   exerciseTypes: Map<string, Exercise['exerciseType']>,
+  exerciseReferences: Map<string, string | null> = new Map(),
 ): WorkoutTemplate {
   return {
     ...template,
@@ -300,6 +339,8 @@ function normalizeTemplate(
       ...entry,
       exerciseType:
         entry.exerciseType ?? exerciseTypes.get(entry.exerciseId) ?? 'strength',
+      referenceUrl:
+        entry.referenceUrl ?? exerciseReferences.get(entry.exerciseId) ?? null,
       dayOfWeek: entry.dayOfWeek ?? 1,
       targetDurationSeconds: entry.targetDurationSeconds ?? null,
       targetDistance: entry.targetDistance ?? null,
@@ -319,6 +360,7 @@ function normalizeWorkout(workout: Workout): Workout {
     exercises: workout.exercises.map((exercise) => ({
       ...exercise,
       exerciseType: exercise.exerciseType ?? 'strength',
+      referenceUrl: exercise.referenceUrl ?? null,
       targetDurationSeconds: exercise.targetDurationSeconds ?? null,
       targetDistance: exercise.targetDistance ?? null,
       targetDistanceUnit: exercise.targetDistanceUnit ?? 'km',
@@ -329,5 +371,15 @@ function normalizeWorkout(workout: Workout): Workout {
         distanceUnit: set.distanceUnit ?? 'km',
       })),
     })),
+  };
+}
+
+function normalizeMuscle(muscle: Muscle): Muscle {
+  return {
+    ...muscle,
+    group: muscle.group ?? 'Legacy',
+    subgroup: muscle.subgroup ?? null,
+    referenceUrl: muscle.referenceUrl ?? null,
+    isBuiltin: muscle.isBuiltin ?? false,
   };
 }

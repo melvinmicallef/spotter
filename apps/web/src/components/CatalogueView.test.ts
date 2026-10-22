@@ -25,11 +25,23 @@ describe('exercise muscle roles', () => {
     expect(
       exerciseMuscleSummary({
         muscles: [
-          { id: 'triceps', name: 'Triceps', role: 'secondary' },
-          { id: 'chest', name: 'Chest', role: 'primary' },
+          {
+            id: 'triceps',
+            name: 'Triceps',
+            group: 'Upper Arms',
+            subgroup: null,
+            role: 'secondary',
+          },
+          {
+            id: 'chest',
+            name: 'Chest',
+            group: 'Chest',
+            subgroup: null,
+            role: 'primary',
+          },
         ],
       }),
-    ).toBe('Chest · Triceps');
+    ).toBe('Chest › Chest · Upper Arms › Triceps');
     expect(exerciseMuscleSummary({ muscles: [] })).toBe('No target muscles');
   });
 

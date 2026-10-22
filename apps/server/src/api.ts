@@ -6,7 +6,6 @@ import { z } from 'zod';
 import {
   exerciseInputSchema,
   exerciseMediaSchema,
-  muscleInputSchema,
   syncOperationSchema,
   uuidSchema,
   workoutTemplateInputSchema,
@@ -30,23 +29,6 @@ export function createApiRouter(
   router.get('/muscles', (_request, response) =>
     response.json(store.listMuscles()),
   );
-  router.post('/muscles', (request, response) => {
-    response
-      .status(201)
-      .json(store.createMuscle(muscleInputSchema.parse(request.body)));
-  });
-  router.patch('/muscles/:id', (request, response) => {
-    response.json(
-      store.updateMuscle(
-        uuidSchema.parse(request.params.id),
-        muscleInputSchema.parse(request.body),
-      ),
-    );
-  });
-  router.delete('/muscles/:id', (request, response) => {
-    store.deleteMuscle(uuidSchema.parse(request.params.id));
-    response.status(204).end();
-  });
 
   router.get('/exercises', (_request, response) =>
     response.json(store.listExercises()),

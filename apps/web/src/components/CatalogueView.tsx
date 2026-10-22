@@ -101,13 +101,7 @@ export function ExercisesView(props: ExercisesViewProps) {
                   mediaId:
                     replacement?.id ??
                     (removeImage ? null : (selectedExercise.media?.id ?? null)),
-                  source: selectedExercise.source
-                    ? {
-                        url: selectedExercise.source.url,
-                        title: selectedExercise.source.title,
-                        mediaUrl: selectedExercise.source.mediaUrl,
-                      }
-                    : null,
+                  source: null,
                 });
               } catch (error) {
                 if (replacement)
@@ -268,6 +262,16 @@ function ExerciseDetails({
             <h3>Execution</h3>
             <p>{exercise.execution || 'No execution instructions added.'}</p>
           </div>
+          {exercise.referenceUrl && (
+            <a
+              className="exercise-reference-link"
+              href={exercise.referenceUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Open exercise reference ↗
+            </a>
+          )}
           <MuscleGroup label="Primary muscles" muscles={primary} />
           <MuscleGroup label="Secondary muscles" muscles={secondary} />
         </div>
@@ -305,6 +309,9 @@ function ExerciseEditorPage({
   >(exercise?.exerciseType ?? 'strength');
   const [preparation, setPreparation] = useState(exercise?.preparation ?? '');
   const [execution, setExecution] = useState(exercise?.execution ?? '');
+  const [referenceUrl, setReferenceUrl] = useState(
+    exercise?.referenceUrl ?? '',
+  );
   const [selectedMuscles, setSelectedMuscles] = useState<MuscleRoles>(
     Object.fromEntries(
       exercise?.muscles.map((muscle) => [muscle.id, muscle.role]) ?? [],
@@ -337,6 +344,7 @@ function ExerciseEditorPage({
                 exerciseType,
                 preparation: preparation.trim() || null,
                 execution: execution.trim() || null,
+                referenceUrl: referenceUrl.trim() || null,
                 muscles: exerciseMuscleLinks(selectedMuscles),
               },
               imageFile,
@@ -381,6 +389,16 @@ function ExerciseEditorPage({
               value={execution}
               onChange={(event) => setExecution(event.target.value)}
             />
+          </label>
+          <label className="field">
+            Reference website (optional)
+            <input
+              type="url"
+              placeholder="https://exrx.net/..."
+              value={referenceUrl}
+              onChange={(event) => setReferenceUrl(event.target.value)}
+            />
+            <small>This link is available from the exercise and workout.</small>
           </label>
           <div className="field">
             <span>Target muscles</span>
@@ -479,7 +497,7 @@ function MuscleGroup({
       {muscles.length > 0 ? (
         <div className="exercise-muscle-tags">
           {muscles.map((muscle) => (
-            <span key={muscle.id}>{muscle.name}</span>
+            <span key={muscle.id}>{muscleDisplayName(muscle)}</span>
           ))}
         </div>
       ) : (
@@ -510,6 +528,7 @@ interface ExerciseDraft {
   exerciseType: ExerciseInput['exerciseType'];
   preparation: string | null;
   execution: string | null;
+  referenceUrl: string | null;
   muscles: ExerciseInput['muscles'];
 }
 
@@ -528,10 +547,10 @@ export function exerciseMuscleLinks(selected: MuscleRoles) {
 export function exerciseMuscleSummary(exercise: Pick<Exercise, 'muscles'>) {
   const primary = exercise.muscles
     .filter((muscle) => muscle.role === 'primary')
-    .map((muscle) => muscle.name);
+    .map(muscleDisplayName);
   const secondary = exercise.muscles
     .filter((muscle) => muscle.role === 'secondary')
-    .map((muscle) => muscle.name);
+    .map(muscleDisplayName);
   return [...primary, ...secondary].join(' · ') || 'No target muscles';
 }
 
@@ -582,7 +601,7 @@ function MuscleRolesEditor({
       >
         {assignedMuscles.map(({ muscle, role: assignedRole }) => (
           <div className="assigned-muscle-row" key={muscle.id}>
-            <strong>{muscle.name}</strong>
+            <strong>{muscleDisplayName(muscle)}</strong>
             <select
               aria-label={`${muscle.name} assigned role`}
               value={assignedRole}
@@ -623,10 +642,16 @@ function MuscleRolesEditor({
             onChange={(event) => setMuscleId(event.target.value)}
           >
             <option value="">Choose a muscle…</option>
-            {availableMuscles.map((muscle) => (
-              <option key={muscle.id} value={muscle.id}>
-                {muscle.name}
-              </option>
+            {groupMuscleOptions(availableMuscles).map(([group, entries]) => (
+              <optgroup label={group} key={group}>
+                {entries.map((muscle) => (
+                  <option key={muscle.id} value={muscle.id}>
+                    {muscle.subgroup
+                      ? `${muscle.subgroup} › ${muscle.name}`
+                      : muscle.name}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
         </label>
@@ -660,4 +685,22 @@ function MuscleRolesEditor({
 
 function roleOrder(role: MuscleRole): number {
   return role === 'primary' ? 0 : 1;
+}
+
+function muscleDisplayName(
+  muscle: Pick<Muscle, 'group' | 'subgroup' | 'name'>,
+) {
+  return [muscle.group, muscle.subgroup, muscle.name]
+    .filter(Boolean)
+    .join(' › ');
+}
+
+function groupMuscleOptions(muscles: Muscle[]) {
+  const groups = new Map<string, Muscle[]>();
+  for (const muscle of muscles) {
+    const entries = groups.get(muscle.group) ?? [];
+    entries.push(muscle);
+    groups.set(muscle.group, entries);
+  }
+  return [...groups.entries()];
 }

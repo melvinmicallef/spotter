@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+export { BUILT_IN_MUSCLES } from './muscles.js';
+
 export const isoDateTimeSchema = z.string().datetime({ offset: true });
 export const uuidSchema = z.string().uuid();
 export const nameSchema = z.string().trim().min(1).max(100);
@@ -9,6 +11,13 @@ export const nullableNoteSchema = z
   .max(2_000)
   .nullable()
   .default(null);
+export const httpUrlSchema = z
+  .string()
+  .url()
+  .max(2_048)
+  .refine((value) => ['http:', 'https:'].includes(new URL(value).protocol), {
+    message: 'Only HTTP and HTTPS URLs are supported',
+  });
 
 export const healthResponseSchema = z.object({
   status: z.literal('ok'),
@@ -33,14 +42,14 @@ export const apiErrorSchema = z.object({
 export const muscleSchema = z.object({
   id: uuidSchema,
   name: nameSchema,
+  group: nameSchema.default('Legacy'),
+  subgroup: nameSchema.nullable().default(null),
+  referenceUrl: httpUrlSchema.nullable().default(null),
+  isBuiltin: z.boolean().default(false),
   createdAt: isoDateTimeSchema,
   updatedAt: isoDateTimeSchema,
 });
 
-export const muscleInputSchema = z.object({
-  id: uuidSchema.optional(),
-  name: nameSchema,
-});
 export const muscleRoleSchema = z.enum(['primary', 'secondary']);
 export const exerciseTypeSchema = z.enum(['strength', 'cardio']);
 export const distanceUnitSchema = z.enum(['km', 'mi']);
@@ -49,16 +58,10 @@ export const dayOfWeekSchema = z.number().int().min(1).max(7);
 export const exerciseMuscleSchema = z.object({
   id: uuidSchema,
   name: nameSchema,
+  group: nameSchema.default('Legacy'),
+  subgroup: nameSchema.nullable().default(null),
   role: muscleRoleSchema,
 });
-
-export const httpUrlSchema = z
-  .string()
-  .url()
-  .max(2_048)
-  .refine((value) => ['http:', 'https:'].includes(new URL(value).protocol), {
-    message: 'Only HTTP and HTTPS URLs are supported',
-  });
 
 export const exerciseMediaSchema = z.object({
   id: uuidSchema,
@@ -91,6 +94,7 @@ export const exerciseSchema = z.object({
   exerciseType: exerciseTypeSchema.default('strength'),
   preparation: nullableNoteSchema,
   execution: nullableNoteSchema,
+  referenceUrl: httpUrlSchema.nullable().default(null),
   muscles: z.array(exerciseMuscleSchema),
   media: exerciseMediaSchema.nullable(),
   source: exerciseSourceSchema.nullable(),
@@ -104,6 +108,7 @@ export const exerciseInputSchema = z.object({
   exerciseType: exerciseTypeSchema.default('strength'),
   preparation: nullableNoteSchema,
   execution: nullableNoteSchema,
+  referenceUrl: httpUrlSchema.nullable().default(null),
   mediaId: uuidSchema.nullable().default(null),
   source: exerciseSourceInputSchema.nullable().default(null),
   muscles: z
@@ -123,6 +128,7 @@ export const templateExerciseSchema = z
     exerciseId: uuidSchema,
     exerciseName: nameSchema,
     exerciseType: exerciseTypeSchema.default('strength'),
+    referenceUrl: httpUrlSchema.nullable().default(null),
     dayOfWeek: dayOfWeekSchema.default(1),
     position: z.number().int().nonnegative(),
     notes: nullableNoteSchema,
@@ -224,6 +230,7 @@ export const workoutExerciseSchema = z
     exerciseId: uuidSchema.nullable(),
     exerciseName: nameSchema,
     exerciseType: exerciseTypeSchema.default('strength'),
+    referenceUrl: httpUrlSchema.nullable().default(null),
     position: z.number().int().nonnegative(),
     notes: nullableNoteSchema,
     targetSets: z.number().int().positive().max(99).nullable(),
@@ -343,7 +350,6 @@ export type HealthResponse = z.infer<typeof healthResponseSchema>;
 export type VersionResponse = z.infer<typeof versionResponseSchema>;
 export type ApiError = z.infer<typeof apiErrorSchema>;
 export type Muscle = z.infer<typeof muscleSchema>;
-export type MuscleInput = z.infer<typeof muscleInputSchema>;
 export type Exercise = z.infer<typeof exerciseSchema>;
 export type ExerciseInput = z.infer<typeof exerciseInputSchema>;
 export type ExerciseType = z.infer<typeof exerciseTypeSchema>;

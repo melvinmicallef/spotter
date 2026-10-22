@@ -118,11 +118,13 @@ test('installs its shell and synchronizes one offline workout after reload', asy
     'Sunday',
   ];
   const otherDayName = weekdayNames[otherDay]!;
-  const muscleResponse = await request.post('/api/muscles', {
-    data: { name: `E2E muscle ${suffix}` },
-  });
+  const muscleResponse = await request.get('/api/muscles');
   expect(muscleResponse.ok()).toBe(true);
-  const muscle = (await muscleResponse.json()) as { id: string };
+  const muscles = (await muscleResponse.json()) as {
+    id: string;
+    name: string;
+  }[];
+  const muscle = muscles.find((entry) => entry.name === 'Sternal')!;
 
   const exerciseName = `Offline press ${suffix}`;
   const exerciseResponse = await request.post('/api/exercises', {
@@ -131,6 +133,7 @@ test('installs its shell and synchronizes one offline workout after reload', asy
       exerciseType: 'strength',
       preparation: 'Brace before lifting',
       execution: 'Cached by the browser test',
+      referenceUrl: 'https://exrx.net/example-offline-press',
       muscles: [{ muscleId: muscle.id, role: 'primary' }],
     },
   });

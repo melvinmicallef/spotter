@@ -45,6 +45,10 @@ describe('local workout repository', () => {
         {
           id: crypto.randomUUID(),
           name: 'Back',
+          group: 'Back',
+          subgroup: null,
+          referenceUrl: 'https://exrx.net/Lists/Directory',
+          isBuiltin: true,
           createdAt: now,
           updatedAt: now,
         },
@@ -82,6 +86,7 @@ describe('local workout repository', () => {
         exerciseId: null,
         exerciseName: 'Snapshot exercise',
         exerciseType: 'strength',
+        referenceUrl: null,
         position: 0,
         notes: 'Exercise note',
         targetSets: null,

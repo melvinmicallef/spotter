@@ -17,7 +17,7 @@ describe('database migrations', () => {
           .prepare('SELECT COUNT(*) AS count FROM schema_migrations')
           .get() as { count: number }
       ).count,
-    ).toBe(5);
+    ).toBe(6);
     expect(
       database
         .prepare(
@@ -59,16 +59,26 @@ describe('database migrations', () => {
 
     const upgraded = openDatabase(path);
     expect(
-      (upgraded.prepare('SELECT name FROM muscles').get() as { name: string })
-        .name,
+      (
+        upgraded
+          .prepare('SELECT name FROM muscles WHERE id = ?')
+          .get('34d43cac-2469-44f0-92e4-3fe2bd59af83') as { name: string }
+      ).name,
     ).toBe('Back');
+    expect(
+      (
+        upgraded
+          .prepare('SELECT COUNT(*) AS count FROM muscles WHERE is_builtin = 1')
+          .get() as { count: number }
+      ).count,
+    ).toBe(45);
     expect(
       (
         upgraded
           .prepare('SELECT MAX(version) AS version FROM schema_migrations')
           .get() as { version: number }
       ).version,
-    ).toBe(5);
+    ).toBe(6);
     upgraded.close();
     rmSync(directory, { recursive: true, force: true });
   });

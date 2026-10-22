@@ -6,7 +6,6 @@ import type {
   ExerciseMedia,
   ExerciseType,
   Muscle,
-  MuscleInput,
   ReferenceData,
   SyncOperation,
   SyncResponse,
@@ -32,73 +31,12 @@ export class SpotterStore {
 
   listMuscles(): Muscle[] {
     return this.database
-      .prepare('SELECT * FROM muscles ORDER BY name COLLATE NOCASE')
+      .prepare(
+        `SELECT * FROM muscles
+         ORDER BY group_order, muscle_order, name COLLATE NOCASE`,
+      )
       .all()
       .map((row) => mapMuscle(row as Row));
-  }
-
-  createMuscle(input: MuscleInput): Muscle {
-    const id = input.id ?? randomUUID();
-    const now = new Date().toISOString();
-    try {
-      this.database.transaction(() => {
-        this.database
-          .prepare(
-            'INSERT INTO muscles (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)',
-          )
-          .run(id, input.name, now, now);
-        this.incrementReferenceRevision();
-      })();
-    } catch (error) {
-      throw this.constraintError(
-        error,
-        'A muscle with this name already exists',
-      );
-    }
-    return this.getMuscle(id);
-  }
-
-  updateMuscle(id: string, input: MuscleInput): Muscle {
-    try {
-      this.database.transaction(() => {
-        const update = this.database
-          .prepare('UPDATE muscles SET name = ?, updated_at = ? WHERE id = ?')
-          .run(input.name, new Date().toISOString(), id);
-        if (update.changes === 0)
-          throw new AppError(404, 'NOT_FOUND', 'Muscle not found');
-        this.incrementReferenceRevision();
-      })();
-    } catch (error) {
-      if (error instanceof AppError) throw error;
-      throw this.constraintError(
-        error,
-        'A muscle with this name already exists',
-      );
-    }
-    return this.getMuscle(id);
-  }
-
-  deleteMuscle(id: string): void {
-    try {
-      this.database.transaction(() => {
-        const result = this.database
-          .prepare('DELETE FROM muscles WHERE id = ?')
-          .run(id);
-        if (result.changes === 0)
-          throw new AppError(404, 'NOT_FOUND', 'Muscle not found');
-        this.incrementReferenceRevision();
-      })();
-    } catch (error) {
-      if (error instanceof AppError) throw error;
-      if (isSqliteConstraint(error)) {
-        throw new AppError(
-          409,
-          'DEPENDENCY_EXISTS',
-          'Muscle is still used by an exercise',
-        );
-      }
-      throw error;
-    }
   }
 
   listExercises(): Exercise[] {
@@ -134,7 +72,7 @@ export class SpotterStore {
             input.preparation,
             input.execution,
             input.mediaId,
-            input.source?.url ?? null,
+            input.referenceUrl ?? input.source?.url ?? null,
             input.source?.title ?? null,
             input.source?.mediaUrl ?? null,
             input.source ? now : null,
@@ -169,7 +107,7 @@ export class SpotterStore {
             input.preparation,
             input.execution,
             input.mediaId,
-            input.source?.url ?? null,
+            input.referenceUrl ?? input.source?.url ?? null,
             input.source?.title ?? null,
             input.source?.mediaUrl ?? null,
             input.source ? new Date().toISOString() : null,
@@ -443,14 +381,6 @@ export class SpotterStore {
     this.database.close();
   }
 
-  private getMuscle(id: string): Muscle {
-    const row = this.database
-      .prepare('SELECT * FROM muscles WHERE id = ?')
-      .get(id) as Row | undefined;
-    if (!row) throw new AppError(404, 'NOT_FOUND', 'Muscle not found');
-    return mapMuscle(row);
-  }
-
   private getExercise(id: string): Exercise {
     const row = this.database
       .prepare(
@@ -477,7 +407,8 @@ export class SpotterStore {
   private mapExercise(row: Row): Exercise {
     const muscles = this.database
       .prepare(
-        `SELECT muscles.id, muscles.name, exercise_muscles.role
+        `SELECT muscles.id, muscles.name, muscles.group_name,
+          muscles.subgroup_name, exercise_muscles.role
          FROM exercise_muscles JOIN muscles ON muscles.id = exercise_muscles.muscle_id
          WHERE exercise_muscles.exercise_id = ?
          ORDER BY exercise_muscles.role, muscles.name COLLATE NOCASE`,
@@ -486,6 +417,8 @@ export class SpotterStore {
       .map((muscle) => ({
         id: String((muscle as Row).id),
         name: String((muscle as Row).name),
+        group: String((muscle as Row).group_name),
+        subgroup: nullableString((muscle as Row).subgroup_name),
         role: (muscle as Row).role as 'primary' | 'secondary',
       }));
     return {
@@ -494,6 +427,7 @@ export class SpotterStore {
       exerciseType: row.exercise_type as Exercise['exerciseType'],
       preparation: nullableString(row.preparation),
       execution: nullableString(row.execution),
+      referenceUrl: nullableString(row.source_url),
       muscles,
       media: row.image_id
         ? {
@@ -506,14 +440,15 @@ export class SpotterStore {
             createdAt: String(row.image_created_at),
           }
         : null,
-      source: row.source_url
-        ? {
-            url: String(row.source_url),
-            title: nullableString(row.source_title),
-            mediaUrl: nullableString(row.source_media_url),
-            importedAt: String(row.source_imported_at),
-          }
-        : null,
+      source:
+        row.source_url && row.source_imported_at
+          ? {
+              url: String(row.source_url),
+              title: nullableString(row.source_title),
+              mediaUrl: nullableString(row.source_media_url),
+              importedAt: String(row.source_imported_at),
+            }
+          : null,
       createdAt: String(row.created_at),
       updatedAt: String(row.updated_at),
     };
@@ -523,7 +458,8 @@ export class SpotterStore {
     const exercises = this.database
       .prepare(
         `SELECT template_exercises.*, exercises.name AS exercise_name,
-          exercises.exercise_type AS exercise_type
+          exercises.exercise_type AS exercise_type,
+          exercises.source_url AS reference_url
          FROM template_exercises JOIN exercises ON exercises.id = template_exercises.exercise_id
          WHERE template_exercises.template_id = ?
          ORDER BY template_exercises.day_of_week, template_exercises.position`,
@@ -534,6 +470,7 @@ export class SpotterStore {
         exerciseId: String((entry as Row).exercise_id),
         exerciseName: String((entry as Row).exercise_name),
         exerciseType: (entry as Row).exercise_type as Exercise['exerciseType'],
+        referenceUrl: nullableString((entry as Row).reference_url),
         dayOfWeek: Number((entry as Row).day_of_week),
         position: Number((entry as Row).position),
         notes: nullableString((entry as Row).notes),
@@ -586,6 +523,7 @@ export class SpotterStore {
           exerciseId: nullableString(exercise.exercise_id),
           exerciseName: String(exercise.exercise_name),
           exerciseType: exercise.exercise_type as Exercise['exerciseType'],
+          referenceUrl: nullableString(exercise.reference_url),
           position: Number(exercise.position),
           notes: nullableString(exercise.notes),
           targetSets: nullableNumber(exercise.target_sets),
@@ -764,10 +702,10 @@ export class SpotterStore {
       .run(workout.id);
     const insertExercise = this.database.prepare(
       `INSERT INTO workout_exercises
-       (id, workout_id, exercise_id, exercise_name, exercise_type, position,
+       (id, workout_id, exercise_id, exercise_name, exercise_type, reference_url, position,
         notes, target_sets, target_reps, target_duration_seconds,
         target_distance, target_distance_unit)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     );
     const insertSet = this.database.prepare(
       `INSERT INTO workout_sets
@@ -787,6 +725,7 @@ export class SpotterStore {
         exerciseExists ? exercise.exerciseId : null,
         exercise.exerciseName,
         exercise.exerciseType,
+        exercise.referenceUrl,
         exercise.position,
         exercise.notes,
         exercise.targetSets,
@@ -845,6 +784,10 @@ function mapMuscle(row: Row): Muscle {
   return {
     id: String(row.id),
     name: String(row.name),
+    group: String(row.group_name),
+    subgroup: nullableString(row.subgroup_name),
+    referenceUrl: nullableString(row.reference_url),
+    isBuiltin: Boolean(row.is_builtin),
     createdAt: String(row.created_at),
     updatedAt: String(row.updated_at),
   };

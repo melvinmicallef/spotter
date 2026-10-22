@@ -330,14 +330,7 @@ export function App() {
           />
         )}
         {view === 'history' && <HistoryView workouts={history} />}
-        {view === 'muscles' && (
-          <MusclesView
-            online={online}
-            muscles={muscles}
-            onRefresh={refreshOnlineReferences}
-            onError={setMessage}
-          />
-        )}
+        {view === 'muscles' && <MusclesView muscles={muscles} />}
         {view === 'exercises' && (
           <ExercisesView
             online={online}

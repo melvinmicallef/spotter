@@ -44,15 +44,24 @@ describe('catalogue, templates, and synchronization API', () => {
     rmSync(mediaPath, { recursive: true, force: true });
   });
 
-  it('manages catalogue records and protects dependencies', async () => {
-    const muscleId = randomUUID();
+  it('uses the built-in muscle hierarchy when managing exercises and templates', async () => {
     const exerciseId = randomUUID();
     const templateId = randomUUID();
 
+    const muscleResponse = await request(app).get('/api/muscles').expect(200);
+    expect(muscleResponse.body).toHaveLength(45);
+    const muscle = muscleResponse.body.find(
+      (entry: { group: string; subgroup: string | null; name: string }) =>
+        entry.group === 'Chest' &&
+        entry.subgroup === 'Pectoralis Major' &&
+        entry.name === 'Sternal',
+    );
+    expect(muscle).toMatchObject({ isBuiltin: true });
+    const muscleId = muscle.id as string;
     await request(app)
       .post('/api/muscles')
-      .send({ id: muscleId, name: 'Chest' })
-      .expect(201);
+      .send({ name: 'Custom' })
+      .expect(404);
     const exercise = await request(app)
       .post('/api/exercises')
       .send({
@@ -60,18 +69,17 @@ describe('catalogue, templates, and synchronization API', () => {
         name: 'Bench press',
         preparation: 'Set the bench and plant both feet',
         execution: 'Control the descent',
+        referenceUrl:
+          'https://exrx.net/WeightExercises/PectoralSternal/BBBenchPress',
         muscles: [{ muscleId, role: 'primary' }],
       })
       .expect(201);
     expect(exercise.body).toMatchObject({
       preparation: 'Set the bench and plant both feet',
       execution: 'Control the descent',
+      referenceUrl:
+        'https://exrx.net/WeightExercises/PectoralSternal/BBBenchPress',
     });
-
-    const dependency = await request(app)
-      .delete(`/api/muscles/${muscleId}`)
-      .expect(409);
-    expect(dependency.body.error.code).toBe('DEPENDENCY_EXISTS');
 
     const template = await request(app)
       .post('/api/templates')
@@ -128,6 +136,7 @@ describe('catalogue, templates, and synchronization API', () => {
           exerciseId,
           exerciseName: 'Air squat',
           exerciseType: 'strength',
+          referenceUrl: null,
           position: 0,
           notes: null,
           targetSets: null,
@@ -418,8 +427,8 @@ describe('catalogue, templates, and synchronization API', () => {
 
   it('returns stable validation errors', async () => {
     const response = await request(app)
-      .post('/api/muscles')
-      .send({ name: '' })
+      .post('/api/exercises')
+      .send({ name: '', muscles: [] })
       .expect(400);
     expect(response.body.error.code).toBe('VALIDATION_ERROR');
   });
