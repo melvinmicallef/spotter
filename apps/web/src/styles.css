@@ -1022,12 +1022,13 @@ small {
 }
 .strength-grid-add .strength-grid-set-heading {
   justify-content: center;
-  border-right: 0;
+  border-right: 1px solid var(--border-strong);
 }
 .strength-grid-add button {
   grid-row: 2 / 4;
   margin: 4px;
   padding: 4px;
+  border: 1px solid var(--border-strong);
   border-radius: 7px;
   font-size: 0.72rem;
 }
