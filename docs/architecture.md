@@ -66,13 +66,17 @@ Each primary view has a stable client-side route: `/workout`, `/history`,
 `/muscles`, `/exercises`, and `/templates`. Navigation writes browser history,
 back/forward navigation restores the corresponding view, and Express plus the
 service-worker navigation fallback both return the PWA shell for a direct load
-or refresh on those paths.
+or refresh on those paths. Exercise creation, details, and editing also have
+stable nested routes: `/exercises/new`, `/exercises/:id`, and
+`/exercises/:id/edit`.
 
 The catalogue has separate muscle and exercise views. The muscle view renders a
 read-only built-in hierarchy sourced from the ExRx directory: only leaf records
 are selectable, while group and subgroup headings are navigation metadata.
 Exercises use a compact image/title/target-muscle list; a selected exercise
-opens a detail page with separate edit and delete actions.
+opens a detail page with separate edit and delete actions. Deletion requires an
+explicit confirmation before the online request is sent. Muscle source links
+open ExRx in a new browser tab so the catalogue remains available.
 Exercises own their strength/cardio type, muscle roles, separate preparation
 and execution instructions, and uploaded image. The version-five SQLite and
 IndexedDB migrations retain legacy single-field instructions as execution text.

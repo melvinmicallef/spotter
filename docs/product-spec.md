@@ -115,7 +115,9 @@ are supplied by the application rather than entered by the user.
 
 Exercises are shown in a compact list with their image, title, and target
 muscles. Selecting one opens a read-only details page with explicit edit and
-delete actions; creation and editing happen on dedicated screens.
+delete actions; deletion requires confirmation. Creation, details, and editing
+happen on dedicated, refresh-safe URLs keyed by the exercise UUID where
+applicable. ExRx source links in the muscle directory open in a new tab.
 
 Uploaded exercise demonstrations may be GIF, PNG, or JPEG, are limited to 5
 MiB, stored under the persistent `/data` path, and removed when their exercise
