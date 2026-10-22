@@ -648,7 +648,7 @@ function TargetSummary({
       exercise.cardioMode === 'interval' ? null : exercise.targetDistance;
     const target =
       exercise.cardioMode === 'interval'
-        ? `Interval · Prep ${formatClock(exercise.intervalPrepSeconds ?? 0)} · Work ${formatClock(exercise.intervalWorkSeconds ?? 0)} · Rest ${formatClock(exercise.intervalRestSeconds ?? 0)} × ${exercise.intervalIterations ?? 0}`
+        ? `Interval · ${exercise.intervalIterations ?? 0} rounds · Prep ${formatClock(exercise.intervalPrepSeconds ?? 0)} · Work ${formatClock(exercise.intervalWorkSeconds ?? 0)} · Rest ${formatClock(exercise.intervalRestSeconds ?? 0)}`
         : exercise.targetDurationSeconds == null
           ? null
           : formatClock(exercise.targetDurationSeconds);
@@ -900,7 +900,6 @@ function CardioWorkout({
       <IntervalTimer
         entry={entry}
         recordedResult={recordedResult}
-        distanceUnit={distanceUnit}
         onChange={onChange}
         actions={actions}
       />
@@ -1025,18 +1024,17 @@ interface TimerRun {
   status: 'idle' | 'running' | 'paused' | 'complete';
   elapsedMs: number;
   startedAt: number | null;
+  skippedWorkMs: number;
 }
 
 function IntervalTimer({
   entry,
   recordedResult,
-  distanceUnit,
   onChange,
   actions,
 }: {
   entry: WorkoutEntry;
   recordedResult: WorkoutSet | undefined;
-  distanceUnit: DistanceUnit;
   onChange: WorkoutViewProps['onChange'];
   actions: WorkoutActions;
 }) {
@@ -1065,6 +1063,7 @@ function IntervalTimer({
         totalMs,
         baseElapsed + performance.now() - startedAt,
       );
+      if (elapsedMs < lastElapsedMs.current) return;
       setDisplayElapsedMs(elapsedMs);
       for (const timerEvent of timerEvents) {
         if (
@@ -1083,10 +1082,17 @@ function IntervalTimer({
       if (elapsedMs >= totalMs) {
         window.clearInterval(interval);
         clearTimerCheckpoint(checkpointKey);
-        setRun({ status: 'complete', elapsedMs: totalMs, startedAt: null });
+        setRun({
+          status: 'complete',
+          elapsedMs: totalMs,
+          startedAt: null,
+          skippedWorkMs: run.skippedWorkMs,
+        });
         if (recordedResult) {
-          const durationSeconds =
-            (entry.intervalWorkSeconds ?? 0) * (entry.intervalIterations ?? 0);
+          const durationSeconds = intervalWorkDurationSeconds(
+            entry,
+            run.skippedWorkMs,
+          );
           onChange((current) =>
             actions.updateSet(current, entry.id, recordedResult.id, {
               durationSeconds,
@@ -1106,19 +1112,13 @@ function IntervalTimer({
     run.status,
     run.startedAt,
     run.elapsedMs,
+    run.skippedWorkMs,
     timerEvents,
     totalMs,
   ]);
 
   const elapsedMs = run.status === 'running' ? displayElapsedMs : run.elapsedMs;
   const currentStage = stageAtElapsed(stages, elapsedMs);
-  const distanceValue = recordedResult
-    ? convertDistance(
-        recordedResult.distance,
-        recordedResult.distanceUnit,
-        distanceUnit,
-      )
-    : null;
 
   function start() {
     activateAudio();
@@ -1129,6 +1129,7 @@ function IntervalTimer({
         status: 'running',
         elapsedMs: run.elapsedMs,
         startedAtWallMs: Date.now(),
+        skippedWorkMs: run.skippedWorkMs,
       });
       setRun({ ...run, status: 'running', startedAt: now });
       return;
@@ -1140,13 +1141,24 @@ function IntervalTimer({
       status: 'running',
       elapsedMs: 0,
       startedAtWallMs: Date.now(),
+      skippedWorkMs: 0,
     });
-    setRun({ status: 'running', elapsedMs: 0, startedAt: now });
+    setRun({
+      status: 'running',
+      elapsedMs: 0,
+      startedAt: now,
+      skippedWorkMs: 0,
+    });
   }
 
   function reset() {
     clearTimerCheckpoint(checkpointKey);
-    setRun({ status: 'idle', elapsedMs: 0, startedAt: null });
+    setRun({
+      status: 'idle',
+      elapsedMs: 0,
+      startedAt: null,
+      skippedWorkMs: 0,
+    });
     setDisplayElapsedMs(0);
     playedEvents.current.clear();
     lastElapsedMs.current = 0;
@@ -1162,10 +1174,69 @@ function IntervalTimer({
       status: 'paused',
       elapsedMs: nowElapsed,
       startedAtWallMs: null,
+      skippedWorkMs: run.skippedWorkMs,
     });
-    setRun({ status: 'paused', elapsedMs: nowElapsed, startedAt: null });
+    setRun({
+      status: 'paused',
+      elapsedMs: nowElapsed,
+      startedAt: null,
+      skippedWorkMs: run.skippedWorkMs,
+    });
     setDisplayElapsedMs(nowElapsed);
     lastElapsedMs.current = nowElapsed;
+  }
+
+  function skipStage() {
+    if (run.status !== 'running' || run.startedAt == null) return;
+    const now = performance.now();
+    const currentElapsedMs = Math.min(
+      totalMs,
+      run.elapsedMs + now - run.startedAt,
+    );
+    const currentStage = stageAtElapsed(stages, currentElapsedMs);
+    if (!currentStage) return;
+
+    const skippedWorkMs =
+      run.skippedWorkMs +
+      (currentStage.stage.name === 'Work'
+        ? Math.max(0, currentStage.endMs - currentElapsedMs)
+        : 0);
+    const nextElapsedMs = currentStage.endMs;
+    lastElapsedMs.current = nextElapsedMs;
+    setDisplayElapsedMs(nextElapsedMs);
+    playBeep(audioContext.current);
+
+    if (nextElapsedMs >= totalMs) {
+      clearTimerCheckpoint(checkpointKey);
+      setRun({
+        status: 'complete',
+        elapsedMs: totalMs,
+        startedAt: null,
+        skippedWorkMs,
+      });
+      if (recordedResult) {
+        onChange((current) =>
+          actions.updateSet(current, entry.id, recordedResult.id, {
+            durationSeconds: intervalWorkDurationSeconds(entry, skippedWorkMs),
+            completed: true,
+          }),
+        );
+      }
+      return;
+    }
+
+    saveTimerCheckpoint(checkpointKey, {
+      status: 'running',
+      elapsedMs: nextElapsedMs,
+      startedAtWallMs: Date.now(),
+      skippedWorkMs,
+    });
+    setRun({
+      status: 'running',
+      elapsedMs: nextElapsedMs,
+      startedAt: now,
+      skippedWorkMs,
+    });
   }
 
   function updateIntervalSettings(
@@ -1237,31 +1308,6 @@ function IntervalTimer({
           </label>
         </div>
       )}
-      {recordedResult && (
-        <label className="cardio-distance-input">
-          Distance ({distanceUnit})
-          <span className="number-unit">
-            <input
-              aria-label={`${entry.exerciseName} distance`}
-              inputMode="decimal"
-              type="number"
-              min="0"
-              step="0.01"
-              value={distanceValue ?? ''}
-              onChange={(event) =>
-                updateEffort(onChange, actions, entry.id, recordedResult.id, {
-                  distance:
-                    event.target.value === ''
-                      ? null
-                      : Number(event.target.value),
-                  distanceUnit,
-                })
-              }
-            />
-            <span className="unit-label">{distanceUnit}</span>
-          </span>
-        </label>
-      )}
       <div className="interval-timer" aria-live="polite">
         <div className="interval-timer-readout">
           <span>
@@ -1277,9 +1323,16 @@ function IntervalTimer({
         </div>
         <div className="inline-actions">
           {run.status === 'running' ? (
-            <button className="secondary" type="button" onClick={pause}>
-              Pause
-            </button>
+            <>
+              <button className="secondary" type="button" onClick={pause}>
+                Pause
+              </button>
+              {currentStage && (
+                <button className="secondary" type="button" onClick={skipStage}>
+                  Skip {currentStage.stage.name.toLowerCase()}
+                </button>
+              )}
+            </>
           ) : (
             <button type="button" onClick={start}>
               {run.status === 'paused'
@@ -1332,7 +1385,12 @@ function IntervalTimer({
 }
 
 function restoreTimerRun(key: string): TimerRun {
-  const idle: TimerRun = { status: 'idle', elapsedMs: 0, startedAt: null };
+  const idle: TimerRun = {
+    status: 'idle',
+    elapsedMs: 0,
+    startedAt: null,
+    skippedWorkMs: 0,
+  };
   try {
     const saved = localStorage.getItem(key);
     if (!saved) return idle;
@@ -1340,11 +1398,19 @@ function restoreTimerRun(key: string): TimerRun {
       status?: unknown;
       elapsedMs?: unknown;
       startedAtWallMs?: unknown;
+      skippedWorkMs?: unknown;
     };
     const elapsedMs = Number(checkpoint.elapsedMs);
-    if (!Number.isFinite(elapsedMs) || elapsedMs < 0) return idle;
+    const skippedWorkMs = Number(checkpoint.skippedWorkMs ?? 0);
+    if (
+      !Number.isFinite(elapsedMs) ||
+      elapsedMs < 0 ||
+      !Number.isFinite(skippedWorkMs) ||
+      skippedWorkMs < 0
+    )
+      return idle;
     if (checkpoint.status === 'paused') {
-      return { status: 'paused', elapsedMs, startedAt: null };
+      return { status: 'paused', elapsedMs, startedAt: null, skippedWorkMs };
     }
     if (
       checkpoint.status === 'running' &&
@@ -1359,6 +1425,7 @@ function restoreTimerRun(key: string): TimerRun {
         status: 'running',
         elapsedMs,
         startedAt: performance.now() - elapsedSinceStart,
+        skippedWorkMs,
       };
     }
   } catch {
@@ -1373,6 +1440,7 @@ function saveTimerCheckpoint(
     status: 'running' | 'paused';
     elapsedMs: number;
     startedAtWallMs: number | null;
+    skippedWorkMs: number;
   },
 ) {
   try {
@@ -1417,6 +1485,15 @@ function buildIntervalStages(entry: WorkoutEntry): IntervalStage[] {
   return stages;
 }
 
+function intervalWorkDurationSeconds(
+  entry: WorkoutEntry,
+  skippedWorkMs: number,
+) {
+  const plannedWorkSeconds =
+    (entry.intervalWorkSeconds ?? 0) * (entry.intervalIterations ?? 0);
+  return Math.max(0, Math.round(plannedWorkSeconds - skippedWorkMs / 1000));
+}
+
 function buildTimerEvents(stages: IntervalStage[]): TimerEvent[] {
   const events: TimerEvent[] = [];
   let stageStartMs = 0;
@@ -1447,6 +1524,7 @@ function stageAtElapsed(stages: IntervalStage[], elapsedMs: number) {
     if (elapsedMs < stageEndMs) {
       return {
         stage,
+        endMs: stageEndMs,
         remainingSeconds: Math.ceil((stageEndMs - elapsedMs) / 1000),
       };
     }

@@ -293,22 +293,34 @@ function HistoryDetailsPage({
                   <h3>{exercise.exerciseName}</h3>
                   <small className="type-badge">{exercise.exerciseType}</small>
                 </div>
-                <span className="history-edit-count">
-                  {exercise.sets.length}{' '}
-                  {exercise.sets.length === 1 ? 'set' : 'sets'}
-                </span>
+                {!(
+                  exercise.exerciseType === 'cardio' &&
+                  exercise.cardioMode === 'interval'
+                ) && (
+                  <span className="history-edit-count">
+                    {exercise.sets.length}{' '}
+                    {exercise.sets.length === 1 ? 'set' : 'sets'}
+                  </span>
+                )}
               </header>
               <div className="history-edit-set-list">
                 {exercise.sets.map((set, setIndex) => (
                   <div
-                    className={`history-edit-set ${exercise.exerciseType}-edit-set`}
+                    className={`history-edit-set ${exercise.exerciseType}-edit-set${exercise.exerciseType === 'cardio' && exercise.cardioMode === 'interval' ? ' interval-cardio-edit-set' : ''}`}
                     key={set.id}
                   >
-                    <strong>Set {setIndex + 1}</strong>
+                    <strong>
+                      {exercise.exerciseType === 'cardio' &&
+                      exercise.cardioMode === 'interval'
+                        ? 'Work total'
+                        : `Set ${setIndex + 1}`}
+                    </strong>
                     {exercise.exerciseType === 'cardio' ? (
                       <>
                         <label>
-                          Duration (seconds)
+                          {exercise.cardioMode === 'interval'
+                            ? 'Work duration (seconds)'
+                            : 'Duration (seconds)'}
                           <input
                             inputMode="numeric"
                             type="number"
@@ -323,28 +335,30 @@ function HistoryDetailsPage({
                             }
                           />
                         </label>
-                        <label>
-                          Distance ({distanceUnit})
-                          <input
-                            inputMode="decimal"
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={
-                              convertDistance(
-                                set.distance,
-                                set.distanceUnit,
-                                distanceUnit,
-                              ) ?? ''
-                            }
-                            onChange={(event) =>
-                              changeSet(exercise.id, set.id, {
-                                distance: inputNumber(event.target.value),
-                                distanceUnit,
-                              })
-                            }
-                          />
-                        </label>
+                        {exercise.cardioMode !== 'interval' && (
+                          <label>
+                            Distance ({distanceUnit})
+                            <input
+                              inputMode="decimal"
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={
+                                convertDistance(
+                                  set.distance,
+                                  set.distanceUnit,
+                                  distanceUnit,
+                                ) ?? ''
+                              }
+                              onChange={(event) =>
+                                changeSet(exercise.id, set.id, {
+                                  distance: inputNumber(event.target.value),
+                                  distanceUnit,
+                                })
+                              }
+                            />
+                          </label>
+                        )}
                       </>
                     ) : (
                       <>
@@ -388,34 +402,44 @@ function HistoryDetailsPage({
                         </label>
                       </>
                     )}
-                    <button
-                      className="icon-button danger-text history-remove-set"
-                      type="button"
-                      aria-label={`Remove ${exercise.exerciseName} set ${setIndex + 1}`}
-                      onClick={() =>
-                        setDraft((current) =>
-                          current
-                            ? removeSet(current, exercise.id, set.id)
-                            : current,
-                        )
-                      }
-                    >
-                      ×
-                    </button>
+                    {!(
+                      exercise.exerciseType === 'cardio' &&
+                      exercise.cardioMode === 'interval'
+                    ) && (
+                      <button
+                        className="icon-button danger-text history-remove-set"
+                        type="button"
+                        aria-label={`Remove ${exercise.exerciseName} set ${setIndex + 1}`}
+                        onClick={() =>
+                          setDraft((current) =>
+                            current
+                              ? removeSet(current, exercise.id, set.id)
+                              : current,
+                          )
+                        }
+                      >
+                        ×
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
-              <button
-                className="secondary history-add-set"
-                type="button"
-                onClick={() =>
-                  setDraft((current) =>
-                    current ? addSet(current, exercise.id) : current,
-                  )
-                }
-              >
-                + Add set
-              </button>
+              {!(
+                exercise.exerciseType === 'cardio' &&
+                exercise.cardioMode === 'interval'
+              ) && (
+                <button
+                  className="secondary history-add-set"
+                  type="button"
+                  onClick={() =>
+                    setDraft((current) =>
+                      current ? addSet(current, exercise.id) : current,
+                    )
+                  }
+                >
+                  + Add set
+                </button>
+              )}
             </article>
           ))}
         </form>
@@ -436,7 +460,7 @@ function HistoryDetailsPage({
               {exercise.exerciseType === 'cardio' && (
                 <p className="history-cardio-target">
                   {exercise.cardioMode === 'interval'
-                    ? `Interval · Prep ${formatClock(exercise.intervalPrepSeconds ?? 0)} · Work ${formatClock(exercise.intervalWorkSeconds ?? 0)} · Rest ${formatClock(exercise.intervalRestSeconds ?? 0)} × ${exercise.intervalIterations ?? 0}`
+                    ? `Interval · ${exercise.intervalIterations ?? 0} rounds · Prep ${formatClock(exercise.intervalPrepSeconds ?? 0)} · Work ${formatClock(exercise.intervalWorkSeconds ?? 0)} · Rest ${formatClock(exercise.intervalRestSeconds ?? 0)}`
                     : exercise.targetDurationSeconds == null
                       ? null
                       : `Duration target · ${formatClock(exercise.targetDurationSeconds)}`}
@@ -445,10 +469,15 @@ function HistoryDetailsPage({
               <ol>
                 {exercise.sets.map((set, index) => (
                   <li key={set.id}>
-                    <span>Set {index + 1} · </span>
+                    <span>
+                      {exercise.exerciseType === 'cardio' &&
+                      exercise.cardioMode === 'interval'
+                        ? 'Work total · '
+                        : `Set ${index + 1} · `}
+                    </span>
                     <span>
                       {exercise.exerciseType === 'cardio'
-                        ? formatCardioEffort(set)
+                        ? formatCardioEffort(set, exercise.cardioMode)
                         : exercise.exerciseType === 'calisthenics'
                           ? formatCalisthenicsSet(set)
                           : formatStrengthSet(set)}
@@ -506,10 +535,15 @@ function formatCalisthenicsSet(set: WorkoutSet) {
   return set.reps == null ? '— reps' : `${set.reps} reps`;
 }
 
-function formatCardioEffort(set: WorkoutSet) {
+function formatCardioEffort(
+  set: WorkoutSet,
+  cardioMode?: 'duration' | 'interval',
+) {
   const measurements = [
     set.durationSeconds == null ? null : formatDuration(set.durationSeconds),
-    set.distance == null ? null : `${set.distance} ${set.distanceUnit}`,
+    cardioMode === 'interval' || set.distance == null
+      ? null
+      : `${set.distance} ${set.distanceUnit}`,
   ].filter(Boolean);
   return measurements.length > 0 ? measurements.join(' · ') : 'No result';
 }

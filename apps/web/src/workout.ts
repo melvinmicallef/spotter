@@ -66,7 +66,7 @@ export function createWorkout(
           cardioMode === 'interval'
             ? (previousInterval?.intervalIterations ?? 8)
             : null,
-        targetDistance: entry.targetDistance,
+        targetDistance: cardioMode === 'interval' ? null : entry.targetDistance,
         targetDistanceUnit: entry.targetDistanceUnit,
         completed: false,
         sets: Array.from(

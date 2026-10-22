@@ -1613,6 +1613,9 @@ small {
 .history-edit-set.calisthenics-edit-set {
   grid-template-columns: 52px minmax(0, 1fr) 36px;
 }
+.history-edit-set.interval-cardio-edit-set {
+  grid-template-columns: 82px minmax(0, 1fr);
+}
 .history-edit-set > strong {
   align-self: center;
   color: var(--text-muted);
@@ -1841,12 +1844,6 @@ small {
 .interval-iterations-field input {
   min-width: 0;
   padding: 8px 7px;
-}
-.cardio-interval-workout > .cardio-distance-input {
-  max-width: 260px;
-  padding: 10px;
-  border-radius: 12px;
-  background: var(--surface-deep);
 }
 .interval-timer {
   display: flex;

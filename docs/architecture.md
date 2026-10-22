@@ -149,19 +149,21 @@ operation from replacing a newer workout.
 
 Each workout-exercise snapshot copies its `strength`, `calisthenics`, or
 `cardio` category. Strength efforts use repetitions, optional weight, and
-`kg`/`lb`; calisthenics efforts use repetitions without weight; cardio efforts
-use either one duration result or a configured interval timer plus optional
-distance. Templates select duration or interval mode; interval timing is
-configured on each workout and stored only in its workout-exercise snapshot.
+`kg`/`lb`; calisthenics efforts use repetitions without weight; duration cardio
+uses one duration result with optional distance, while interval cardio records
+work duration without distance. Templates select duration or interval mode;
+interval timing is configured on each workout and stored only in its
+workout-exercise snapshot.
 Starting an interval workout uses the latest completed interval execution for
 that exercise, across templates, or defaults to 0 prep seconds, 30 work
 seconds, 30 rest seconds, and 8 iterations. Users can adjust those values
 before starting the timer. The interval timer runs prep, work, and rest stages,
-beeps for countdown values five through one and at stage transitions, and
-records total work time when it completes. A device-local Metric/Imperial
-Settings preference controls weight entry and display, and cardio distance
-uses `km`/`mi` derived from that preference. Saved weighted values retain their
-recorded unit.
+can skip the active stage, beeps for countdown values five through one and at
+stage transitions, and records work duration, subtracting work skipped early.
+History shows the interval settings and recorded work duration without a
+distance field. A device-local Metric/Imperial Settings preference controls
+weight entry and display, and duration-cardio distance uses `km`/`mi` derived
+from that preference. Saved weighted values retain their recorded unit.
 The browser keeps a small numeric interval-timer checkpoint keyed by workout
 exercise so a running or paused timer can resume after a refresh on that device.
 The finished duration is written through the normal IndexedDB workout and
@@ -466,13 +468,14 @@ The current `0.2.0` implementation uses one active workout per device, one
 active weekly ISO-day template, starts from any unfinished day with today
 selected by default, per-device current-week completion markers, strength
 repetitions plus explicit `kg`/`lb` weight, calisthenics
-repetitions without weight, and cardio duration or interval timers plus explicit
-`km`/`mi` distance. Metric is the device-local default. Settings converts active
-entry and template target displays while preserving recorded units in completed
-history. Completed history supports online set-value and set-count edits only
-after pending outbox work has synchronized; exercise entries and their order
-remain fixed. Strength exercise details graph Epley estimated one-rep max and
-total training volume by workout date. Workout entries retain their progress
-locally, including completion state and interval timer checkpoints. The
-deployment remains trusted and single-user without built-in authentication;
-the API layer remains the boundary for adding actor and ownership context later.
+repetitions without weight, duration cardio with optional distance, and
+interval timers that record work duration without distance. Metric is the
+device-local default. Settings converts active entry and template target
+displays while preserving recorded units in completed history. Completed
+history supports online set-value and set-count edits only after pending outbox
+work has synchronized; exercise entries and their order remain fixed. Strength
+exercise details graph Epley estimated one-rep max and total training volume by
+workout date. Workout entries retain their progress locally, including
+completion state and interval timer checkpoints. The deployment remains
+trusted and single-user without built-in authentication; the API layer remains
+the boundary for adding actor and ownership context later.

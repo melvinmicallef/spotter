@@ -173,12 +173,13 @@ introduced without replacing the workout model or synchronization core.
   any unfinished day selectable with today as the default, device-local
   completed-day markers that reset Monday midnight, confirmed workout
   cancellation that does not consume a day, device-local Metric/Imperial units,
-  duration and interval cardio, previous-set hints, collapsible completed
-  exercises, a shared stretching poster, and history detail pages with online
-  set-value editing. History edits cannot change exercise entries or their
-  order. Strength exercise details show dated Epley estimated one-rep max and
-  training-volume charts. The deployment remains trusted and single-user
-  without built-in authentication.
+  duration cardio with optional distance, interval cardio with a skippable
+  stage timer and distance-free history, previous-set hints, collapsible
+  completed exercises, a shared stretching poster, and history detail pages
+  with online set-value editing. History edits cannot change exercise entries
+  or their order. Strength exercise details show dated Epley estimated one-rep
+  max and training-volume charts. The deployment remains trusted and
+  single-user without built-in authentication.
 - Exercise demonstrations are validated GIF, PNG, or JPEG uploads of at most
   five MiB, stored below `/data/media`, and prefetched into a dedicated offline
   application cache. Website import is not part of the product. Exercises may
