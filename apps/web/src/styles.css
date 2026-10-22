@@ -1197,6 +1197,56 @@ small {
   color: var(--text-muted);
   font-size: 0.78rem;
 }
+.cardio-target-editor {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  align-items: end;
+  gap: 10px;
+  padding-top: 4px;
+}
+.cardio-target-editor > label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+.time-target-field,
+.duration-input {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.time-target-field legend,
+.duration-input legend {
+  grid-column: 1 / -1;
+  margin-bottom: 4px;
+  padding: 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+.time-target-field label,
+.duration-input label {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.time-target-field label > span:last-child,
+.duration-input label > span:last-child {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+.time-target-field input,
+.duration-input input {
+  min-width: 0;
+  padding: 8px 7px;
+}
 .type-badge {
   display: inline-block;
   margin: 0 0 0 8px;
@@ -1502,6 +1552,66 @@ small {
   border-radius: 12px;
   background: var(--surface-deep);
 }
+.cardio-workout-inputs {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(130px, 0.7fr);
+  align-items: end;
+  gap: 12px;
+  padding: 10px;
+  border-radius: 12px;
+  background: var(--surface-deep);
+}
+.cardio-workout-inputs .duration-input {
+  max-width: 340px;
+}
+.cardio-workout-inputs .duration-input legend,
+.cardio-distance-input {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+.cardio-distance-input {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.cardio-interval-workout {
+  display: grid;
+  gap: 12px;
+}
+.cardio-interval-workout > .cardio-distance-input {
+  max-width: 260px;
+  padding: 10px;
+  border-radius: 12px;
+  background: var(--surface-deep);
+}
+.interval-timer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-deep);
+}
+.interval-timer-readout {
+  display: grid;
+  gap: 3px;
+}
+.interval-timer-readout > span {
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.interval-timer-readout small {
+  color: var(--text-muted);
+}
+.interval-timer-readout strong {
+  font-size: clamp(2rem, 9vw, 3rem);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
 .number-unit {
   display: grid;
   grid-template-columns: 1fr auto;
@@ -1711,5 +1821,12 @@ small {
   .number-unit input,
   .set-row > input {
     padding: 9px 6px;
+  }
+  .cardio-workout-inputs {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .interval-timer {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }

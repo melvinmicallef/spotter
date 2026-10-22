@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import type {
   DayOfWeek,
@@ -264,8 +264,9 @@ export function WorkoutView({
                   <small className="type-badge">{entry.exerciseType}</small>
                   <span className="workout-completed-badge">Completed</span>
                   <span className="workout-completed-count">
-                    {entry.sets.length}{' '}
-                    {entry.exerciseType === 'cardio' ? 'efforts' : 'sets'}
+                    {entry.exerciseType === 'cardio'
+                      ? '1 result'
+                      : `${entry.sets.length} ${entry.sets.length === 1 ? 'set' : 'sets'}`}
                   </span>
                 </div>
                 <button
@@ -374,7 +375,7 @@ export function WorkoutView({
                 </div>
 
                 {entry.exerciseType === 'cardio' ? (
-                  <CardioEfforts
+                  <CardioWorkout
                     entry={entry}
                     distanceUnit={distanceUnit}
                     onChange={onChange}
@@ -426,15 +427,18 @@ function TargetSummary({
   distanceUnit: DistanceUnit;
 }) {
   if (exercise.exerciseType === 'cardio') {
-    const minutes = exercise.targetDurationSeconds
-      ? exercise.targetDurationSeconds / 60
-      : null;
-    if (minutes == null && exercise.targetDistance == null) return null;
+    const target =
+      exercise.cardioMode === 'interval'
+        ? `Interval · Prep ${formatClock(exercise.intervalPrepSeconds ?? 0)} · Work ${formatClock(exercise.intervalWorkSeconds ?? 0)} · Rest ${formatClock(exercise.intervalRestSeconds ?? 0)} × ${exercise.intervalIterations ?? 0}`
+        : exercise.targetDurationSeconds == null
+          ? null
+          : formatClock(exercise.targetDurationSeconds);
+    if (target == null && exercise.targetDistance == null) return null;
     return (
       <p className="target-summary">
         Target:{' '}
         {[
-          minutes == null ? null : `${minutes} min`,
+          target,
           exercise.targetDistance == null
             ? null
             : `${convertDistance(exercise.targetDistance, exercise.targetDistanceUnit, distanceUnit)} ${distanceUnit}`,
@@ -640,7 +644,7 @@ function CalisthenicsSets({
   );
 }
 
-function CardioEfforts({
+function CardioWorkout({
   entry,
   distanceUnit,
   onChange,
@@ -651,51 +655,275 @@ function CardioEfforts({
   onChange: WorkoutViewProps['onChange'];
   actions: WorkoutActions;
 }) {
+  const recordedResult = entry.sets[0];
+  if (entry.cardioMode === 'interval') {
+    return (
+      <IntervalTimer
+        entry={entry}
+        recordedResult={recordedResult}
+        distanceUnit={distanceUnit}
+        onChange={onChange}
+        actions={actions}
+      />
+    );
+  }
+  if (!recordedResult) return null;
   return (
-    <>
-      <div className="set-head cardio-head">
-        <span>Effort</span>
-        <span>Minutes</span>
-        <span>Distance ({distanceUnit})</span>
-        <span />
-      </div>
-      {entry.sets.map((effort, effortIndex) => (
-        <div className="set-row" key={effort.id}>
-          <strong>{effortIndex + 1}</strong>
+    <div className="cardio-workout-inputs">
+      <DurationInput
+        label={`${entry.exerciseName} duration`}
+        value={recordedResult.durationSeconds}
+        onChange={(durationSeconds) =>
+          updateEffort(onChange, actions, entry.id, recordedResult.id, {
+            durationSeconds,
+          })
+        }
+      />
+      <label className="cardio-distance-input">
+        Distance ({distanceUnit})
+        <span className="number-unit">
           <input
-            aria-label={`${entry.exerciseName} duration minutes effort ${effortIndex + 1}`}
+            aria-label={`${entry.exerciseName} distance`}
             inputMode="decimal"
             type="number"
             min="0"
-            step="0.1"
+            step="0.01"
             value={
-              effort.durationSeconds == null ? '' : effort.durationSeconds / 60
+              convertDistance(
+                recordedResult.distance,
+                recordedResult.distanceUnit,
+                distanceUnit,
+              ) ?? ''
             }
             onChange={(event) =>
-              updateEffort(onChange, actions, entry.id, effort.id, {
-                durationSeconds:
-                  event.target.value === ''
-                    ? null
-                    : Math.round(Number(event.target.value) * 60),
+              updateEffort(onChange, actions, entry.id, recordedResult.id, {
+                distance:
+                  event.target.value === '' ? null : Number(event.target.value),
+                distanceUnit,
               })
             }
           />
-          <div className="number-unit">
+          <span className="unit-label">{distanceUnit}</span>
+        </span>
+      </label>
+    </div>
+  );
+}
+
+function DurationInput({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number | null;
+  onChange: (value: number | null) => void;
+}) {
+  const minutes = value == null ? '' : Math.floor(value / 60);
+  const seconds = value == null ? '' : value % 60;
+  function updatePart(part: 'minutes' | 'seconds', raw: string) {
+    if (raw === '' && value == null) return;
+    const nextMinutes =
+      part === 'minutes'
+        ? Number(raw || 0)
+        : minutes === ''
+          ? 0
+          : Number(minutes);
+    const nextSeconds =
+      part === 'seconds'
+        ? Math.min(59, Number(raw || 0))
+        : seconds === ''
+          ? 0
+          : Number(seconds);
+    const total = Math.max(0, nextMinutes * 60 + nextSeconds);
+    onChange(total === 0 ? null : total);
+  }
+  return (
+    <fieldset className="duration-input">
+      <legend>{label}</legend>
+      <label>
+        <span className="sr-only">{label} minutes</span>
+        <input
+          aria-label={`${label} minutes`}
+          inputMode="numeric"
+          type="number"
+          min="0"
+          value={minutes}
+          onChange={(event) => updatePart('minutes', event.target.value)}
+        />
+        <span>min</span>
+      </label>
+      <label>
+        <span className="sr-only">{label} seconds</span>
+        <input
+          aria-label={`${label} seconds`}
+          inputMode="numeric"
+          type="number"
+          min="0"
+          max="59"
+          value={seconds}
+          onChange={(event) => updatePart('seconds', event.target.value)}
+        />
+        <span>sec</span>
+      </label>
+    </fieldset>
+  );
+}
+
+interface IntervalStage {
+  name: 'Prep' | 'Work' | 'Rest';
+  iteration: number | null;
+  durationSeconds: number;
+}
+
+interface TimerEvent {
+  atMs: number;
+  kind: 'countdown' | 'transition';
+  number?: number;
+}
+
+function IntervalTimer({
+  entry,
+  recordedResult,
+  distanceUnit,
+  onChange,
+  actions,
+}: {
+  entry: WorkoutEntry;
+  recordedResult: WorkoutSet | undefined;
+  distanceUnit: DistanceUnit;
+  onChange: WorkoutViewProps['onChange'];
+  actions: WorkoutActions;
+}) {
+  const stages = useMemo(() => buildIntervalStages(entry), [entry]);
+  const totalMs = stages.reduce(
+    (total, stage) => total + stage.durationSeconds * 1000,
+    0,
+  );
+  const timerEvents = useMemo(() => buildTimerEvents(stages), [stages]);
+  const [run, setRun] = useState<{
+    status: 'idle' | 'running' | 'paused' | 'complete';
+    elapsedMs: number;
+    startedAt: number | null;
+  }>({ status: 'idle', elapsedMs: 0, startedAt: null });
+  const [displayElapsedMs, setDisplayElapsedMs] = useState(0);
+  const audioContext = useRef<AudioContext | null>(null);
+  const playedEvents = useRef(new Set<number>());
+  const lastElapsedMs = useRef(0);
+  useEffect(() => {
+    if (run.status !== 'running' || run.startedAt == null) return;
+    const startedAt = run.startedAt;
+    const baseElapsed = run.elapsedMs;
+    const interval = window.setInterval(() => {
+      const elapsedMs = Math.min(
+        totalMs,
+        baseElapsed + performance.now() - startedAt,
+      );
+      setDisplayElapsedMs(elapsedMs);
+      for (const timerEvent of timerEvents) {
+        if (
+          timerEvent.atMs <= lastElapsedMs.current ||
+          timerEvent.atMs > elapsedMs ||
+          playedEvents.current.has(timerEvent.atMs)
+        ) {
+          continue;
+        }
+        playedEvents.current.add(timerEvent.atMs);
+        if (elapsedMs - timerEvent.atMs < 1_000) {
+          playBeep(audioContext.current, timerEvent.number);
+        }
+      }
+      lastElapsedMs.current = elapsedMs;
+      if (elapsedMs >= totalMs) {
+        window.clearInterval(interval);
+        setRun({ status: 'complete', elapsedMs: totalMs, startedAt: null });
+        if (recordedResult) {
+          const durationSeconds =
+            (entry.intervalWorkSeconds ?? 0) * (entry.intervalIterations ?? 0);
+          onChange((current) =>
+            actions.updateSet(current, entry.id, recordedResult.id, {
+              durationSeconds,
+              completed: true,
+            }),
+          );
+        }
+      }
+    }, 100);
+    return () => window.clearInterval(interval);
+  }, [
+    actions,
+    entry,
+    onChange,
+    recordedResult,
+    run.status,
+    run.startedAt,
+    run.elapsedMs,
+    timerEvents,
+    totalMs,
+  ]);
+
+  const elapsedMs = run.status === 'running' ? displayElapsedMs : run.elapsedMs;
+  const currentStage = stageAtElapsed(stages, elapsedMs);
+  const distanceValue = recordedResult
+    ? convertDistance(
+        recordedResult.distance,
+        recordedResult.distanceUnit,
+        distanceUnit,
+      )
+    : null;
+
+  function start() {
+    let context = audioContext.current;
+    if (context == null && typeof window.AudioContext !== 'undefined') {
+      context = new window.AudioContext();
+      audioContext.current = context;
+    }
+    if (context?.state === 'suspended') void context.resume();
+    const now = performance.now();
+    if (run.status === 'paused') {
+      lastElapsedMs.current = run.elapsedMs;
+      setRun({ ...run, status: 'running', startedAt: now });
+      return;
+    }
+    playedEvents.current.clear();
+    lastElapsedMs.current = -1;
+    setDisplayElapsedMs(0);
+    setRun({ status: 'running', elapsedMs: 0, startedAt: now });
+  }
+
+  function reset() {
+    setRun({ status: 'idle', elapsedMs: 0, startedAt: null });
+    setDisplayElapsedMs(0);
+    playedEvents.current.clear();
+    lastElapsedMs.current = 0;
+  }
+
+  function pause() {
+    const nowElapsed = Math.min(
+      totalMs,
+      run.elapsedMs +
+        (run.startedAt == null ? 0 : performance.now() - run.startedAt),
+    );
+    setRun({ status: 'paused', elapsedMs: nowElapsed, startedAt: null });
+    setDisplayElapsedMs(nowElapsed);
+    lastElapsedMs.current = nowElapsed;
+  }
+
+  return (
+    <div className="cardio-interval-workout">
+      {recordedResult && (
+        <label className="cardio-distance-input">
+          Distance ({distanceUnit})
+          <span className="number-unit">
             <input
-              aria-label={`${entry.exerciseName} distance effort ${effortIndex + 1}`}
+              aria-label={`${entry.exerciseName} distance`}
               inputMode="decimal"
               type="number"
               min="0"
               step="0.01"
-              value={
-                convertDistance(
-                  effort.distance,
-                  effort.distanceUnit,
-                  distanceUnit,
-                ) ?? ''
-              }
+              value={distanceValue ?? ''}
               onChange={(event) =>
-                updateEffort(onChange, actions, entry.id, effort.id, {
+                updateEffort(onChange, actions, entry.id, recordedResult.id, {
                   distance:
                     event.target.value === ''
                       ? null
@@ -705,25 +933,131 @@ function CardioEfforts({
               }
             />
             <span className="unit-label">{distanceUnit}</span>
-          </div>
-          <RemoveEffort
-            label={`Remove ${entry.exerciseName} effort ${effortIndex + 1}`}
-            onClick={() =>
-              onChange((current) =>
-                actions.removeSet(current, entry.id, effort.id),
-              )
-            }
-          />
+          </span>
+        </label>
+      )}
+      <div className="interval-timer" aria-live="polite">
+        <div className="interval-timer-readout">
+          <span>
+            {currentStage?.stage.name ??
+              (run.status === 'complete' ? 'Complete' : 'Ready')}
+          </span>
+          {currentStage?.stage.iteration != null && (
+            <small>
+              Round {currentStage.stage.iteration} of {entry.intervalIterations}
+            </small>
+          )}
+          <strong>{formatClock(currentStage?.remainingSeconds ?? 0)}</strong>
         </div>
-      ))}
-      <AddEffort
-        label="+ Add effort"
-        entry={entry}
-        onChange={onChange}
-        actions={actions}
-      />
-    </>
+        <div className="inline-actions">
+          {run.status === 'running' ? (
+            <button className="secondary" type="button" onClick={pause}>
+              Pause
+            </button>
+          ) : (
+            <button type="button" onClick={start}>
+              {run.status === 'paused'
+                ? 'Resume timer'
+                : run.status === 'complete'
+                  ? 'Start again'
+                  : 'Start interval timer'}
+            </button>
+          )}
+          {run.status !== 'idle' && (
+            <button className="secondary" type="button" onClick={reset}>
+              Reset
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
   );
+}
+
+function buildIntervalStages(entry: WorkoutEntry): IntervalStage[] {
+  const iterations = entry.intervalIterations ?? 1;
+  const stages: IntervalStage[] = [];
+  if ((entry.intervalPrepSeconds ?? 0) > 0) {
+    stages.push({
+      name: 'Prep',
+      iteration: null,
+      durationSeconds: entry.intervalPrepSeconds!,
+    });
+  }
+  for (let iteration = 1; iteration <= iterations; iteration += 1) {
+    stages.push({
+      name: 'Work',
+      iteration,
+      durationSeconds: entry.intervalWorkSeconds ?? 1,
+    });
+    if (iteration < iterations && (entry.intervalRestSeconds ?? 0) > 0) {
+      stages.push({
+        name: 'Rest',
+        iteration,
+        durationSeconds: entry.intervalRestSeconds!,
+      });
+    }
+  }
+  return stages;
+}
+
+function buildTimerEvents(stages: IntervalStage[]): TimerEvent[] {
+  const events: TimerEvent[] = [];
+  let stageStartMs = 0;
+  stages.forEach((stage, index) => {
+    if (index > 0) events.push({ atMs: stageStartMs, kind: 'transition' });
+    for (
+      let count = Math.min(5, stage.durationSeconds);
+      count >= 1;
+      count -= 1
+    ) {
+      events.push({
+        atMs: stageStartMs + (stage.durationSeconds - count) * 1000,
+        kind: 'countdown',
+        number: count,
+      });
+    }
+    stageStartMs += stage.durationSeconds * 1000;
+  });
+  if (stages.length > 0)
+    events.push({ atMs: stageStartMs, kind: 'transition' });
+  return events.sort((left, right) => left.atMs - right.atMs);
+}
+
+function stageAtElapsed(stages: IntervalStage[], elapsedMs: number) {
+  let stageStartMs = 0;
+  for (const stage of stages) {
+    const stageEndMs = stageStartMs + stage.durationSeconds * 1000;
+    if (elapsedMs < stageEndMs) {
+      return {
+        stage,
+        remainingSeconds: Math.ceil((stageEndMs - elapsedMs) / 1000),
+      };
+    }
+    stageStartMs = stageEndMs;
+  }
+  return undefined;
+}
+
+function playBeep(context: AudioContext | null, number?: number) {
+  if (!context || context.state !== 'running') return;
+  const oscillator = context.createOscillator();
+  const volume = context.createGain();
+  oscillator.type = 'sine';
+  oscillator.frequency.value = number == null ? 880 : 440 + (6 - number) * 45;
+  volume.gain.setValueAtTime(0.0001, context.currentTime);
+  volume.gain.exponentialRampToValueAtTime(0.16, context.currentTime + 0.012);
+  volume.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.16);
+  oscillator.connect(volume);
+  volume.connect(context.destination);
+  oscillator.start();
+  oscillator.stop(context.currentTime + 0.17);
+}
+
+function formatClock(totalSeconds: number) {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
 function updateEffort(
@@ -763,26 +1097,4 @@ function displayWeight(
   displayUnit: WeightUnit,
 ) {
   return convertWeight(weight, recordedUnit, displayUnit) ?? '';
-}
-
-function AddEffort({
-  label,
-  entry,
-  onChange,
-  actions,
-}: {
-  label: string;
-  entry: WorkoutEntry;
-  onChange: WorkoutViewProps['onChange'];
-  actions: WorkoutActions;
-}) {
-  return (
-    <button
-      className="secondary full"
-      type="button"
-      onClick={() => onChange((current) => actions.addSet(current, entry.id))}
-    >
-      {label}
-    </button>
-  );
 }

@@ -163,8 +163,9 @@ introduced without replacing the workout model or synchronization core.
   share one transaction; synchronization is serialized and idempotent.
 - The `0.1.0` product boundary is one active workout per device, explicit
   strength/calisthenics/cardio exercise types, ISO-weekday templates with optional named
-  days, `kg`/`lb` weight and `km`/`mi` distance, read-only completed workouts,
-  and one trusted user per deployment without built-in authentication.
+  days, `kg`/`lb` weight and `km`/`mi` distance, cardio duration and interval
+  modes, read-only completed workouts, and one trusted user per deployment
+  without built-in authentication.
 - Exercise demonstrations are validated GIF, PNG, or JPEG uploads of at most
   five MiB, stored below `/data/media`, and prefetched into a dedicated offline
   application cache. Website import is not part of the product. Exercises may

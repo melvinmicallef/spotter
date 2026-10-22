@@ -336,6 +336,11 @@ export class SpotterStore {
         targetSets: exercise.targetSets,
         targetReps: exercise.targetReps,
         targetDurationSeconds: exercise.targetDurationSeconds,
+        cardioMode: exercise.cardioMode,
+        intervalPrepSeconds: exercise.intervalPrepSeconds,
+        intervalWorkSeconds: exercise.intervalWorkSeconds,
+        intervalRestSeconds: exercise.intervalRestSeconds,
+        intervalIterations: exercise.intervalIterations,
         targetDistance: exercise.targetDistance,
         targetDistanceUnit: exercise.targetDistanceUnit,
       })),
@@ -557,6 +562,18 @@ export class SpotterStore {
         targetDurationSeconds: nullableNumber(
           (entry as Row).target_duration_seconds,
         ),
+        cardioMode: ((entry as Row).cardio_mode ?? 'duration') as
+          'duration' | 'interval',
+        intervalPrepSeconds: nullableNumber(
+          (entry as Row).interval_prep_seconds,
+        ),
+        intervalWorkSeconds: nullableNumber(
+          (entry as Row).interval_work_seconds,
+        ),
+        intervalRestSeconds: nullableNumber(
+          (entry as Row).interval_rest_seconds,
+        ),
+        intervalIterations: nullableNumber((entry as Row).interval_iterations),
         targetDistance: nullableNumber((entry as Row).target_distance),
         targetDistanceUnit: (entry as Row).target_distance_unit as 'km' | 'mi',
       }));
@@ -610,6 +627,12 @@ export class SpotterStore {
           targetDurationSeconds: nullableNumber(
             exercise.target_duration_seconds,
           ),
+          cardioMode: (exercise.cardio_mode ?? 'duration') as
+            'duration' | 'interval',
+          intervalPrepSeconds: nullableNumber(exercise.interval_prep_seconds),
+          intervalWorkSeconds: nullableNumber(exercise.interval_work_seconds),
+          intervalRestSeconds: nullableNumber(exercise.interval_rest_seconds),
+          intervalIterations: nullableNumber(exercise.interval_iterations),
           targetDistance: nullableNumber(exercise.target_distance),
           targetDistanceUnit: exercise.target_distance_unit as 'km' | 'mi',
           completed: Boolean(exercise.completed),
@@ -667,8 +690,9 @@ export class SpotterStore {
       `INSERT INTO template_exercises
        (id, template_id, exercise_id, day_of_week, position,
         target_sets, target_reps, target_duration_seconds, target_distance,
-        target_distance_unit)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        target_distance_unit, cardio_mode, interval_prep_seconds,
+        interval_work_seconds, interval_rest_seconds, interval_iterations)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     );
     const positions = new Map<number, number>();
     exercises.forEach((exercise) => {
@@ -685,6 +709,11 @@ export class SpotterStore {
         exercise.targetDurationSeconds,
         exercise.targetDistance,
         exercise.targetDistanceUnit,
+        exercise.cardioMode ?? 'duration',
+        exercise.intervalPrepSeconds ?? null,
+        exercise.intervalWorkSeconds ?? null,
+        exercise.intervalRestSeconds ?? null,
+        exercise.intervalIterations ?? null,
       );
     });
   }
@@ -722,7 +751,9 @@ export class SpotterStore {
              LIMIT 1`
           : `SELECT 1 FROM template_exercises
              WHERE exercise_id = ?
-               AND (target_duration_seconds IS NOT NULL OR target_distance IS NOT NULL)
+               AND (target_duration_seconds IS NOT NULL OR target_distance IS NOT NULL
+                 OR interval_prep_seconds IS NOT NULL OR interval_work_seconds IS NOT NULL
+                 OR interval_rest_seconds IS NOT NULL OR interval_iterations IS NOT NULL)
              LIMIT 1`,
       )
       .get(id);
@@ -744,7 +775,11 @@ export class SpotterStore {
       exercise.targetSets !== null || exercise.targetReps !== null;
     const hasCardioTargets =
       exercise.targetDurationSeconds !== null ||
-      exercise.targetDistance !== null;
+      exercise.targetDistance !== null ||
+      exercise.intervalPrepSeconds != null ||
+      exercise.intervalWorkSeconds != null ||
+      exercise.intervalRestSeconds != null ||
+      exercise.intervalIterations != null;
     if (
       (exerciseType !== 'cardio' && hasCardioTargets) ||
       (exerciseType === 'cardio' && hasStrengthTargets)
@@ -753,7 +788,7 @@ export class SpotterStore {
         400,
         'INVALID_TEMPLATE_TARGETS',
         exerciseType === 'cardio'
-          ? 'Cardio exercises use duration and distance targets'
+          ? 'Cardio exercises use duration or interval settings with optional distance'
           : 'Strength and calisthenics exercises use set and rep targets',
         { exerciseId: exercise.exerciseId, exerciseType },
       );
@@ -802,8 +837,10 @@ export class SpotterStore {
       `INSERT INTO workout_exercises
        (id, workout_id, exercise_id, exercise_name, exercise_type, exercise_category, reference_url, position,
         notes, target_sets, target_reps, target_duration_seconds,
-        target_distance, target_distance_unit, completed)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        target_distance, target_distance_unit, completed, cardio_mode,
+        interval_prep_seconds, interval_work_seconds, interval_rest_seconds,
+        interval_iterations)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     );
     const insertSet = this.database.prepare(
       `INSERT INTO workout_sets
@@ -833,6 +870,11 @@ export class SpotterStore {
         exercise.targetDistance,
         exercise.targetDistanceUnit,
         Number(exercise.completed ?? false),
+        exercise.cardioMode ?? 'duration',
+        exercise.intervalPrepSeconds ?? null,
+        exercise.intervalWorkSeconds ?? null,
+        exercise.intervalRestSeconds ?? null,
+        exercise.intervalIterations ?? null,
       );
       for (const set of exercise.sets) {
         insertSet.run(

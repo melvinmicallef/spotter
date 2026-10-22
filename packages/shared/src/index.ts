@@ -56,6 +56,7 @@ export const exerciseTypeSchema = z.enum([
   'calisthenics',
   'cardio',
 ]);
+export const cardioModeSchema = z.enum(['duration', 'interval']);
 export const distanceUnitSchema = z.enum(['km', 'mi']);
 export const dayOfWeekSchema = z.number().int().min(1).max(7);
 export const templateDayNameSchema = z.object({
@@ -167,6 +168,35 @@ export const templateExerciseSchema = z
       .max(7 * 24 * 60 * 60)
       .nullable()
       .default(null),
+    cardioMode: cardioModeSchema.optional(),
+    intervalPrepSeconds: z
+      .number()
+      .int()
+      .min(0)
+      .max(7 * 24 * 60 * 60)
+      .nullable()
+      .optional(),
+    intervalWorkSeconds: z
+      .number()
+      .int()
+      .positive()
+      .max(7 * 24 * 60 * 60)
+      .nullable()
+      .optional(),
+    intervalRestSeconds: z
+      .number()
+      .int()
+      .min(0)
+      .max(7 * 24 * 60 * 60)
+      .nullable()
+      .optional(),
+    intervalIterations: z
+      .number()
+      .int()
+      .positive()
+      .max(999)
+      .nullable()
+      .optional(),
     targetDistance: z.number().positive().max(100_000).nullable().default(null),
     targetDistanceUnit: distanceUnitSchema.default('km'),
   })
@@ -219,6 +249,35 @@ export const workoutTemplateInputSchema = z.object({
           .max(7 * 24 * 60 * 60)
           .nullable()
           .default(null),
+        cardioMode: cardioModeSchema.optional(),
+        intervalPrepSeconds: z
+          .number()
+          .int()
+          .min(0)
+          .max(7 * 24 * 60 * 60)
+          .nullable()
+          .optional(),
+        intervalWorkSeconds: z
+          .number()
+          .int()
+          .positive()
+          .max(7 * 24 * 60 * 60)
+          .nullable()
+          .optional(),
+        intervalRestSeconds: z
+          .number()
+          .int()
+          .min(0)
+          .max(7 * 24 * 60 * 60)
+          .nullable()
+          .optional(),
+        intervalIterations: z
+          .number()
+          .int()
+          .positive()
+          .max(999)
+          .nullable()
+          .optional(),
         targetDistance: z
           .number()
           .positive()
@@ -270,6 +329,35 @@ export const workoutExerciseSchema = z
       .max(7 * 24 * 60 * 60)
       .nullable()
       .default(null),
+    cardioMode: cardioModeSchema.optional(),
+    intervalPrepSeconds: z
+      .number()
+      .int()
+      .min(0)
+      .max(7 * 24 * 60 * 60)
+      .nullable()
+      .optional(),
+    intervalWorkSeconds: z
+      .number()
+      .int()
+      .positive()
+      .max(7 * 24 * 60 * 60)
+      .nullable()
+      .optional(),
+    intervalRestSeconds: z
+      .number()
+      .int()
+      .min(0)
+      .max(7 * 24 * 60 * 60)
+      .nullable()
+      .optional(),
+    intervalIterations: z
+      .number()
+      .int()
+      .positive()
+      .max(999)
+      .nullable()
+      .optional(),
     targetDistance: z.number().positive().max(100_000).nullable().default(null),
     targetDistanceUnit: distanceUnitSchema.default('km'),
     completed: z.boolean().optional(),
@@ -314,6 +402,11 @@ function validateTargetMetrics(
     targetSets: number | null;
     targetReps: number | null;
     targetDurationSeconds: number | null;
+    cardioMode?: z.infer<typeof cardioModeSchema>;
+    intervalPrepSeconds?: number | null;
+    intervalWorkSeconds?: number | null;
+    intervalRestSeconds?: number | null;
+    intervalIterations?: number | null;
     targetDistance: number | null;
   },
   context: z.RefinementCtx,
@@ -321,15 +414,19 @@ function validateTargetMetrics(
   if (
     exercise.exerciseType !== 'cardio' &&
     (exercise.targetDurationSeconds !== null ||
-      exercise.targetDistance !== null)
+      exercise.targetDistance !== null ||
+      exercise.intervalPrepSeconds != null ||
+      exercise.intervalWorkSeconds != null ||
+      exercise.intervalRestSeconds != null ||
+      exercise.intervalIterations != null)
   ) {
     context.addIssue({
       code: 'custom',
       path: ['exerciseType'],
       message:
         exercise.exerciseType === 'calisthenics'
-          ? 'Calisthenics exercises cannot contain duration or distance targets'
-          : 'Strength exercises cannot contain duration or distance targets',
+          ? 'Calisthenics exercises cannot contain cardio timing or distance targets'
+          : 'Strength exercises cannot contain cardio timing or distance targets',
     });
   }
   if (
@@ -340,6 +437,60 @@ function validateTargetMetrics(
       code: 'custom',
       path: ['exerciseType'],
       message: 'Cardio exercises cannot contain set or rep targets',
+    });
+  }
+  if (exercise.exerciseType !== 'cardio') return;
+
+  if ((exercise.cardioMode ?? 'duration') === 'duration') {
+    if (
+      exercise.intervalPrepSeconds != null ||
+      exercise.intervalWorkSeconds != null ||
+      exercise.intervalRestSeconds != null ||
+      exercise.intervalIterations != null
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['cardioMode'],
+        message: 'Interval settings require interval cardio mode',
+      });
+    }
+    return;
+  }
+
+  if (exercise.targetDurationSeconds !== null) {
+    context.addIssue({
+      code: 'custom',
+      path: ['targetDurationSeconds'],
+      message:
+        'Interval cardio uses work and rest settings instead of a duration target',
+    });
+  }
+  if (exercise.intervalPrepSeconds == null) {
+    context.addIssue({
+      code: 'custom',
+      path: ['intervalPrepSeconds'],
+      message: 'Interval cardio requires a prep time',
+    });
+  }
+  if (exercise.intervalWorkSeconds == null) {
+    context.addIssue({
+      code: 'custom',
+      path: ['intervalWorkSeconds'],
+      message: 'Interval cardio requires a work time',
+    });
+  }
+  if (exercise.intervalRestSeconds == null) {
+    context.addIssue({
+      code: 'custom',
+      path: ['intervalRestSeconds'],
+      message: 'Interval cardio requires a rest time',
+    });
+  }
+  if (exercise.intervalIterations == null) {
+    context.addIssue({
+      code: 'custom',
+      path: ['intervalIterations'],
+      message: 'Interval cardio requires at least one iteration',
     });
   }
 }
@@ -393,6 +544,7 @@ export type Muscle = z.infer<typeof muscleSchema>;
 export type Exercise = z.infer<typeof exerciseSchema>;
 export type ExerciseInput = z.infer<typeof exerciseInputSchema>;
 export type ExerciseType = z.infer<typeof exerciseTypeSchema>;
+export type CardioMode = z.infer<typeof cardioModeSchema>;
 export type DistanceUnit = z.infer<typeof distanceUnitSchema>;
 export type DayOfWeek = z.infer<typeof dayOfWeekSchema>;
 export type ExerciseMedia = z.infer<typeof exerciseMediaSchema>;

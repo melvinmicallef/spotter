@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import type {
+  CardioMode,
   DayOfWeek,
   Exercise,
   WorkoutTemplate,
@@ -569,30 +570,113 @@ function TemplateEditor({
                             </div>
                           </div>
                           {exercise?.exerciseType === 'cardio' ? (
-                            <div className="target-fields">
+                            <div className="cardio-target-editor">
                               <label>
-                                Target minutes
-                                <input
-                                  aria-label={`${exercise.name} target minutes on ${day.label}`}
-                                  inputMode="numeric"
-                                  type="number"
-                                  min="1"
-                                  value={
-                                    entry.targetDurationSeconds == null
-                                      ? ''
-                                      : entry.targetDurationSeconds / 60
-                                  }
-                                  onChange={(event) =>
+                                Cardio mode
+                                <select
+                                  aria-label={`${exercise.name} cardio mode on ${day.label}`}
+                                  value={entry.cardioMode ?? 'duration'}
+                                  onChange={(event) => {
+                                    const cardioMode = event.target
+                                      .value as CardioMode;
                                     updateEntry(index, {
-                                      targetDurationSeconds: event.target.value
-                                        ? Math.round(
-                                            Number(event.target.value) * 60,
-                                          )
-                                        : null,
+                                      cardioMode,
+                                      targetDurationSeconds:
+                                        cardioMode === 'duration'
+                                          ? entry.targetDurationSeconds
+                                          : null,
+                                      intervalPrepSeconds:
+                                        cardioMode === 'interval'
+                                          ? (entry.intervalPrepSeconds ?? 0)
+                                          : null,
+                                      intervalWorkSeconds:
+                                        cardioMode === 'interval'
+                                          ? (entry.intervalWorkSeconds ?? 30)
+                                          : null,
+                                      intervalRestSeconds:
+                                        cardioMode === 'interval'
+                                          ? (entry.intervalRestSeconds ?? 30)
+                                          : null,
+                                      intervalIterations:
+                                        cardioMode === 'interval'
+                                          ? (entry.intervalIterations ?? 8)
+                                          : null,
+                                    });
+                                  }}
+                                >
+                                  <option value="duration">Duration</option>
+                                  <option value="interval">Interval</option>
+                                </select>
+                              </label>
+                              {(entry.cardioMode ?? 'duration') ===
+                              'duration' ? (
+                                <TimeTargetFields
+                                  label="Duration"
+                                  value={entry.targetDurationSeconds}
+                                  onChange={(targetDurationSeconds) =>
+                                    updateEntry(index, {
+                                      targetDurationSeconds,
                                     })
                                   }
+                                  ariaLabel={`${exercise.name} duration on ${day.label}`}
                                 />
-                              </label>
+                              ) : (
+                                <>
+                                  <TimeTargetFields
+                                    label="Prep time"
+                                    value={entry.intervalPrepSeconds ?? null}
+                                    onChange={(intervalPrepSeconds) =>
+                                      updateEntry(index, {
+                                        intervalPrepSeconds:
+                                          intervalPrepSeconds ?? 0,
+                                      })
+                                    }
+                                    ariaLabel={`${exercise.name} prep time on ${day.label}`}
+                                    allowZero
+                                  />
+                                  <TimeTargetFields
+                                    label="Work time"
+                                    value={entry.intervalWorkSeconds ?? null}
+                                    onChange={(intervalWorkSeconds) =>
+                                      updateEntry(index, {
+                                        intervalWorkSeconds:
+                                          intervalWorkSeconds ?? 0,
+                                      })
+                                    }
+                                    ariaLabel={`${exercise.name} work time on ${day.label}`}
+                                  />
+                                  <TimeTargetFields
+                                    label="Rest time"
+                                    value={entry.intervalRestSeconds ?? null}
+                                    onChange={(intervalRestSeconds) =>
+                                      updateEntry(index, {
+                                        intervalRestSeconds:
+                                          intervalRestSeconds ?? 0,
+                                      })
+                                    }
+                                    ariaLabel={`${exercise.name} rest time on ${day.label}`}
+                                    allowZero
+                                  />
+                                  <label>
+                                    Iterations
+                                    <input
+                                      aria-label={`${exercise.name} interval iterations on ${day.label}`}
+                                      inputMode="numeric"
+                                      type="number"
+                                      min="1"
+                                      max="999"
+                                      value={entry.intervalIterations ?? ''}
+                                      onChange={(event) =>
+                                        updateEntry(index, {
+                                          intervalIterations: event.target.value
+                                            ? Number(event.target.value)
+                                            : null,
+                                        })
+                                      }
+                                    />
+                                  </label>
+                                </>
+                              )}
                               <label>
                                 Target distance ({distanceUnit})
                                 <input
@@ -690,6 +774,11 @@ function TemplateEditor({
                       targetSets: null,
                       targetReps: null,
                       targetDurationSeconds: null,
+                      cardioMode: 'duration',
+                      intervalPrepSeconds: null,
+                      intervalWorkSeconds: null,
+                      intervalRestSeconds: null,
+                      intervalIterations: null,
                       targetDistance: null,
                       targetDistanceUnit: 'km',
                     },
@@ -883,8 +972,12 @@ function templateTargetSummary(
 ): string {
   const parts: string[] = [];
   if ((exercise?.exerciseType ?? entry.exerciseType) === 'cardio') {
-    if (entry.targetDurationSeconds != null) {
-      parts.push(`${entry.targetDurationSeconds / 60} min`);
+    if (entry.cardioMode === 'interval') {
+      parts.push(
+        `Prep ${formatTimer(entry.intervalPrepSeconds ?? 0)} · Work ${formatTimer(entry.intervalWorkSeconds ?? 0)} · Rest ${formatTimer(entry.intervalRestSeconds ?? 0)} × ${entry.intervalIterations ?? 0}`,
+      );
+    } else if (entry.targetDurationSeconds != null) {
+      parts.push(`${formatTimer(entry.targetDurationSeconds)}`);
     }
     if (entry.targetDistance != null) {
       parts.push(
@@ -931,8 +1024,81 @@ function toInput(template: WorkoutTemplate): WorkoutTemplateInput {
       targetSets: entry.targetSets,
       targetReps: entry.targetReps,
       targetDurationSeconds: entry.targetDurationSeconds,
+      cardioMode: entry.cardioMode ?? 'duration',
+      intervalPrepSeconds: entry.intervalPrepSeconds ?? null,
+      intervalWorkSeconds: entry.intervalWorkSeconds ?? null,
+      intervalRestSeconds: entry.intervalRestSeconds ?? null,
+      intervalIterations: entry.intervalIterations ?? null,
       targetDistance: entry.targetDistance,
       targetDistanceUnit: entry.targetDistanceUnit,
     })),
   };
+}
+
+function TimeTargetFields({
+  label,
+  value,
+  onChange,
+  ariaLabel,
+  allowZero = false,
+}: {
+  label: string;
+  value: number | null;
+  onChange: (value: number | null) => void;
+  ariaLabel: string;
+  allowZero?: boolean;
+}) {
+  const minutes = value == null ? '' : Math.floor(value / 60);
+  const seconds = value == null ? '' : value % 60;
+  function updatePart(part: 'minutes' | 'seconds', raw: string) {
+    if (raw === '' && value == null) return;
+    const nextMinutes =
+      part === 'minutes'
+        ? Number(raw || 0)
+        : minutes === ''
+          ? 0
+          : Number(minutes);
+    const nextSeconds =
+      part === 'seconds'
+        ? Math.min(59, Number(raw || 0))
+        : seconds === ''
+          ? 0
+          : Number(seconds);
+    const total = Math.max(0, nextMinutes * 60 + nextSeconds);
+    onChange(total === 0 && !allowZero ? null : total);
+  }
+  return (
+    <fieldset className="time-target-field">
+      <legend>{label}</legend>
+      <label>
+        <span className="sr-only">{ariaLabel} minutes</span>
+        <input
+          aria-label={`${ariaLabel} minutes`}
+          inputMode="numeric"
+          type="number"
+          min="0"
+          value={minutes}
+          onChange={(event) => updatePart('minutes', event.target.value)}
+        />
+        <span>min</span>
+      </label>
+      <label>
+        <span className="sr-only">{ariaLabel} seconds</span>
+        <input
+          aria-label={`${ariaLabel} seconds`}
+          inputMode="numeric"
+          type="number"
+          min="0"
+          max="59"
+          value={seconds}
+          onChange={(event) => updatePart('seconds', event.target.value)}
+        />
+        <span>sec</span>
+      </label>
+    </fieldset>
+  );
+}
+
+function formatTimer(seconds: number) {
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 }

@@ -98,6 +98,9 @@ stretching-poster image. The image is shared across devices and is stored using
 the existing media storage path; a device caches its media response after it
 loads so the poster can be viewed offline. The presentation and measurement
 system preferences remain device-local.
+Version twelve adds duration/interval mode and interval stage settings to
+template and workout exercise snapshots, defaults existing cardio rows to
+duration mode, and advances the reference revision so cached templates refresh.
 
 The exercise editor assigns muscles incrementally rather than rendering the
 entire catalogue. Duplicate assignments are excluded, multiple secondary
@@ -147,9 +150,14 @@ operation from replacing a newer workout.
 Each workout-exercise snapshot copies its `strength`, `calisthenics`, or
 `cardio` category. Strength efforts use repetitions, optional weight, and
 `kg`/`lb`; calisthenics efforts use repetitions without weight; cardio efforts
-use duration and distance. A device-local Metric/Imperial Settings preference
-controls weight entry and display, and cardio distance uses `km`/`mi` derived
-from that preference. Saved weighted values retain their recorded unit.
+use either one duration result or a configured interval timer plus optional
+distance. Duration and interval settings are stored per template entry and
+copied into the workout snapshot. The interval timer runs prep, work, and rest
+stages, beeps for countdown values five through one and at stage transitions,
+and records total work time when it completes. A device-local Metric/Imperial
+Settings preference controls weight entry and display, and cardio distance
+uses `km`/`mi` derived from that preference. Saved weighted values retain
+their recorded unit.
 The persistence model retains nullable columns for both measurement families so
 migrations and historical reads remain straightforward, while the client shows
 and writes only the fields valid for the snapshot type.

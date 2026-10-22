@@ -55,7 +55,9 @@ associated muscles. Every exercise is either:
 
 - **strength**, recorded as sets with repetitions and optional weight;
 - **calisthenics**, recorded as sets and repetitions without weight; or
-- **cardio**, recorded as efforts with duration and optional distance.
+- **cardio**, planned in duration mode (minutes and seconds) or interval mode
+  (prep, work, rest, and iteration count), and recorded with duration and
+  optional distance.
 
 ### Weekly workout template
 
@@ -78,14 +80,18 @@ not change the workout's history.
 
 ### Recorded effort
 
-A strength effort supports repetitions, optional weight, explicit `kg` or `lb`
-units, and notes. A calisthenics effort supports repetitions and notes without
-a weight field. A cardio effort supports duration in seconds, distance,
-explicit `km` or `mi` units, and notes. The UI must show only the fields that
-apply to the exercise type. Weight and distance entry use the units derived
-from the Metric or Imperial system selected in device Settings. Changing that
-preference converts displayed active-workout and template target values while
-saved efforts and history retain their recorded units.
+A strength effort supports repetitions and optional weight with explicit `kg`
+or `lb` units. A calisthenics effort supports repetitions without a weight
+field. A duration cardio entry stores one duration in seconds and optional
+distance. An interval plan stores its prep, work, and rest durations and
+iteration count with both the template entry and workout snapshot. The workout
+timer beeps for the last five seconds of each stage and when a stage changes;
+finishing the timer records total work time. Cardio results retain duration
+and distance with explicit `km` or `mi` units. The UI must show only the fields
+that apply to the exercise type. Weight and distance entry use the units
+derived from the Metric or Imperial system selected in device Settings.
+Changing that preference converts displayed active-workout and template target
+values while saved efforts and history retain their recorded units.
 
 ## Functional requirements
 
@@ -176,7 +182,9 @@ While online, a user can:
 - assign an optional name to each weekday, such as "Legs" or "Chest & Back";
 - remove and reorder exercises within each day; and
 - configure type-appropriate initial targets, with repetitions shown before
-  sets for strength and calisthenics exercises.
+  sets for strength and calisthenics exercises; and
+- choose duration or interval mode for each cardio entry and configure its
+  interval stages.
 
 Template exercises do not have individual notes. A template may still have
 notes that apply to the overall weekly plan.
@@ -208,7 +216,10 @@ A user can:
   stay blank, and previous extra sets are omitted;
 - record repetitions and weight for strength exercises;
 - record repetitions without weight for calisthenics exercises;
-- record duration and distance for cardio exercises;
+- record cardio duration as minutes and seconds, or run the configured
+  interval timer with audible five-to-one countdown and stage-transition
+  beeps;
+- record optional distance for cardio exercises;
 - open an exercise guide modal with its demonstration, instructions, comments,
   reference link, and target muscles;
 - finish a workout;

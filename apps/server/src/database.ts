@@ -323,6 +323,43 @@ export const migrations = [
       WHERE key = 'reference_revision';
     `,
   },
+  {
+    version: 12,
+    name: 'cardio_duration_and_interval_modes',
+    sql: `
+      ALTER TABLE template_exercises ADD COLUMN cardio_mode TEXT
+        CHECK (cardio_mode IN ('duration', 'interval'));
+      ALTER TABLE template_exercises ADD COLUMN interval_prep_seconds INTEGER
+        CHECK (interval_prep_seconds IS NULL OR interval_prep_seconds >= 0);
+      ALTER TABLE template_exercises ADD COLUMN interval_work_seconds INTEGER
+        CHECK (interval_work_seconds IS NULL OR interval_work_seconds > 0);
+      ALTER TABLE template_exercises ADD COLUMN interval_rest_seconds INTEGER
+        CHECK (interval_rest_seconds IS NULL OR interval_rest_seconds >= 0);
+      ALTER TABLE template_exercises ADD COLUMN interval_iterations INTEGER
+        CHECK (interval_iterations IS NULL OR interval_iterations BETWEEN 1 AND 999);
+      UPDATE template_exercises SET cardio_mode = 'duration'
+      WHERE exercise_id IN (
+        SELECT id FROM exercises WHERE exercise_category = 'cardio'
+      );
+
+      ALTER TABLE workout_exercises ADD COLUMN cardio_mode TEXT
+        CHECK (cardio_mode IN ('duration', 'interval'));
+      ALTER TABLE workout_exercises ADD COLUMN interval_prep_seconds INTEGER
+        CHECK (interval_prep_seconds IS NULL OR interval_prep_seconds >= 0);
+      ALTER TABLE workout_exercises ADD COLUMN interval_work_seconds INTEGER
+        CHECK (interval_work_seconds IS NULL OR interval_work_seconds > 0);
+      ALTER TABLE workout_exercises ADD COLUMN interval_rest_seconds INTEGER
+        CHECK (interval_rest_seconds IS NULL OR interval_rest_seconds >= 0);
+      ALTER TABLE workout_exercises ADD COLUMN interval_iterations INTEGER
+        CHECK (interval_iterations IS NULL OR interval_iterations BETWEEN 1 AND 999);
+      UPDATE workout_exercises SET cardio_mode = 'duration'
+      WHERE exercise_category = 'cardio';
+
+      UPDATE app_metadata
+      SET value = CAST(CAST(value AS INTEGER) + 1 AS TEXT)
+      WHERE key = 'reference_revision';
+    `,
+  },
 ] as const;
 
 export type SpotterDatabase = Database.Database;

@@ -59,6 +59,15 @@ export function HistoryView({
                           {exercise.exerciseType}
                         </small>
                       </h3>
+                      {exercise.exerciseType === 'cardio' && (
+                        <p className="history-cardio-target">
+                          {exercise.cardioMode === 'interval'
+                            ? `Interval · Prep ${formatClock(exercise.intervalPrepSeconds ?? 0)} · Work ${formatClock(exercise.intervalWorkSeconds ?? 0)} · Rest ${formatClock(exercise.intervalRestSeconds ?? 0)} × ${exercise.intervalIterations ?? 0}`
+                            : exercise.targetDurationSeconds == null
+                              ? null
+                              : `Duration target · ${formatClock(exercise.targetDurationSeconds)}`}
+                        </p>
+                      )}
                       {exercise.notes && <p>{exercise.notes}</p>}
                       <ol>
                         {exercise.sets.map((set) => (
@@ -163,6 +172,10 @@ function formatCardioEffort(set: Workout['exercises'][number]['sets'][number]) {
     set.distance == null ? null : `${set.distance} ${set.distanceUnit}`,
   ].filter(Boolean);
   return measurements.length > 0 ? measurements.join(' · ') : 'No result';
+}
+
+function formatClock(seconds: number) {
+  return `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
 }
 
 function formatDuration(seconds: number) {
