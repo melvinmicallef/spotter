@@ -253,8 +253,17 @@ export function WorkoutView({
               <div className="workout-completed-summary">
                 <div className="workout-completed-info">
                   <span className="exercise-index">{exerciseIndex + 1}</span>
-                  <strong>{entry.exerciseName}</strong>
-                  <small className="type-badge">{entry.exerciseType}</small>
+                  <WorkoutExerciseTitle
+                    name={entry.exerciseName}
+                    exerciseId={entry.exerciseId}
+                    canOpenGuide={exercises.some(
+                      (exercise) => exercise.id === entry.exerciseId,
+                    )}
+                    onOpen={(exerciseId) => setExerciseDetailsId(exerciseId)}
+                  />
+                  {entry.exerciseType !== 'strength' && (
+                    <small className="type-badge">{entry.exerciseType}</small>
+                  )}
                   <span className="workout-completed-badge">Completed</span>
                   <span className="workout-completed-count">
                     {entry.exerciseType === 'cardio'
@@ -289,8 +298,21 @@ export function WorkoutView({
                       <span className="exercise-index">
                         {exerciseIndex + 1}
                       </span>
-                      <strong>{entry.exerciseName}</strong>
-                      <small className="type-badge">{entry.exerciseType}</small>
+                      <WorkoutExerciseTitle
+                        name={entry.exerciseName}
+                        exerciseId={entry.exerciseId}
+                        canOpenGuide={exercises.some(
+                          (exercise) => exercise.id === entry.exerciseId,
+                        )}
+                        onOpen={(exerciseId) =>
+                          setExerciseDetailsId(exerciseId)
+                        }
+                      />
+                      {entry.exerciseType !== 'strength' && (
+                        <small className="type-badge">
+                          {entry.exerciseType}
+                        </small>
+                      )}
                       {entry.referenceUrl && (
                         <a
                           className="workout-reference-link"
@@ -342,17 +364,6 @@ export function WorkoutView({
                     </div>
                   </header>
                   <TargetSummary exercise={entry} distanceUnit={distanceUnit} />
-                  <button
-                    className="secondary workout-guide-button"
-                    type="button"
-                    disabled={
-                      !exercises.some((item) => item.id === entry.exerciseId)
-                    }
-                    onClick={() => setExerciseDetailsId(entry.exerciseId)}
-                    aria-label={`How to do ${entry.exerciseName}`}
-                  >
-                    How to do it
-                  </button>
                 </div>
 
                 {entry.exerciseType === 'cardio' ? (
@@ -402,7 +413,7 @@ export function WorkoutView({
         ))}
       </div>
       <button
-        className="secondary full"
+        className="secondary full workout-add-exercise"
         type="button"
         onClick={() => setExercisePickerOpen(true)}
       >
@@ -434,6 +445,31 @@ export function WorkoutView({
 
 type WorkoutEntry = Workout['exercises'][number];
 type WorkoutActions = WorkoutViewProps['actions'];
+
+function WorkoutExerciseTitle({
+  name,
+  exerciseId,
+  canOpenGuide,
+  onOpen,
+}: {
+  name: string;
+  exerciseId: string | null;
+  canOpenGuide: boolean;
+  onOpen: (exerciseId: string) => void;
+}) {
+  return canOpenGuide && exerciseId ? (
+    <button
+      className="workout-exercise-title"
+      type="button"
+      aria-label={`How to do ${name}`}
+      onClick={() => onOpen(exerciseId)}
+    >
+      {name}
+    </button>
+  ) : (
+    <strong className="workout-exercise-title-static">{name}</strong>
+  );
+}
 
 function TargetSummary({
   exercise,

@@ -878,7 +878,8 @@ small {
   flex-wrap: wrap;
   gap: 8px;
 }
-.workout-completed-info strong {
+.workout-completed-info strong,
+.workout-completed-info .workout-exercise-title {
   overflow-wrap: anywhere;
 }
 .workout-completed-badge {
@@ -926,8 +927,27 @@ small {
   gap: 8px;
 }
 .workout-strength-info > header strong,
-.workout-card-main > header strong {
+.workout-card-main > header strong,
+.workout-strength-info > header .workout-exercise-title,
+.workout-card-main > header .workout-exercise-title {
   overflow-wrap: anywhere;
+}
+.workout-exercise-title {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  color: inherit;
+  background: transparent;
+  font-weight: 700;
+  text-align: left;
+}
+.workout-exercise-title:hover:not(:disabled) {
+  color: var(--accent);
+  filter: none;
+}
+.workout-exercise-title:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
 }
 .workout-strength-info .inline-actions {
   flex: 0 0 auto;
@@ -935,11 +955,6 @@ small {
 }
 .workout-strength-info .inline-actions .icon-button {
   padding: 4px;
-}
-.workout-strength-info .workout-guide-button,
-.workout-card-main .workout-guide-button {
-  align-self: flex-start;
-  margin: 0;
 }
 .workout-strength-sets {
   display: flex;
@@ -1790,6 +1805,9 @@ small {
 }
 .full {
   width: 100%;
+}
+.workout-add-exercise {
+  margin-top: 18px;
 }
 .history-stats {
   display: flex;
