@@ -988,6 +988,7 @@ small {
 }
 .strength-grid-reps {
   background: var(--surface-solid);
+  border-bottom: 0;
 }
 .strength-grid-number-unit {
   display: grid;
@@ -1025,6 +1026,7 @@ small {
 }
 .strength-grid-add .strength-grid-set-heading {
   justify-content: center;
+  border-right: 0;
 }
 .strength-grid-add button {
   grid-row: 2 / 4;
@@ -1426,50 +1428,203 @@ small {
 .exercise-picker-details > button {
   margin-top: auto;
 }
-.history-details {
-  display: block;
-  flex: 1;
-  min-width: 0;
-}
 .history-entry {
-  align-items: flex-start;
+  align-items: center;
+}
+.history-open-button {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0;
+  border: 0;
+  color: var(--text);
+  background: transparent;
+  text-align: left;
+}
+.history-open-copy {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+.history-exercise-names {
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+.history-open-meta {
+  display: grid;
+  flex: 0 0 auto;
+  justify-items: end;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+.history-open-meta > span:first-child {
+  border-radius: 99px;
+  padding: 5px 8px;
+  color: var(--text-secondary);
+  background: var(--accent-soft);
 }
 .history-delete-button {
   flex: 0 0 auto;
-  align-self: flex-start;
+  align-self: center;
 }
-.history-details summary {
+.history-workout-exercises {
+  display: grid;
+  gap: 14px;
+}
+.history-exercise {
+  display: block;
+  min-width: 0;
+}
+.history-exercise > header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
-  cursor: pointer;
-  list-style-position: outside;
-}
-.history-body {
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid var(--border);
-}
-.history-exercise + .history-exercise {
-  margin-top: 18px;
+  gap: 12px;
 }
 .history-exercise h3 {
-  margin-bottom: 5px;
+  margin: 0;
 }
 .history-exercise ol {
   display: grid;
   gap: 7px;
   padding-left: 24px;
+  margin-bottom: 0;
 }
 .history-exercise li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
   padding: 8px 10px;
   border-radius: 9px;
   background: var(--surface-deep);
 }
-.history-exercise li > span + span {
-  margin-left: 12px;
+.history-exercise li small {
+  width: 100%;
   color: var(--text-muted);
+}
+.history-edit-exercise {
+  display: flex;
+  align-items: stretch;
+  flex-direction: column;
+  gap: 12px;
+}
+.history-edit-count {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+.history-edit-set-list {
+  display: grid;
+  gap: 8px;
+}
+.history-edit-set {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) minmax(0, 1fr) 36px;
+  align-items: end;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 10px;
+  background: var(--surface-deep);
+}
+.history-edit-set.calisthenics-edit-set {
+  grid-template-columns: 52px minmax(0, 1fr) 36px;
+}
+.history-edit-set > strong {
+  align-self: center;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+.history-edit-set > label {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+.history-edit-set > label input {
+  width: 100%;
+}
+.history-remove-set {
+  width: 36px;
+  height: 38px;
+  padding: 0;
+}
+.history-add-set {
+  align-self: flex-start;
+}
+.history-edit-error {
+  color: var(--notice-text);
+}
+.strength-progress {
+  display: grid;
+  gap: 14px;
+  margin-top: 26px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 17px;
+  background: var(--surface);
+  box-shadow: 0 18px 60px var(--shadow);
+}
+.strength-progress h2 {
+  margin: 3px 0 5px;
+}
+.strength-progress > div:first-child > p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+.strength-progress-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
+  gap: 12px;
+}
+.strength-progress-chart {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-solid);
+}
+.strength-progress-chart h3 {
+  margin: 0;
+  font-size: 0.98rem;
+}
+.strength-progress-chart svg {
+  display: block;
+  width: 100%;
+  overflow: visible;
+  margin-top: 8px;
+}
+.progress-grid-line {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+.progress-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 3;
+}
+.progress-point {
+  fill: var(--accent);
+  stroke: var(--surface-solid);
+  stroke-width: 2;
+}
+.progress-axis-label,
+.progress-date-label {
+  fill: var(--text-muted);
+  font-family: inherit;
+  font-size: 11px;
+}
+.progress-latest-value {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  text-align: right;
 }
 .workout-card > header {
   display: flex;

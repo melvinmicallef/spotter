@@ -348,6 +348,42 @@ export function App() {
     }
   }
 
+  async function saveHistoryWorkout(workout: Workout): Promise<Workout> {
+    if (!navigator.onLine)
+      throw new Error('Connect to the server before editing workout history.');
+
+    const syncResult = await drainOutbox();
+    setPending(syncResult.pending);
+    if (syncResult.pending > 0 || syncResult.failures.length > 0) {
+      throw new Error(
+        syncResult.error ??
+          'Pending workout changes must sync before editing history.',
+      );
+    }
+
+    const updatedWorkout = await api.updateCompletedWorkout(workout.id, {
+      exercises: workout.exercises.map((exercise) => ({
+        id: exercise.id,
+        sets: exercise.sets.map((set) => ({
+          id: set.id,
+          reps: set.reps,
+          weight: set.weight,
+          weightUnit: set.weightUnit,
+          durationSeconds: set.durationSeconds,
+          distance: set.distance,
+          distanceUnit: set.distanceUnit,
+        })),
+      })),
+    });
+    setServerWorkouts((current) =>
+      current.map((item) =>
+        item.id === updatedWorkout.id ? updatedWorkout : item,
+      ),
+    );
+    setMessage('History item updated.');
+    return updatedWorkout;
+  }
+
   const history = useMemo(() => {
     const merged = new Map(
       serverWorkouts
@@ -355,7 +391,8 @@ export function App() {
         .map((workout) => [workout.id, workout]),
     );
     for (const workout of localWorkouts) {
-      if (workout.status === 'completed') merged.set(workout.id, workout);
+      if (workout.status === 'completed' && !merged.has(workout.id))
+        merged.set(workout.id, workout);
     }
     return [...merged.values()].sort((a, b) =>
       b.startedAt.localeCompare(a.startedAt),
@@ -441,6 +478,18 @@ export function App() {
           <HistoryView
             workouts={history}
             online={online}
+            routePath={pathname}
+            editableWorkoutIds={
+              new Set(
+                serverWorkouts
+                  .filter((workout) => workout.status === 'completed')
+                  .map((workout) => workout.id),
+              )
+            }
+            weightUnit={weightUnit}
+            distanceUnit={distanceUnit}
+            onNavigate={navigatePath}
+            onSaveWorkout={saveHistoryWorkout}
             onDeleteWorkout={deleteHistoryWorkout}
           />
         )}
@@ -450,6 +499,8 @@ export function App() {
             online={online}
             muscles={muscles}
             exercises={exercises}
+            workoutHistory={history}
+            weightUnit={weightUnit}
             routePath={pathname}
             onNavigate={navigatePath}
             onRefresh={refreshOnlineReferences}

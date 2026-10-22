@@ -120,18 +120,25 @@ snapshot for any populated day.
 - Upload one persistent stretching poster in Settings and open its uncropped
   view from Today; cache the media response after it loads for offline viewing.
 - Finish a workout and view history.
+- Show exercise names in the history list and open completed workout details.
+- Edit historical set counts and measurements online without changing the
+  workout's exercise entries or order.
+- Show dated Epley estimated one-rep max and total training volume charts on
+  weighted strength exercise details.
 - Historical display remains valid after catalogue or template changes.
 
 ### Decisions to record
 
 - Single or multiple active workouts.
 - Launch measurement types and unit behavior.
-- Whether a completed workout can be edited online.
+- Completed-history edits are online-only and cannot change exercise entries or
+  their order; this policy is recorded in the product specification.
 
 ### Exit gate
 
-The complete workout lifecycle functions online with server-backed history and
-snapshot-safe historical display.
+The complete workout lifecycle functions online with server-backed history,
+fixed-roster completed-workout edits, strength progress charts, and snapshot-safe
+historical display.
 
 ## Milestone 4: IndexedDB and offline workout tracking (implemented)
 
@@ -249,18 +256,18 @@ published.
 
 ## Required test matrix
 
-| Area             | Minimum coverage                                                                  |
-| ---------------- | --------------------------------------------------------------------------------- |
-| Shared contracts | Valid and invalid wire payloads; backward-compatible parsing where promised       |
-| SQLite           | Fresh migration, upgrade migration, foreign keys, uniqueness, transactions        |
-| Catalogue        | CRUD, list/detail flow, role-aware associations, images, dependencies, validation |
-| Templates        | Ordering, duplication, snapshots, changed/deleted references                      |
-| Workout domain   | Lifecycle, ordering, set edits, completion, history snapshots                     |
-| IndexedDB        | Repository operations, version upgrades, atomic workout/outbox writes             |
-| Synchronization  | Duplicate replay, retry, partial failures, interrupted acknowledgement            |
-| PWA              | Offline shell, route reload, update with active workout                           |
-| Container        | Startup, health, migrations, persistent volume, graceful stop                     |
-| Workflows        | Normal commit does not publish; tag/manual run produces intended tags             |
+| Area             | Minimum coverage                                                                          |
+| ---------------- | ----------------------------------------------------------------------------------------- |
+| Shared contracts | Valid and invalid wire payloads; backward-compatible parsing where promised               |
+| SQLite           | Fresh migration, upgrade migration, foreign keys, uniqueness, transactions                |
+| Catalogue        | CRUD, list/detail flow, role-aware associations, images, dependencies, validation         |
+| Templates        | Ordering, duplication, snapshots, changed/deleted references                              |
+| Workout domain   | Lifecycle, ordering, set edits, completion, history snapshots, fixed-roster history edits |
+| IndexedDB        | Repository operations, version upgrades, atomic workout/outbox writes                     |
+| Synchronization  | Duplicate replay, retry, partial failures, interrupted acknowledgement                    |
+| PWA              | Offline shell, route reload, update with active workout                                   |
+| Container        | Startup, health, migrations, persistent volume, graceful stop                             |
+| Workflows        | Normal commit does not publish; tag/manual run produces intended tags                     |
 
 The browser-level paths run in Playwright from `tests/e2e`, separately from the
 fast Vitest suite with `npm run test:e2e`. They cover installation metadata,
@@ -268,7 +275,8 @@ service-worker shell caching, offline IndexedDB recovery and exactly-once
 synchronization, catalogue and template CRUD, exercise guide/comments and media,
 confirmation dialogs, typed strength/calisthenics/cardio inputs, interval timer
 beeps and refresh recovery, previous-value placeholders, measurement and theme
-preferences, stretching-poster caching and deletion, and history. CI installs
+preferences, stretching-poster caching and deletion, history details and edits,
+and strength progress charts. CI installs
 Chromium for these runs. Tag releases call the publishing workflow only after
 the tag's validation job succeeds; manual dispatch runs browser tests itself.
 

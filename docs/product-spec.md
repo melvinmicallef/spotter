@@ -223,14 +223,23 @@ A user can:
 - open an exercise guide modal with its demonstration, instructions, comments,
   reference link, and target muscles;
 - finish a workout;
-- view workout history with the local weekday and full date followed by the
-  template name; and
+- view workout history with the local weekday and full date, template name,
+  and exercise names;
+- open a completed workout's details page and edit its recorded set count,
+  repetitions, weight, duration, or distance without adding, removing, or
+  reordering its exercise entries;
+- view a strength exercise's progress over workout dates using Epley estimated
+  one-rep max and total training volume (weight × repetitions summed across
+  sets); and
 - delete a completed workout from history after confirming in an in-app dialog.
 
 Starting, updating, and finishing a workout must work offline after the PWA and
 required reference data have been loaded at least once.
 Deleting history is online-only. Pending workout changes must synchronize before
 deletion so an older outbox operation cannot recreate the deleted workout.
+Completed-history edits are also online-only and require pending workout changes
+to synchronize first. They can change only set values and set counts; exercise
+entries and their snapshots remain fixed.
 
 ## Offline contract
 
@@ -350,6 +359,7 @@ The first usable release is complete when:
   `lb` units derived from the device's Metric or Imperial Settings preference.
 - Cardio efforts record duration and optional distance in explicit `km` or
   `mi` units derived from the same preference.
-- Completed workouts are read-only; only an active workout is edited offline.
+- Completed workouts can be edited online through a fixed-roster history editor;
+  editing completed history is not supported offline.
 - The initial deployment is a trusted single-user installation without built-in
   authentication.

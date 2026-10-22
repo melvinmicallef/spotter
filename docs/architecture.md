@@ -419,7 +419,6 @@ than copying an actively changing database file without coordination.
 - Authentication and deployment exposure expectations.
 - Additional exercise types or measurements beyond the recorded strength,
   calisthenics, and cardio baseline.
-- Whether completed workouts can be edited offline.
 
 ## Recorded implementation decisions
 
@@ -448,7 +447,10 @@ day swaps, strength repetitions plus explicit `kg`/`lb` weight, calisthenics
 repetitions without weight, and cardio duration or interval timers plus explicit
 `km`/`mi` distance. Metric is the device-local default. Settings converts active
 entry and template target displays while preserving recorded units in completed
-history. Workout entries retain their progress locally, including completion
-state and interval timer checkpoints. The deployment remains trusted and
-single-user without built-in authentication; the API layer remains the boundary
-for adding actor and ownership context later.
+history. Completed history supports online set-value and set-count edits only
+after pending outbox work has synchronized; exercise entries and their order
+remain fixed. Strength exercise details graph Epley estimated one-rep max and
+total training volume by workout date. Workout entries retain their progress
+locally, including completion state and interval timer checkpoints. The
+deployment remains trusted and single-user without built-in authentication;
+the API layer remains the boundary for adding actor and ownership context later.

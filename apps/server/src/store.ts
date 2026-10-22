@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import type {
   AppSettings,
   AppSettingsInput,
+  CompletedWorkoutEdit,
   Exercise,
   ExerciseInput,
   ExerciseMedia,
@@ -408,6 +409,127 @@ export class SpotterStore {
       .get(id) as Row | undefined;
     if (!row) throw new AppError(404, 'NOT_FOUND', 'Workout not found');
     return this.mapWorkout(row);
+  }
+
+  updateCompletedWorkout(id: string, input: CompletedWorkoutEdit): Workout {
+    this.database.transaction(() => {
+      const workout = this.getWorkout(id);
+      if (workout.status !== 'completed')
+        throw new AppError(
+          409,
+          'WORKOUT_NOT_COMPLETED',
+          'Only completed workouts can be edited in history',
+        );
+
+      if (
+        input.exercises.length !== workout.exercises.length ||
+        input.exercises.some(
+          (exercise, index) => exercise.id !== workout.exercises[index]?.id,
+        )
+      ) {
+        throw new AppError(
+          400,
+          'WORKOUT_EXERCISES_IMMUTABLE',
+          'History edits cannot add, remove, or reorder exercises',
+        );
+      }
+
+      const existingSetOwner = new Map(
+        workout.exercises.flatMap((exercise) =>
+          exercise.sets.map((set) => [set.id, exercise.id] as const),
+        ),
+      );
+      const submittedSetIds = new Set<string>();
+      const hasSetWithOtherMeasurement = input.exercises.some((edited) => {
+        const exercise = workout.exercises.find(
+          (entry) => entry.id === edited.id,
+        )!;
+        return edited.sets.some(
+          (set) =>
+            (exercise.exerciseType === 'cardio' &&
+              (set.reps !== null || set.weight !== null)) ||
+            (exercise.exerciseType !== 'cardio' &&
+              (set.durationSeconds !== null || set.distance !== null)) ||
+            (exercise.exerciseType === 'calisthenics' && set.weight !== null),
+        );
+      });
+      if (hasSetWithOtherMeasurement) {
+        throw new AppError(
+          400,
+          'INVALID_WORKOUT_SET',
+          'A set can only contain measurements supported by its exercise type',
+        );
+      }
+
+      const findExistingSet = this.database.prepare(
+        'SELECT workout_exercise_id FROM workout_sets WHERE id = ?',
+      );
+      for (const exercise of input.exercises) {
+        for (const set of exercise.sets) {
+          if (submittedSetIds.has(set.id))
+            throw new AppError(
+              400,
+              'DUPLICATE_WORKOUT_SET',
+              'Set IDs must be unique within a workout',
+            );
+          submittedSetIds.add(set.id);
+          const originalOwner = existingSetOwner.get(set.id);
+          if (originalOwner && originalOwner !== exercise.id)
+            throw new AppError(
+              400,
+              'INVALID_WORKOUT_SET',
+              'A set cannot be moved to another exercise',
+            );
+          if (!originalOwner && findExistingSet.get(set.id))
+            throw new AppError(
+              409,
+              'WORKOUT_SET_ID_EXISTS',
+              'This set ID already belongs to another workout',
+            );
+        }
+      }
+
+      const deleteSets = this.database.prepare(
+        'DELETE FROM workout_sets WHERE workout_exercise_id = ?',
+      );
+      const insertSet = this.database.prepare(
+        `INSERT INTO workout_sets
+         (id, workout_exercise_id, position, reps, weight, weight_unit,
+          duration_seconds, distance, distance_unit, notes, completed)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      );
+      for (const edited of input.exercises) {
+        const original = workout.exercises.find(
+          (exercise) => exercise.id === edited.id,
+        )!;
+        const originalSets = new Map(original.sets.map((set) => [set.id, set]));
+        deleteSets.run(edited.id);
+        edited.sets.forEach((set, position) => {
+          const originalSet = originalSets.get(set.id);
+          insertSet.run(
+            set.id,
+            edited.id,
+            position,
+            set.reps,
+            set.weight,
+            set.weightUnit,
+            set.durationSeconds,
+            set.distance,
+            set.distanceUnit,
+            originalSet?.notes ?? null,
+            Number(originalSet?.completed ?? true),
+          );
+        });
+      }
+
+      const updatedAt = new Date(
+        Math.max(Date.now(), Date.parse(workout.updatedAt) + 1),
+      ).toISOString();
+      this.database
+        .prepare('UPDATE workout_sessions SET updated_at = ? WHERE id = ?')
+        .run(updatedAt, id);
+    })();
+    return this.getWorkout(id);
   }
 
   deleteWorkout(id: string): void {

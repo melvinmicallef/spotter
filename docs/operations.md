@@ -82,7 +82,9 @@ state that the older image understands the newer schema.
 
 - One active workout is supported per device.
 - Simultaneous editing of the same workout on multiple devices is unsupported.
-- Completed workouts are read-only.
+- Completed workout history can be edited online for set counts and values; its
+  exercise entries and order remain fixed. Pending workout changes must sync
+  before editing, and completed-history edits are unavailable offline.
 - There is no built-in account, authentication, export, or retention policy.
 - Catalogue and template changes require connectivity.
 - Weekly day swaps are device-local and apply only to the current ISO week.

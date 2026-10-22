@@ -19,6 +19,9 @@ export type TemplateRoute =
   | { kind: 'details'; templateId: string }
   | { kind: 'edit'; templateId: string };
 
+export type HistoryRoute =
+  { kind: 'list' } | { kind: 'details'; workoutId: string };
+
 const VIEW_PATHS: Record<View, string> = {
   workout: '/workout',
   history: '/history',
@@ -37,10 +40,24 @@ export function viewFromPath(pathname: string): View {
   const normalized = normalizePath(pathname);
   if (normalized.startsWith('/exercises/')) return 'exercises';
   if (normalized.startsWith('/templates/')) return 'templates';
+  if (normalized.startsWith('/history/')) return 'history';
   const match = Object.entries(VIEW_PATHS).find(
     ([, path]) => path === normalized,
   );
   return (match?.[0] as View | undefined) ?? 'workout';
+}
+
+export function pathForHistory(route: HistoryRoute): string {
+  return route.kind === 'list' ? '/history' : `/history/${route.workoutId}`;
+}
+
+export function historyRouteFromPath(pathname: string): HistoryRoute {
+  const segments = normalizePath(pathname).split('/').filter(Boolean);
+  if (segments[0] !== 'history' || segments.length !== 2)
+    return { kind: 'list' };
+  return isUuid(segments[1])
+    ? { kind: 'details', workoutId: segments[1]! }
+    : { kind: 'list' };
 }
 
 export function pathForExercise(route: ExerciseRoute): string {

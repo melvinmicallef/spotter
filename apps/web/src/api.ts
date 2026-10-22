@@ -2,6 +2,7 @@ import {
   appSettingsInputSchema,
   appSettingsSchema,
   apiErrorSchema,
+  completedWorkoutEditSchema,
   exerciseSchema,
   exerciseMediaSchema,
   referenceDataSchema,
@@ -12,6 +13,7 @@ import {
 import type {
   AppSettings,
   AppSettingsInput,
+  CompletedWorkoutEdit,
   Exercise,
   ExerciseInput,
   ExerciseMedia,
@@ -82,6 +84,17 @@ export const api = {
   },
   async deleteWorkout(id: string): Promise<void> {
     await request(`/workouts/${id}`, { method: 'DELETE' });
+  },
+  async updateCompletedWorkout(
+    id: string,
+    input: CompletedWorkoutEdit,
+  ): Promise<Workout> {
+    return workoutSchema.parse(
+      await request(`/workouts/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(completedWorkoutEditSchema.parse(input)),
+      }),
+    );
   },
   async sync(batch: SyncBatch): Promise<SyncResponse> {
     return syncResponseSchema.parse(

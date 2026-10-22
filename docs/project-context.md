@@ -48,6 +48,7 @@ baseline.
 | Offline database       | IndexedDB                                                                                            |
 | Offline writes         | Active workout tracking, including starting, resuming, recording, and finishing                      |
 | Offline reference data | Cached read-only muscles, exercises, and templates needed to log a workout                           |
+| Completed history      | Online set-value and set-count edits; exercise entries and snapshots remain fixed                    |
 | Online-only writes     | Creating, editing, reordering, or deleting exercises and templates                                   |
 | Muscle catalogue       | Built-in ExRx leaf muscles grouped under non-selectable parent headings                              |
 | Synchronization        | Durable outbox, client-generated IDs, idempotent server application, automatic retry after reconnect |
@@ -133,8 +134,7 @@ Do not infer answers to these questions from the rest of the architecture:
 
 - history export and retention requirements;
 - account and tenancy behavior after the trusted single-user `0.1.x` line;
-- measurement types beyond strength, calisthenics, and cardio; and
-- completed-workout editing in a future release.
+- measurement types beyond strength, calisthenics, and cardio.
 
 The architecture intentionally leaves boundaries where these decisions can be
 introduced without replacing the workout model or synchronization core.
@@ -168,9 +168,11 @@ introduced without replacing the workout model or synchronization core.
 - The current `0.2.0` product contract includes one active workout per device,
   strength/calisthenics/cardio types, ISO-weekday templates with optional named
   days, device-local Metric/Imperial units, duration and interval cardio,
-  previous-set hints, collapsible completed exercises, and a shared stretching
-  poster. The deployment remains trusted and single-user without built-in
-  authentication; completed workouts remain read-only.
+  previous-set hints, collapsible completed exercises, a shared stretching
+  poster, and history detail pages with online set-value editing. History edits
+  cannot change exercise entries or their order. Strength exercise details show
+  dated Epley estimated one-rep max and training-volume charts. The deployment
+  remains trusted and single-user without built-in authentication.
 - Exercise demonstrations are validated GIF, PNG, or JPEG uploads of at most
   five MiB, stored below `/data/media`, and prefetched into a dedicated offline
   application cache. Website import is not part of the product. Exercises may

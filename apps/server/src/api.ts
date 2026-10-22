@@ -6,6 +6,7 @@ import { z } from 'zod';
 import {
   appSettingsInputSchema,
   appSettingsSchema,
+  completedWorkoutEditSchema,
   exerciseInputSchema,
   exerciseMediaSchema,
   syncOperationSchema,
@@ -187,6 +188,14 @@ export function createApiRouter(
   );
   router.get('/workouts/:id', (request, response) => {
     response.json(store.getWorkout(uuidSchema.parse(request.params.id)));
+  });
+  router.patch('/workouts/:id', (request, response) => {
+    response.json(
+      store.updateCompletedWorkout(
+        uuidSchema.parse(request.params.id),
+        completedWorkoutEditSchema.parse(request.body),
+      ),
+    );
   });
   router.delete('/workouts/:id', (request, response) => {
     store.deleteWorkout(uuidSchema.parse(request.params.id));

@@ -160,8 +160,10 @@ production container are implemented. The exercise catalogue supports primary
 and secondary muscle roles, preparation and execution instructions, optional
 comments and reference links, and validated GIF, PNG, or JPEG demonstrations.
 Workout entry uses compact, type-specific fields. Template-wide notes and
-optional names for each weekday are supported; workout history preserves
-completed exercise and set snapshots.
+optional names for each weekday are supported. History shows exercise names,
+opens completed-workout details, and supports online set-value and set-count
+edits without changing a workout's exercise list. Strength exercise details
+include Epley estimated one-rep max and training-volume graphs by workout date.
 
 ## Run the production image
 

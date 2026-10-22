@@ -510,6 +510,38 @@ export const workoutSchema = z.object({
   exercises: z.array(workoutExerciseSchema).max(200),
 });
 
+export const completedWorkoutSetEditSchema = z
+  .object({
+    id: uuidSchema,
+    reps: z.number().int().nonnegative().max(9_999).nullable(),
+    weight: z.number().nonnegative().max(100_000).nullable(),
+    weightUnit: weightUnitSchema,
+    durationSeconds: z
+      .number()
+      .int()
+      .nonnegative()
+      .max(7 * 24 * 60 * 60)
+      .nullable(),
+    distance: z.number().nonnegative().max(100_000).nullable(),
+    distanceUnit: distanceUnitSchema,
+  })
+  .strict();
+
+export const completedWorkoutEditSchema = z
+  .object({
+    exercises: z
+      .array(
+        z
+          .object({
+            id: uuidSchema,
+            sets: z.array(completedWorkoutSetEditSchema).max(200),
+          })
+          .strict(),
+      )
+      .max(200),
+  })
+  .strict();
+
 export const syncOperationSchema = z.object({
   operationId: uuidSchema,
   kind: z.literal('upsert_workout'),
@@ -556,6 +588,7 @@ export type WorkoutTemplateInput = z.infer<typeof workoutTemplateInputSchema>;
 export type Workout = z.infer<typeof workoutSchema>;
 export type WorkoutExercise = z.infer<typeof workoutExerciseSchema>;
 export type WorkoutSet = z.infer<typeof workoutSetSchema>;
+export type CompletedWorkoutEdit = z.infer<typeof completedWorkoutEditSchema>;
 export type SyncOperation = z.infer<typeof syncOperationSchema>;
 export type SyncBatch = z.infer<typeof syncBatchSchema>;
 export type SyncResponse = z.infer<typeof syncResponseSchema>;

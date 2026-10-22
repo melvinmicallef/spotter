@@ -1,15 +1,19 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
-import type { Exercise, ExerciseInput, Muscle } from '@spotter/shared';
+import type { Exercise, ExerciseInput, Muscle, Workout } from '@spotter/shared';
 
 import { api } from '../api.js';
+import type { WeightUnit } from '../measurement-system.js';
 import { ConfirmDialog } from './ConfirmDialog.js';
+import { StrengthProgressChart } from './StrengthProgressChart.js';
 import { exerciseRouteFromPath, pathForExercise } from '../routes.js';
 
 interface ExercisesViewProps {
   online: boolean;
   muscles: Muscle[];
   exercises: Exercise[];
+  workoutHistory: Workout[];
+  weightUnit: WeightUnit;
   routePath: string;
   onNavigate: (path: string) => void;
   onRefresh: () => Promise<void>;
@@ -152,6 +156,8 @@ export function ExercisesView(props: ExercisesViewProps) {
       <>
         <ExerciseDetails
           exercise={selectedExercise}
+          workoutHistory={props.workoutHistory}
+          weightUnit={props.weightUnit}
           online={props.online}
           notice={offlineNotice}
           onBack={() => props.onNavigate(pathForExercise({ kind: 'list' }))}
@@ -240,6 +246,8 @@ export function ExercisesView(props: ExercisesViewProps) {
 
 function ExerciseDetails({
   exercise,
+  workoutHistory,
+  weightUnit,
   online,
   notice,
   onBack,
@@ -247,6 +255,8 @@ function ExerciseDetails({
   onDelete,
 }: {
   exercise: Exercise;
+  workoutHistory: Workout[];
+  weightUnit: WeightUnit;
   online: boolean;
   notice: ReactNode;
   onBack: () => void;
@@ -287,6 +297,11 @@ function ExerciseDetails({
             </button>
           </div>
         }
+      />
+      <StrengthProgressChart
+        exercise={exercise}
+        workouts={workoutHistory}
+        weightUnit={weightUnit}
       />
     </section>
   );
