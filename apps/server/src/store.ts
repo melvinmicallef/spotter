@@ -560,7 +560,10 @@ export class SpotterStore {
       const row = this.database
         .prepare('SELECT status FROM workout_sessions WHERE id = ?')
         .get(id) as { status: string } | undefined;
-      if (!row) throw new AppError(404, 'NOT_FOUND', 'Workout not found');
+      // Completed workouts may still be present in a device's local history
+      // after the canonical server row has been removed. Treat repeated
+      // deletion as success so the client can clear that stale local copy.
+      if (!row) return;
       if (row.status !== 'completed')
         throw new AppError(
           409,

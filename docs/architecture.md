@@ -323,6 +323,9 @@ both canonical SQLite state and exercise demonstrations.
 - Timestamps use ISO 8601 UTC strings on the wire.
 - Validation failures return stable machine-readable error codes.
 - Mutation responses return the canonical server representation.
+- Deleting a completed workout is idempotent: an already-absent server row is
+  treated as deleted, allowing the client to remove a stale cached history
+  copy. An existing in-progress workout still cannot be deleted from history.
 - Collection synchronization uses a cursor or revision token instead of
   relying only on client timestamps.
 - Payload and batch limits protect the service from accidental unbounded
