@@ -121,6 +121,15 @@ textarea:focus {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
+input[type='number'] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
 fieldset {
   margin: 0;
   padding: 0;
