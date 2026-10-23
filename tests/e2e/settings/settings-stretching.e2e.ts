@@ -45,6 +45,7 @@ test('keeps device preferences and shows a saved stretching poster offline', asy
     .toBeGreaterThan(0);
 
   await context.setOffline(true);
+  await page.setViewportSize({ width: 390, height: 720 });
   await page.getByRole('link', { name: 'Workout' }).click();
   await page.getByRole('button', { name: 'Show stretching' }).click();
   const stretchingPoster = page.getByRole('img', { name: 'Stretching poster' });
@@ -57,6 +58,12 @@ test('keeps device preferences and shows a saved stretching poster offline', asy
     )
     .toBeGreaterThan(0);
   await expect(stretchingPoster).toHaveCSS('object-fit', 'contain');
+  const frame = await page.locator('.stretching-poster-frame').boundingBox();
+  const image = await stretchingPoster.boundingBox();
+  expect(frame).not.toBeNull();
+  expect(image).not.toBeNull();
+  expect(Math.abs(frame!.y - image!.y)).toBeLessThanOrEqual(1);
+  expect(Math.abs(frame!.height - image!.height)).toBeLessThanOrEqual(1);
 
   await context.setOffline(false);
   await expect(page.getByRole('status')).toContainText('Online');
