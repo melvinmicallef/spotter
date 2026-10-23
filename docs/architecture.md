@@ -87,20 +87,11 @@ explicit confirmation before the online request is sent. Muscle source links
 open ExRx in a new browser tab so the catalogue remains available.
 Exercises own their strength/calisthenics/cardio category, muscle roles,
 separate preparation and execution instructions, optional comments, and
-uploaded image. The
-version-five SQLite migration and client cache normalization retain legacy
-single-field instructions as execution text; version seven adds the exercise
-comments field and advances the reference revision to refresh cached exercises.
-Version eight adds optional weekday names to templates and snapshots the chosen
-name into newly started workouts.
-Version nine adds a server-managed application setting for the single
+uploaded image. A server-managed application setting points to the single
 stretching-poster image. The image is shared across devices and is stored using
 the existing media storage path; a device caches its media response after it
 loads so the poster can be viewed offline. The presentation and measurement
 system preferences remain device-local.
-Version twelve adds duration/interval mode and interval stage settings to
-template and workout exercise snapshots, defaults existing cardio rows to
-duration mode, and advances the reference revision so cached templates refresh.
 
 The exercise editor assigns muscles incrementally rather than rendering the
 entire catalogue. Duplicate assignments are excluded, multiple secondary
@@ -126,6 +117,12 @@ calls throughout the UI. Proposed logical stores are:
 
 IndexedDB schema upgrades must be versioned and tested with data from the
 previous supported version.
+
+The pre-user reset starts the browser at version one of the `spotter-v2`
+IndexedDB database. The earlier `spotter` namespace is not read, so old cached
+references or pending operations cannot repopulate the reset server. Future
+browser migrations increment the version within `spotter-v2` and preserve its
+workouts and outbox.
 
 ### Local write path
 
@@ -172,10 +169,8 @@ The persistence model retains nullable columns for both measurement families so
 migrations and historical reads remain straightforward, while the client shows
 and writes only the fields valid for the snapshot type.
 
-SQLite retains its original constrained `exercise_type` columns for the
-strength/cardio recording families and adds `exercise_category` for the
-calisthenics distinction. Calisthenics maps to the legacy strength family in
-the database while the API and client use the explicit category.
+SQLite stores the same `strength`, `calisthenics`, and `cardio` category as the
+API. Its clean baseline has no legacy strength/cardio compatibility column.
 
 Template entries use ISO weekday numbers (`1` Monday through `7` Sunday) plus a
 position that is unique within that day. A weekly template can contain multiple
@@ -301,6 +296,26 @@ schema_migrations
 Foreign keys are enabled for every connection. Transactions protect ordered
 changes and synchronization batches. Migrations run before the HTTP server
 reports readiness.
+
+The pre-user database was reset to one version-one `baseline` migration. It
+creates the full current schema directly; migrations from published `0.1.0`
+or `0.2.0` databases are intentionally unsupported. Development installations
+using those schemas must stop the server, remove the SQLite file and its WAL
+sidecars, and clear the browser's site data before starting this baseline.
+From this baseline onward, migrations are append-only. Versions and names form
+a contiguous, immutable history. Startup rejects a database whose recorded
+migration differs from the application or is newer than the application,
+rather than running against an unknown schema. Each migration runs in a
+transaction. Future table rebuilds that require temporarily disabling foreign
+keys must do so before the transaction, run `foreign_key_check` before commit,
+and restore enforcement even on failure.
+
+The final schema uses each parent/position uniqueness constraint as the index
+for ordered template entries, workout exercises, and sets. Separate indexes
+cover workout-history ordering and nullable catalogue/template foreign keys
+used during deletion. Processed operation IDs remain unique and are retained
+indefinitely because sync retries have no bounded lifetime in the current
+contract.
 
 The server seeds 45 stable built-in leaf muscles at startup. Muscle rows retain
 their ExRx group, optional subgroup, source URL, and display order. The API

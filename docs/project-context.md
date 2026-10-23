@@ -164,7 +164,11 @@ introduced without replacing the workout model or synchronization core.
 - Vite builds and serves the React client in development.
 - `better-sqlite3` provides synchronous transaction boundaries. Ordered
   migrations run at startup, UUIDs and UTC timestamps use text columns, and
-  file-backed databases use WAL mode.
+  file-backed databases use WAL mode. Because no user data existed, the schema
+  was reset to a single version-one baseline with the current
+  strength/calisthenics/cardio model. Older development databases must be
+  cleared rather than upgraded. Future migrations append to this baseline;
+  startup rejects unknown or altered migration histories.
 - `idb` provides the browser repository boundary. Workout and outbox changes
   share one transaction; synchronization is serialized and idempotent.
 - The current `0.2.0` product contract includes one active workout per device,

@@ -13,7 +13,7 @@ interface WorkoutExerciseSnapshot {
 
 async function activeSetSnapshot(page: Page) {
   return page.evaluate<WorkoutSetSnapshot | undefined>(async () => {
-    const request = indexedDB.open('spotter');
+    const request = indexedDB.open('spotter-v2');
     const database = await new Promise<IDBDatabase>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
@@ -37,7 +37,7 @@ async function activeSetSnapshot(page: Page) {
 
 async function activeExerciseCompleted(page: Page) {
   return page.evaluate<boolean | undefined>(async () => {
-    const request = indexedDB.open('spotter');
+    const request = indexedDB.open('spotter-v2');
     const database = await new Promise<IDBDatabase>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
@@ -60,7 +60,7 @@ async function activeExerciseCompleted(page: Page) {
 
 async function outboxSize(page: Page) {
   return page.evaluate<number>(async () => {
-    const request = indexedDB.open('spotter');
+    const request = indexedDB.open('spotter-v2');
     const database = await new Promise<IDBDatabase>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
@@ -80,7 +80,7 @@ async function outboxSize(page: Page) {
 
 async function cachedExerciseNames(page: Page) {
   return page.evaluate<string[]>(async () => {
-    const request = indexedDB.open('spotter');
+    const request = indexedDB.open('spotter-v2');
     const database = await new Promise<IDBDatabase>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
@@ -275,9 +275,14 @@ test('installs its shell and synchronizes one offline workout after reload', asy
   await expect(page.getByLabel(`${exerciseName} weight set 1`)).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Finish' }).click();
-  await expect(
-    page.getByRole('button', { name: `${otherDayName} (Workout) Done` }),
-  ).toBeDisabled();
+  const completedDay = page.getByRole('button', {
+    name: `${otherDayName} (Workout) Done`,
+  });
+  await expect(completedDay).toBeEnabled();
+  await completedDay.click();
+  const repeatDialog = page.getByRole('alertdialog');
+  await expect(repeatDialog).toContainText('Day already completed');
+  await repeatDialog.getByRole('button', { name: 'Cancel' }).click();
   await page.getByRole('link', { name: 'History' }).click();
   const historyRow = page
     .locator('.history-entry')

@@ -5,184 +5,25 @@ import Database from 'better-sqlite3';
 
 import { BUILT_IN_MUSCLES } from '@spotter/shared';
 
-export const migrations = [
+interface Migration {
+  version: number;
+  name: string;
+  sql: string;
+  rebuildsReferencedTables?: boolean;
+}
+
+// This is the clean pre-user baseline. Future releases append migrations here;
+// applied versions and names must never be edited or reused.
+export const migrations: readonly Migration[] = [
   {
     version: 1,
-    name: 'initial_domain',
+    name: 'baseline',
     sql: `
-      CREATE TABLE app_metadata (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+      CREATE TABLE app_metadata (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      );
       INSERT INTO app_metadata (key, value) VALUES ('reference_revision', '0');
-
-      CREATE TABLE muscles (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL COLLATE NOCASE UNIQUE,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-      );
-
-      CREATE TABLE exercises (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL COLLATE NOCASE UNIQUE,
-        instructions TEXT,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-      );
-
-      CREATE TABLE exercise_muscles (
-        exercise_id TEXT NOT NULL REFERENCES exercises(id) ON DELETE CASCADE,
-        muscle_id TEXT NOT NULL REFERENCES muscles(id) ON DELETE RESTRICT,
-        role TEXT NOT NULL CHECK (role IN ('primary', 'secondary')),
-        PRIMARY KEY (exercise_id, muscle_id)
-      );
-
-      CREATE TABLE workout_templates (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL COLLATE NOCASE UNIQUE,
-        notes TEXT,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-      );
-
-      CREATE TABLE template_exercises (
-        id TEXT PRIMARY KEY,
-        template_id TEXT NOT NULL REFERENCES workout_templates(id) ON DELETE CASCADE,
-        exercise_id TEXT NOT NULL REFERENCES exercises(id) ON DELETE RESTRICT,
-        position INTEGER NOT NULL CHECK (position >= 0),
-        notes TEXT,
-        target_sets INTEGER CHECK (target_sets > 0),
-        target_reps INTEGER CHECK (target_reps > 0),
-        UNIQUE (template_id, position)
-      );
-
-      CREATE TABLE workout_sessions (
-        id TEXT PRIMARY KEY,
-        template_id TEXT REFERENCES workout_templates(id) ON DELETE SET NULL,
-        name TEXT NOT NULL,
-        status TEXT NOT NULL CHECK (status IN ('in_progress', 'completed')),
-        started_at TEXT NOT NULL,
-        completed_at TEXT,
-        notes TEXT,
-        updated_at TEXT NOT NULL
-      );
-
-      CREATE TABLE workout_exercises (
-        id TEXT PRIMARY KEY,
-        workout_id TEXT NOT NULL REFERENCES workout_sessions(id) ON DELETE CASCADE,
-        exercise_id TEXT REFERENCES exercises(id) ON DELETE SET NULL,
-        exercise_name TEXT NOT NULL,
-        position INTEGER NOT NULL CHECK (position >= 0),
-        notes TEXT,
-        target_sets INTEGER CHECK (target_sets > 0),
-        target_reps INTEGER CHECK (target_reps > 0),
-        UNIQUE (workout_id, position)
-      );
-
-      CREATE TABLE workout_sets (
-        id TEXT PRIMARY KEY,
-        workout_exercise_id TEXT NOT NULL REFERENCES workout_exercises(id) ON DELETE CASCADE,
-        position INTEGER NOT NULL CHECK (position >= 0),
-        reps INTEGER CHECK (reps >= 0),
-        weight REAL CHECK (weight >= 0),
-        weight_unit TEXT NOT NULL CHECK (weight_unit IN ('kg', 'lb')),
-        notes TEXT,
-        completed INTEGER NOT NULL CHECK (completed IN (0, 1)),
-        UNIQUE (workout_exercise_id, position)
-      );
-
-      CREATE TABLE processed_operations (
-        operation_id TEXT PRIMARY KEY,
-        processed_at TEXT NOT NULL
-      );
-
-      CREATE INDEX workout_sessions_status_idx ON workout_sessions(status, started_at DESC);
-      CREATE INDEX workout_exercises_workout_idx ON workout_exercises(workout_id, position);
-      CREATE INDEX workout_sets_exercise_idx ON workout_sets(workout_exercise_id, position);
-    `,
-  },
-  {
-    version: 2,
-    name: 'exercise_media_and_sources',
-    sql: `
-      CREATE TABLE exercise_media (
-        id TEXT PRIMARY KEY,
-        kind TEXT NOT NULL CHECK (kind = 'gif'),
-        mime_type TEXT NOT NULL CHECK (mime_type = 'image/gif'),
-        byte_size INTEGER NOT NULL CHECK (byte_size > 0 AND byte_size <= 5242880),
-        original_name TEXT NOT NULL,
-        created_at TEXT NOT NULL
-      );
-
-      ALTER TABLE exercises ADD COLUMN media_id TEXT
-        REFERENCES exercise_media(id) ON DELETE SET NULL;
-      ALTER TABLE exercises ADD COLUMN source_url TEXT;
-      ALTER TABLE exercises ADD COLUMN source_title TEXT;
-      ALTER TABLE exercises ADD COLUMN source_media_url TEXT;
-      ALTER TABLE exercises ADD COLUMN source_imported_at TEXT;
-      CREATE UNIQUE INDEX exercises_media_id_idx ON exercises(media_id)
-        WHERE media_id IS NOT NULL;
-    `,
-  },
-  {
-    version: 3,
-    name: 'typed_exercises_and_weekly_templates',
-    sql: `
-      ALTER TABLE exercises ADD COLUMN exercise_type TEXT NOT NULL DEFAULT 'strength'
-        CHECK (exercise_type IN ('strength', 'cardio'));
-
-      ALTER TABLE template_exercises RENAME TO template_exercises_v2;
-      CREATE TABLE template_exercises (
-        id TEXT PRIMARY KEY,
-        template_id TEXT NOT NULL REFERENCES workout_templates(id) ON DELETE CASCADE,
-        exercise_id TEXT NOT NULL REFERENCES exercises(id) ON DELETE RESTRICT,
-        day_of_week INTEGER NOT NULL CHECK (day_of_week BETWEEN 1 AND 7),
-        position INTEGER NOT NULL CHECK (position >= 0),
-        notes TEXT,
-        target_sets INTEGER CHECK (target_sets > 0),
-        target_reps INTEGER CHECK (target_reps > 0),
-        target_duration_seconds INTEGER CHECK (target_duration_seconds > 0),
-        target_distance REAL CHECK (target_distance > 0),
-        target_distance_unit TEXT NOT NULL DEFAULT 'km'
-          CHECK (target_distance_unit IN ('km', 'mi')),
-        UNIQUE (template_id, day_of_week, position)
-      );
-      INSERT INTO template_exercises
-        (id, template_id, exercise_id, day_of_week, position, notes,
-         target_sets, target_reps, target_duration_seconds, target_distance,
-         target_distance_unit)
-      SELECT id, template_id, exercise_id, 1, position, notes,
-        target_sets, target_reps, NULL, NULL, 'km'
-      FROM template_exercises_v2;
-      DROP TABLE template_exercises_v2;
-
-      ALTER TABLE workout_sessions ADD COLUMN template_day INTEGER
-        CHECK (template_day BETWEEN 1 AND 7);
-      ALTER TABLE workout_exercises ADD COLUMN exercise_type TEXT NOT NULL DEFAULT 'strength'
-        CHECK (exercise_type IN ('strength', 'cardio'));
-      ALTER TABLE workout_exercises ADD COLUMN target_duration_seconds INTEGER
-        CHECK (target_duration_seconds > 0);
-      ALTER TABLE workout_exercises ADD COLUMN target_distance REAL
-        CHECK (target_distance > 0);
-      ALTER TABLE workout_exercises ADD COLUMN target_distance_unit TEXT NOT NULL DEFAULT 'km'
-        CHECK (target_distance_unit IN ('km', 'mi'));
-      ALTER TABLE workout_sets ADD COLUMN duration_seconds INTEGER
-        CHECK (duration_seconds >= 0);
-      ALTER TABLE workout_sets ADD COLUMN distance REAL CHECK (distance >= 0);
-      ALTER TABLE workout_sets ADD COLUMN distance_unit TEXT NOT NULL DEFAULT 'km'
-        CHECK (distance_unit IN ('km', 'mi'));
-    `,
-  },
-  {
-    version: 4,
-    name: 'active_templates_and_exercise_images',
-    sql: `
-      ALTER TABLE workout_templates ADD COLUMN is_active INTEGER NOT NULL DEFAULT 0
-        CHECK (is_active IN (0, 1));
-      UPDATE workout_templates SET is_active = 1
-      WHERE id = (
-        SELECT id FROM workout_templates ORDER BY created_at, id LIMIT 1
-      );
-      CREATE UNIQUE INDEX workout_templates_one_active_idx
-        ON workout_templates(is_active) WHERE is_active = 1;
 
       CREATE TABLE exercise_images (
         id TEXT PRIMARY KEY,
@@ -192,34 +33,6 @@ export const migrations = [
         original_name TEXT NOT NULL,
         created_at TEXT NOT NULL
       );
-      INSERT INTO exercise_images (id, mime_type, byte_size, original_name, created_at)
-      SELECT id, mime_type, byte_size, original_name, created_at
-      FROM exercise_media;
-      ALTER TABLE exercises ADD COLUMN image_id TEXT
-        REFERENCES exercise_images(id) ON DELETE SET NULL;
-      UPDATE exercises SET image_id = media_id WHERE media_id IS NOT NULL;
-      UPDATE exercises SET media_id = NULL;
-      DELETE FROM exercise_media;
-      CREATE UNIQUE INDEX exercises_image_id_idx ON exercises(image_id)
-        WHERE image_id IS NOT NULL;
-    `,
-  },
-  {
-    version: 5,
-    name: 'split_exercise_instructions',
-    sql: `
-      ALTER TABLE exercises ADD COLUMN preparation TEXT;
-      ALTER TABLE exercises ADD COLUMN execution TEXT;
-      UPDATE exercises SET execution = instructions
-      WHERE instructions IS NOT NULL;
-    `,
-  },
-  {
-    version: 6,
-    name: 'built_in_muscle_hierarchy_and_exercise_references',
-    sql: `
-      ALTER TABLE exercise_muscles RENAME TO exercise_muscles_v6;
-      ALTER TABLE muscles RENAME TO muscles_v6;
 
       CREATE TABLE muscles (
         id TEXT PRIMARY KEY,
@@ -235,11 +48,25 @@ export const migrations = [
       );
       CREATE UNIQUE INDEX muscles_hierarchy_idx
         ON muscles(group_name, COALESCE(subgroup_name, ''), name COLLATE NOCASE);
-      INSERT INTO muscles
-        (id, name, group_name, subgroup_name, reference_url, is_builtin,
-         group_order, muscle_order, created_at, updated_at)
-      SELECT id, name, 'Legacy', NULL, NULL, 0, 999, 999, created_at, updated_at
-      FROM muscles_v6;
+
+      CREATE TABLE exercises (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL COLLATE NOCASE UNIQUE,
+        exercise_category TEXT NOT NULL
+          CHECK (exercise_category IN ('strength', 'calisthenics', 'cardio')),
+        preparation TEXT,
+        execution TEXT,
+        comments TEXT,
+        image_id TEXT REFERENCES exercise_images(id) ON DELETE SET NULL,
+        source_url TEXT,
+        source_title TEXT,
+        source_media_url TEXT,
+        source_imported_at TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      CREATE UNIQUE INDEX exercises_image_id_idx ON exercises(image_id)
+        WHERE image_id IS NOT NULL;
 
       CREATE TABLE exercise_muscles (
         exercise_id TEXT NOT NULL REFERENCES exercises(id) ON DELETE CASCADE,
@@ -247,145 +74,148 @@ export const migrations = [
         role TEXT NOT NULL CHECK (role IN ('primary', 'secondary')),
         PRIMARY KEY (exercise_id, muscle_id)
       );
-      INSERT INTO exercise_muscles (exercise_id, muscle_id, role)
-      SELECT exercise_id, muscle_id, role FROM exercise_muscles_v6;
-      DROP TABLE exercise_muscles_v6;
-      DROP TABLE muscles_v6;
+      CREATE INDEX exercise_muscles_muscle_idx ON exercise_muscles(muscle_id);
 
-      ALTER TABLE workout_exercises ADD COLUMN reference_url TEXT;
-      UPDATE app_metadata
-      SET value = CAST(CAST(value AS INTEGER) + 1 AS TEXT)
-      WHERE key = 'reference_revision';
-    `,
-  },
-  {
-    version: 7,
-    name: 'exercise_comments',
-    sql: `
-      ALTER TABLE exercises ADD COLUMN comments TEXT;
-      UPDATE app_metadata
-      SET value = CAST(CAST(value AS INTEGER) + 1 AS TEXT)
-      WHERE key = 'reference_revision';
-    `,
-  },
-  {
-    version: 8,
-    name: 'named_template_days',
-    sql: `
+      CREATE TABLE workout_templates (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL COLLATE NOCASE UNIQUE,
+        notes TEXT,
+        is_active INTEGER NOT NULL DEFAULT 0 CHECK (is_active IN (0, 1)),
+        active_since TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        CHECK ((is_active = 1 AND active_since IS NOT NULL)
+          OR (is_active = 0 AND active_since IS NULL))
+      );
+      CREATE UNIQUE INDEX workout_templates_one_active_idx
+        ON workout_templates(is_active) WHERE is_active = 1;
+
       CREATE TABLE template_day_names (
-        template_id TEXT NOT NULL
-          REFERENCES workout_templates(id) ON DELETE CASCADE,
+        template_id TEXT NOT NULL REFERENCES workout_templates(id) ON DELETE CASCADE,
         day_of_week INTEGER NOT NULL CHECK (day_of_week BETWEEN 1 AND 7),
-        name TEXT NOT NULL
-          CHECK (length(trim(name)) BETWEEN 1 AND 100),
+        name TEXT NOT NULL CHECK (length(trim(name)) BETWEEN 1 AND 100),
         PRIMARY KEY (template_id, day_of_week)
       );
 
-      ALTER TABLE workout_sessions ADD COLUMN template_day_name TEXT
-        CHECK (template_day_name IS NULL OR
-          length(trim(template_day_name)) BETWEEN 1 AND 100);
-    `,
-  },
-  {
-    version: 9,
-    name: 'stretching_poster_setting',
-    sql: `
+      CREATE TABLE template_exercises (
+        id TEXT PRIMARY KEY,
+        template_id TEXT NOT NULL REFERENCES workout_templates(id) ON DELETE CASCADE,
+        exercise_id TEXT NOT NULL REFERENCES exercises(id) ON DELETE RESTRICT,
+        day_of_week INTEGER NOT NULL CHECK (day_of_week BETWEEN 1 AND 7),
+        position INTEGER NOT NULL CHECK (position >= 0),
+        target_sets INTEGER CHECK (target_sets > 0),
+        target_reps INTEGER CHECK (target_reps > 0),
+        target_duration_seconds INTEGER CHECK (target_duration_seconds > 0),
+        target_distance REAL CHECK (target_distance > 0),
+        target_distance_unit TEXT NOT NULL DEFAULT 'km'
+          CHECK (target_distance_unit IN ('km', 'mi')),
+        cardio_mode TEXT CHECK (cardio_mode IN ('duration', 'interval')),
+        interval_prep_seconds INTEGER
+          CHECK (interval_prep_seconds IS NULL OR interval_prep_seconds >= 0),
+        interval_work_seconds INTEGER
+          CHECK (interval_work_seconds IS NULL OR interval_work_seconds > 0),
+        interval_rest_seconds INTEGER
+          CHECK (interval_rest_seconds IS NULL OR interval_rest_seconds >= 0),
+        interval_iterations INTEGER
+          CHECK (interval_iterations IS NULL OR interval_iterations BETWEEN 1 AND 999),
+        UNIQUE (template_id, day_of_week, position)
+      );
+      CREATE INDEX template_exercises_exercise_idx ON template_exercises(exercise_id);
+
       CREATE TABLE app_settings (
         id INTEGER PRIMARY KEY CHECK (id = 1),
-        stretching_poster_id TEXT
-          REFERENCES exercise_images(id) ON DELETE SET NULL
+        stretching_poster_id TEXT REFERENCES exercise_images(id) ON DELETE SET NULL
       );
       INSERT INTO app_settings (id, stretching_poster_id) VALUES (1, NULL);
-    `,
-  },
-  {
-    version: 10,
-    name: 'workout_exercise_completion',
-    sql: `
-      ALTER TABLE workout_exercises ADD COLUMN completed INTEGER NOT NULL DEFAULT 0
-        CHECK (completed IN (0, 1));
-    `,
-  },
-  {
-    version: 11,
-    name: 'calisthenics_exercise_category',
-    sql: `
-      ALTER TABLE exercises ADD COLUMN exercise_category TEXT NOT NULL DEFAULT 'strength'
-        CHECK (exercise_category IN ('strength', 'calisthenics', 'cardio'));
-      UPDATE exercises SET exercise_category = exercise_type;
 
-      ALTER TABLE workout_exercises ADD COLUMN exercise_category TEXT NOT NULL DEFAULT 'strength'
-        CHECK (exercise_category IN ('strength', 'calisthenics', 'cardio'));
-      UPDATE workout_exercises SET exercise_category = exercise_type;
+      CREATE TABLE workout_sessions (
+        id TEXT PRIMARY KEY,
+        template_id TEXT REFERENCES workout_templates(id) ON DELETE SET NULL,
+        template_day INTEGER CHECK (template_day BETWEEN 1 AND 7),
+        template_day_name TEXT
+          CHECK (template_day_name IS NULL OR length(trim(template_day_name)) BETWEEN 1 AND 100),
+        name TEXT NOT NULL,
+        status TEXT NOT NULL CHECK (status IN ('in_progress', 'completed')),
+        started_at TEXT NOT NULL,
+        completed_at TEXT,
+        notes TEXT,
+        updated_at TEXT NOT NULL
+      );
+      CREATE INDEX workout_sessions_started_idx ON workout_sessions(started_at DESC);
+      CREATE INDEX workout_sessions_template_idx
+        ON workout_sessions(template_id) WHERE template_id IS NOT NULL;
 
-      UPDATE app_metadata
-      SET value = CAST(CAST(value AS INTEGER) + 1 AS TEXT)
-      WHERE key = 'reference_revision';
-    `,
-  },
-  {
-    version: 12,
-    name: 'cardio_duration_and_interval_modes',
-    sql: `
-      ALTER TABLE template_exercises ADD COLUMN cardio_mode TEXT
-        CHECK (cardio_mode IN ('duration', 'interval'));
-      ALTER TABLE template_exercises ADD COLUMN interval_prep_seconds INTEGER
-        CHECK (interval_prep_seconds IS NULL OR interval_prep_seconds >= 0);
-      ALTER TABLE template_exercises ADD COLUMN interval_work_seconds INTEGER
-        CHECK (interval_work_seconds IS NULL OR interval_work_seconds > 0);
-      ALTER TABLE template_exercises ADD COLUMN interval_rest_seconds INTEGER
-        CHECK (interval_rest_seconds IS NULL OR interval_rest_seconds >= 0);
-      ALTER TABLE template_exercises ADD COLUMN interval_iterations INTEGER
-        CHECK (interval_iterations IS NULL OR interval_iterations BETWEEN 1 AND 999);
-      UPDATE template_exercises SET cardio_mode = 'duration'
-      WHERE exercise_id IN (
-        SELECT id FROM exercises WHERE exercise_category = 'cardio'
+      CREATE TABLE workout_exercises (
+        id TEXT PRIMARY KEY,
+        workout_id TEXT NOT NULL REFERENCES workout_sessions(id) ON DELETE CASCADE,
+        exercise_id TEXT REFERENCES exercises(id) ON DELETE SET NULL,
+        exercise_name TEXT NOT NULL,
+        exercise_category TEXT NOT NULL
+          CHECK (exercise_category IN ('strength', 'calisthenics', 'cardio')),
+        reference_url TEXT,
+        position INTEGER NOT NULL CHECK (position >= 0),
+        notes TEXT,
+        target_sets INTEGER CHECK (target_sets > 0),
+        target_reps INTEGER CHECK (target_reps > 0),
+        target_duration_seconds INTEGER CHECK (target_duration_seconds > 0),
+        target_distance REAL CHECK (target_distance > 0),
+        target_distance_unit TEXT NOT NULL DEFAULT 'km'
+          CHECK (target_distance_unit IN ('km', 'mi')),
+        completed INTEGER NOT NULL DEFAULT 0 CHECK (completed IN (0, 1)),
+        cardio_mode TEXT CHECK (cardio_mode IN ('duration', 'interval')),
+        interval_prep_seconds INTEGER
+          CHECK (interval_prep_seconds IS NULL OR interval_prep_seconds >= 0),
+        interval_work_seconds INTEGER
+          CHECK (interval_work_seconds IS NULL OR interval_work_seconds > 0),
+        interval_rest_seconds INTEGER
+          CHECK (interval_rest_seconds IS NULL OR interval_rest_seconds >= 0),
+        interval_iterations INTEGER
+          CHECK (interval_iterations IS NULL OR interval_iterations BETWEEN 1 AND 999),
+        UNIQUE (workout_id, position)
+      );
+      CREATE INDEX workout_exercises_exercise_idx
+        ON workout_exercises(exercise_id) WHERE exercise_id IS NOT NULL;
+
+      CREATE TABLE workout_sets (
+        id TEXT PRIMARY KEY,
+        workout_exercise_id TEXT NOT NULL REFERENCES workout_exercises(id) ON DELETE CASCADE,
+        position INTEGER NOT NULL CHECK (position >= 0),
+        reps INTEGER CHECK (reps >= 0),
+        weight REAL CHECK (weight >= 0),
+        weight_unit TEXT NOT NULL CHECK (weight_unit IN ('kg', 'lb')),
+        duration_seconds INTEGER CHECK (duration_seconds >= 0),
+        distance REAL CHECK (distance >= 0),
+        distance_unit TEXT NOT NULL DEFAULT 'km'
+          CHECK (distance_unit IN ('km', 'mi')),
+        notes TEXT,
+        completed INTEGER NOT NULL CHECK (completed IN (0, 1)),
+        UNIQUE (workout_exercise_id, position)
       );
 
-      ALTER TABLE workout_exercises ADD COLUMN cardio_mode TEXT
-        CHECK (cardio_mode IN ('duration', 'interval'));
-      ALTER TABLE workout_exercises ADD COLUMN interval_prep_seconds INTEGER
-        CHECK (interval_prep_seconds IS NULL OR interval_prep_seconds >= 0);
-      ALTER TABLE workout_exercises ADD COLUMN interval_work_seconds INTEGER
-        CHECK (interval_work_seconds IS NULL OR interval_work_seconds > 0);
-      ALTER TABLE workout_exercises ADD COLUMN interval_rest_seconds INTEGER
-        CHECK (interval_rest_seconds IS NULL OR interval_rest_seconds >= 0);
-      ALTER TABLE workout_exercises ADD COLUMN interval_iterations INTEGER
-        CHECK (interval_iterations IS NULL OR interval_iterations BETWEEN 1 AND 999);
-      UPDATE workout_exercises SET cardio_mode = 'duration'
-      WHERE exercise_category = 'cardio';
-
-      UPDATE app_metadata
-      SET value = CAST(CAST(value AS INTEGER) + 1 AS TEXT)
-      WHERE key = 'reference_revision';
+      CREATE TABLE processed_operations (
+        operation_id TEXT PRIMARY KEY,
+        processed_at TEXT NOT NULL
+      );
     `,
   },
-  {
-    version: 13,
-    name: 'template_activation_timestamp',
-    sql: `
-      ALTER TABLE workout_templates ADD COLUMN active_since TEXT;
-      UPDATE workout_templates
-      SET active_since = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
-      WHERE is_active = 1;
-      UPDATE app_metadata
-      SET value = CAST(CAST(value AS INTEGER) + 1 AS TEXT)
-      WHERE key = 'reference_revision';
-    `,
-  },
-] as const;
+];
 
 export type SpotterDatabase = Database.Database;
 
 export function openDatabase(path: string): SpotterDatabase {
   if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true });
   const database = new Database(path);
-  database.pragma('foreign_keys = ON');
-  database.pragma('busy_timeout = 5000');
-  if (path !== ':memory:') database.pragma('journal_mode = WAL');
-  migrate(database);
-  seedBuiltInMuscles(database);
-  return database;
+  try {
+    database.pragma('foreign_keys = ON');
+    database.pragma('busy_timeout = 5000');
+    if (path !== ':memory:') database.pragma('journal_mode = WAL');
+    migrate(database);
+    seedBuiltInMuscles(database);
+    return database;
+  } catch (error) {
+    database.close();
+    throw error;
+  }
 }
 
 function seedBuiltInMuscles(database: SpotterDatabase) {
@@ -431,22 +261,43 @@ function migrate(database: SpotterDatabase) {
     );
   `);
 
-  const applied = new Set(
-    database
-      .prepare('SELECT version FROM schema_migrations')
-      .all()
-      .map((row) => (row as { version: number }).version),
-  );
+  const appliedRows = database
+    .prepare('SELECT version, name FROM schema_migrations ORDER BY version')
+    .all() as { version: number; name: string }[];
+  for (const [index, row] of appliedRows.entries()) {
+    const known = migrations[index];
+    if (!known || row.version !== known.version || row.name !== known.name) {
+      throw new Error(
+        `Unsupported database migration ${row.version} (${row.name}); expected ${known ? `${known.version} (${known.name})` : 'no further migrations'}`,
+      );
+    }
+  }
+  const applied = new Set(appliedRows.map((row) => row.version));
 
   for (const migration of migrations) {
     if (applied.has(migration.version)) continue;
-    database.transaction(() => {
-      database.exec(migration.sql);
-      database
-        .prepare(
-          'INSERT INTO schema_migrations (version, name, applied_at) VALUES (?, ?, ?)',
-        )
-        .run(migration.version, migration.name, new Date().toISOString());
-    })();
+    const rebuildsReferencedTables =
+      'rebuildsReferencedTables' in migration &&
+      migration.rebuildsReferencedTables;
+    if (rebuildsReferencedTables) database.pragma('foreign_keys = OFF');
+    try {
+      database.transaction(() => {
+        database.exec(migration.sql);
+        if (rebuildsReferencedTables) {
+          const violations = database.pragma('foreign_key_check') as unknown[];
+          if (violations.length > 0)
+            throw new Error(
+              `Migration ${migration.version} left ${violations.length} foreign key violations`,
+            );
+        }
+        database
+          .prepare(
+            'INSERT INTO schema_migrations (version, name, applied_at) VALUES (?, ?, ?)',
+          )
+          .run(migration.version, migration.name, new Date().toISOString());
+      })();
+    } finally {
+      if (rebuildsReferencedTables) database.pragma('foreign_keys = ON');
+    }
   }
 }

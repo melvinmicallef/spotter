@@ -22,10 +22,6 @@ import { AppError, isSqliteConstraint } from './errors.js';
 
 type Row = Record<string, unknown>;
 
-function legacyExerciseType(type: ExerciseType): 'strength' | 'cardio' {
-  return type === 'calisthenics' ? 'strength' : type;
-}
-
 export interface MediaInput {
   id: string;
   mimeType: ExerciseMedia['mimeType'];
@@ -69,14 +65,13 @@ export class SpotterStore {
         this.database
           .prepare(
             `INSERT INTO exercises
-             (id, name, exercise_type, exercise_category, preparation, execution, comments, image_id, source_url, source_title,
+             (id, name, exercise_category, preparation, execution, comments, image_id, source_url, source_title,
               source_media_url, source_imported_at, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           )
           .run(
             id,
             input.name,
-            legacyExerciseType(input.exerciseType),
             input.exerciseType,
             input.preparation,
             input.execution,
@@ -107,13 +102,12 @@ export class SpotterStore {
         this.assertExerciseTypeChangeIsCompatible(id, input.exerciseType);
         const result = this.database
           .prepare(
-            `UPDATE exercises SET name = ?, exercise_type = ?, exercise_category = ?, preparation = ?, execution = ?, comments = ?, image_id = ?,
+            `UPDATE exercises SET name = ?, exercise_category = ?, preparation = ?, execution = ?, comments = ?, image_id = ?,
              source_url = ?, source_title = ?, source_media_url = ?,
              source_imported_at = ?, updated_at = ? WHERE id = ?`,
           )
           .run(
             input.name,
-            legacyExerciseType(input.exerciseType),
             input.exerciseType,
             input.preparation,
             input.execution,
@@ -1031,12 +1025,12 @@ export class SpotterStore {
       .run(workout.id);
     const insertExercise = this.database.prepare(
       `INSERT INTO workout_exercises
-       (id, workout_id, exercise_id, exercise_name, exercise_type, exercise_category, reference_url, position,
+       (id, workout_id, exercise_id, exercise_name, exercise_category, reference_url, position,
         notes, target_sets, target_reps, target_duration_seconds,
         target_distance, target_distance_unit, completed, cardio_mode,
         interval_prep_seconds, interval_work_seconds, interval_rest_seconds,
         interval_iterations)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     );
     const insertSet = this.database.prepare(
       `INSERT INTO workout_sets
@@ -1055,7 +1049,6 @@ export class SpotterStore {
         workout.id,
         exerciseExists ? exercise.exerciseId : null,
         exercise.exerciseName,
-        legacyExerciseType(exercise.exerciseType),
         exercise.exerciseType,
         exercise.referenceUrl,
         exercise.position,

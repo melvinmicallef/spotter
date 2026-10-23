@@ -11,7 +11,7 @@ import { drainOutbox } from './sync.js';
 afterEach(async () => {
   vi.unstubAllGlobals();
   await localRepository.resetConnectionForTests();
-  await deleteDB('spotter');
+  await deleteDB('spotter-v2');
 });
 
 describe('outbox synchronization', () => {

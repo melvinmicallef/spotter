@@ -69,6 +69,17 @@ the workout history before discarding the previous copy.
 
 ## Upgrade
 
+The one-time pre-user schema reset replaces the migration history used by
+`0.1.0` and `0.2.0`. Those database files cannot be opened by this baseline.
+Stop the old server and remove `spotter.sqlite`, `spotter.sqlite-wal`, and
+`spotter.sqlite-shm` before first startup on the new baseline. Remove media
+files linked only to the old database, and clear the browser's site data
+(including IndexedDB and service-worker caches) so old offline operations do
+not repopulate the empty server. This reset discards all old workout,
+catalogue, template, and settings data.
+
+For later releases built on the new baseline:
+
 1. Create a consistent backup.
 2. Pull or build the intended image tag.
 3. Replace the container while retaining the same host `./data` directory.
