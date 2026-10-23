@@ -188,14 +188,11 @@ small {
   font-size: 1.2rem;
 }
 .brand-mark {
-  display: grid;
+  display: block;
   width: 36px;
   height: 36px;
-  place-items: center;
+  flex: 0 0 auto;
   border-radius: 11px;
-  color: var(--accent-text);
-  background: var(--accent);
-  font-weight: 950;
 }
 .header-actions {
   display: flex;

@@ -8,8 +8,8 @@ import { ZodError } from 'zod';
 import { createApiRouter } from './api.js';
 import type { AppConfig } from './config.js';
 import { AppError } from './errors.js';
-import type { SpotterStore } from './store.js';
-import type { MediaStorage } from './media.js';
+import type { SpotterStore } from './persistence/store.js';
+import type { MediaStorage } from './features/media/storage.js';
 
 export interface AppDependencies {
   isDatabaseReady: () => boolean;

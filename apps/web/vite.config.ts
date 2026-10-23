@@ -9,11 +9,9 @@ export default defineConfig({
       registerType: 'prompt',
       useCredentials: true,
       includeAssets: [
-        'spotter.svg',
-        'spotter-maskable.svg',
-        'spotter-192.png',
-        'spotter-512.png',
-        'spotter-maskable-512.png',
+        'spotter-runner-192.png',
+        'spotter-runner-512.png',
+        'spotter-runner-maskable-512.png',
       ],
       manifest: {
         name: 'Spotter Workout Tracker',
@@ -28,33 +26,21 @@ export default defineConfig({
         prefer_related_applications: false,
         icons: [
           {
-            src: '/spotter-192.png',
+            src: '/spotter-runner-192.png',
             sizes: '192x192',
             type: 'image/png',
             purpose: 'any',
           },
           {
-            src: '/spotter-512.png',
+            src: '/spotter-runner-512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any',
           },
           {
-            src: '/spotter-maskable-512.png',
+            src: '/spotter-runner-maskable-512.png',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'maskable',
-          },
-          {
-            src: '/spotter.svg',
-            sizes: 'any',
-            type: 'image/svg+xml',
-            purpose: 'any',
-          },
-          {
-            src: '/spotter-maskable.svg',
-            sizes: 'any',
-            type: 'image/svg+xml',
             purpose: 'maskable',
           },
         ],

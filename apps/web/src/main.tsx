@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 
-import { App } from './App.js';
+import { App } from './app/App.js';
 import { PwaUpdate } from './components/PwaUpdate.js';
 import './styles.css';
 

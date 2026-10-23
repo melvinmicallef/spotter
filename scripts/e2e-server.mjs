@@ -23,9 +23,9 @@ if (buildExitCode !== 0) {
 const [{ createApp }, { openDatabase }, { MediaStorage }, { SpotterStore }] =
   await Promise.all([
     import('../apps/server/dist/app.js'),
-    import('../apps/server/dist/database.js'),
-    import('../apps/server/dist/media.js'),
-    import('../apps/server/dist/store.js'),
+    import('../apps/server/dist/persistence/database.js'),
+    import('../apps/server/dist/features/media/storage.js'),
+    import('../apps/server/dist/persistence/store.js'),
   ]);
 
 const database = openDatabase(databasePath);

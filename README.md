@@ -8,6 +8,11 @@ The project is developed on the `develop` branch. Its npm workspace contains
 the React client, Express server, and shared wire contracts. The current release
 is `1.0.0`.
 
+Client features and their unit tests live under `apps/web/src/features`;
+server routes are grouped under `apps/server/src/features`, with SQLite code in
+`apps/server/src/persistence`. Browser tests are grouped by feature under
+`tests/e2e`. The selected runner icon source is `design/runner-concept.png`.
+
 Spotter is a vibe-coded app built with OpenAI Codex.
 
 ## Product principles

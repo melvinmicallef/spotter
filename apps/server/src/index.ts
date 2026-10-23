@@ -1,8 +1,8 @@
 import { createApp } from './app.js';
 import { loadConfig } from './config.js';
-import { openDatabase } from './database.js';
-import { MediaStorage } from './media.js';
-import { SpotterStore } from './store.js';
+import { openDatabase } from './persistence/database.js';
+import { MediaStorage } from './features/media/storage.js';
+import { SpotterStore } from './persistence/store.js';
 
 const config = loadConfig();
 const database = openDatabase(config.DATABASE_PATH);

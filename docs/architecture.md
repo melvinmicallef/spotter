@@ -25,14 +25,26 @@ The production container runs one Node.js process. Express serves both the API
 and static client files, avoiding a second web-server image or a multi-container
 deployment for the initial release.
 
-## Proposed repository layout
+## Repository layout
 
 ```text
 apps/
-  server/          Express application, API routes, and database access
-  web/             React PWA, IndexedDB, and synchronization client
+  server/src/
+    features/      HTTP routes grouped by catalogue, media, settings,
+                   templates, reference data, workouts, and synchronization
+    persistence/   SQLite migrations and canonical store
+    integration/   Cross-feature API tests
+    app.ts          Express assembly and static PWA serving
+  web/src/
+    app/           Application state and view composition
+    features/      Catalogue, history, offline storage and sync, settings,
+                   templates, and workouts; unit tests beside each feature
+    shared/        API client, routing, and weekday helpers
+    components/    Shared dialogs and PWA update prompt
 packages/
   shared/          Domain types, API contracts, and validation schemas
+tests/e2e/        Browser tests grouped by feature
+design/           Selected runner icon source artwork
 docs/              Product and architecture documentation
 .github/workflows/ Validation and image-publishing workflows
 Dockerfile         Multi-stage production image
@@ -42,6 +54,10 @@ package.json       Workspace scripts and shared tool configuration
 The web and server applications share wire-format schemas from `packages/shared`
 but do not share persistence-specific models. This keeps browser storage and
 SQLite implementation details from leaking into the API contract.
+The server's feature routers preserve the public `/api/*` paths while SQLite
+access remains in one persistence layer. The runner source artwork is kept in
+`design/runner-concept.png`; only its production PNG sizes live in the web
+application's public assets.
 
 ## Client application
 
@@ -56,7 +72,9 @@ Separating these concerns makes service-worker upgrades safer and keeps workout
 records queryable by application code.
 
 The PWA manifest provides standalone display, a root start URL and scope,
-192px and 512px PNG icons, and a separate maskable Android icon. The client
+192px and 512px PNG runner icons derived from the selected concept image with
+transparent rounded corners, and a separate full-bleed maskable Android PNG.
+The green runner also appears in the favicon and app header. The client
 captures Chromium's install prompt when the browser exposes it. Production
 deployments opened on another device must use HTTPS for browser installation;
 localhost is suitable only when the browser is on the same development device.
