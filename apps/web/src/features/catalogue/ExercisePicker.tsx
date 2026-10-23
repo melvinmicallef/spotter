@@ -74,6 +74,7 @@ export function ExercisePicker({
           <label className="field">
             Filter by name
             <input
+              autoComplete="off"
               autoFocus
               type="search"
               value={nameFilter}
@@ -84,6 +85,7 @@ export function ExercisePicker({
           <label className="field">
             Filter by muscle
             <select
+              autoComplete="off"
               value={muscleFilter}
               onChange={(event) => setMuscleFilter(event.target.value)}
             >

@@ -90,6 +90,7 @@ export function SettingsView({
         <label className="settings-select">
           <span className="sr-only">Measurement system</span>
           <select
+            autoComplete="off"
             value={measurementSystem}
             onChange={(event) =>
               onChangeMeasurementSystem(event.target.value as MeasurementSystem)

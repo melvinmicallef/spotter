@@ -718,6 +718,7 @@ function StrengthSets({
                 <div className="strength-grid-cell strength-grid-weight">
                   <div className="strength-grid-number-unit">
                     <input
+                      autoComplete="off"
                       aria-label={`${entry.exerciseName} weight set ${setIndex + 1}`}
                       placeholder={
                         previousSet?.weight == null
@@ -759,6 +760,7 @@ function StrengthSets({
                 </div>
                 <div className="strength-grid-cell strength-grid-reps">
                   <input
+                    autoComplete="off"
                     aria-label={`${entry.exerciseName} repetitions set ${setIndex + 1}`}
                     placeholder={
                       previousSet?.reps == null
@@ -848,6 +850,7 @@ function CalisthenicsSets({
                 </div>
                 <div className="strength-grid-cell strength-grid-reps">
                   <input
+                    autoComplete="off"
                     aria-label={`${entry.exerciseName} repetitions set ${setIndex + 1}`}
                     placeholder={
                       previousSet?.reps == null
@@ -927,6 +930,7 @@ function CardioWorkout({
         Distance ({distanceUnit})
         <span className="number-unit">
           <input
+            autoComplete="off"
             aria-label={`${entry.exerciseName} distance`}
             inputMode="decimal"
             type="number"
@@ -988,6 +992,7 @@ function DurationInput({
       <label>
         <span className="sr-only">{label} minutes</span>
         <input
+          autoComplete="off"
           aria-label={`${label} minutes`}
           inputMode="numeric"
           type="number"
@@ -1000,6 +1005,7 @@ function DurationInput({
       <label>
         <span className="sr-only">{label} seconds</span>
         <input
+          autoComplete="off"
           aria-label={`${label} seconds`}
           inputMode="numeric"
           type="number"
@@ -1296,6 +1302,7 @@ function IntervalTimer({
           <label className="interval-iterations-field">
             Iterations
             <input
+              autoComplete="off"
               aria-label={`${entry.exerciseName} interval iterations`}
               inputMode="numeric"
               type="number"

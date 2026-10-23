@@ -56,6 +56,7 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
 
   await page.getByRole('link', { name: 'Exercises' }).click();
   await page.getByRole('button', { name: 'Add exercise' }).click();
+  await expectAutofillDisabled(page);
   await page.getByLabel('Exercise name').fill(strengthName);
   await page
     .getByLabel('Preparation')
@@ -211,6 +212,7 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
   await expect(page).toHaveURL(/\/templates\/[0-9a-f-]+\/edit$/);
   await page.reload();
   await expect(page.getByLabel('Template name')).toHaveValue(planName);
+  await expectAutofillDisabled(page);
   const template = page.locator('.template-card');
   await page.setViewportSize({ width: 390, height: 844 });
   const swapControlsBounds = await template
@@ -228,6 +230,7 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
 
   await template.getByLabel(`Add exercise to ${today}`).click();
   let picker = page.getByRole('dialog', { name: 'Choose exercises' });
+  await expectAutofillDisabled(page);
   await picker.getByLabel('Filter by muscle').selectOption({
     label: primaryName,
   });
@@ -328,6 +331,7 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
   await expect(
     page.getByText(`${today} (Chest & Back)`, { exact: true }),
   ).toBeVisible();
+  await expectAutofillDisabled(page);
   await page.getByRole('button', { name: `How to do ${strengthName}` }).click();
   const exerciseGuide = page.getByRole('dialog', { name: strengthName });
   await expect(exerciseGuide).toContainText('Pause at the bottom');
@@ -384,4 +388,15 @@ async function createExercise(
   await expect(
     page.locator('button.exercise-library-row').filter({ hasText: name }),
   ).toBeVisible();
+}
+
+async function expectAutofillDisabled(page: Page) {
+  const enabledControls = await page
+    .locator('form, input:not([type="file"]), select, textarea')
+    .evaluateAll((controls) =>
+      controls
+        .filter((control) => control.getAttribute('autocomplete') !== 'off')
+        .map((control) => control.outerHTML.slice(0, 120)),
+    );
+  expect(enabledControls).toEqual([]);
 }

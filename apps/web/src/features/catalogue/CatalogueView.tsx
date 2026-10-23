@@ -238,6 +238,7 @@ export function ExercisesView(props: ExercisesViewProps) {
           <label className="field exercise-library-filter">
             Filter by primary muscle
             <select
+              autoComplete="off"
               aria-label="Filter by primary muscle"
               value={primaryMuscleFilter}
               onChange={(event) => setPrimaryMuscleFilter(event.target.value)}
@@ -532,6 +533,7 @@ function ExerciseEditorPage({
       {notice}
       <fieldset disabled={!online}>
         <form
+          autoComplete="off"
           className="form-card exercise-editor-form"
           onSubmit={(event) => {
             event.preventDefault();
@@ -554,6 +556,7 @@ function ExerciseEditorPage({
           <label className="field">
             Exercise name
             <input
+              autoComplete="off"
               required
               value={name}
               onChange={(event) => setName(event.target.value)}
@@ -562,6 +565,7 @@ function ExerciseEditorPage({
           <label className="field">
             Exercise type
             <select
+              autoComplete="off"
               value={exerciseType}
               onChange={(event) =>
                 setExerciseType(
@@ -577,6 +581,7 @@ function ExerciseEditorPage({
           <label className="field">
             Preparation
             <textarea
+              autoComplete="off"
               placeholder="Setup, equipment, stance, or starting position (optional)"
               value={preparation}
               onChange={(event) => setPreparation(event.target.value)}
@@ -585,6 +590,7 @@ function ExerciseEditorPage({
           <label className="field">
             Execution
             <textarea
+              autoComplete="off"
               placeholder="Movement steps and technique cues (optional)"
               value={execution}
               onChange={(event) => setExecution(event.target.value)}
@@ -593,6 +599,7 @@ function ExerciseEditorPage({
           <label className="field">
             Comments
             <textarea
+              autoComplete="off"
               placeholder="Additional exercise comments (optional)"
               value={comments}
               onChange={(event) => setComments(event.target.value)}
@@ -601,6 +608,7 @@ function ExerciseEditorPage({
           <label className="field">
             Reference website (optional)
             <input
+              autoComplete="off"
               type="url"
               placeholder="https://exrx.net/..."
               value={referenceUrl}
@@ -930,6 +938,7 @@ function MuscleRolesEditor({
           <div className="assigned-muscle-row" key={muscle.id}>
             <strong>{muscleDisplayName(muscle)}</strong>
             <select
+              autoComplete="off"
               aria-label={`${muscle.name} assigned role`}
               value={assignedRole}
               onChange={(event) =>
@@ -964,6 +973,7 @@ function MuscleRolesEditor({
         <label>
           Muscle
           <select
+            autoComplete="off"
             aria-label="Muscle to add"
             value={muscleId}
             onChange={(event) => setMuscleId(event.target.value)}
@@ -985,6 +995,7 @@ function MuscleRolesEditor({
         <label>
           Role
           <select
+            autoComplete="off"
             aria-label="Muscle role"
             value={role}
             onChange={(event) => setRole(event.target.value as MuscleRole)}

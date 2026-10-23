@@ -462,6 +462,7 @@ function TemplateEditor({
       {notice}
       <fieldset disabled={!online}>
         <form
+          autoComplete="off"
           className="form-card template-card"
           onSubmit={(event) => {
             event.preventDefault();
@@ -482,6 +483,7 @@ function TemplateEditor({
           <label className="field">
             Template name
             <input
+              autoComplete="off"
               required
               value={draft.name}
               onChange={(event) =>
@@ -500,6 +502,7 @@ function TemplateEditor({
             <label>
               First day
               <select
+                autoComplete="off"
                 aria-label="First day to swap"
                 value={firstSwapDay}
                 onChange={(event) =>
@@ -521,6 +524,7 @@ function TemplateEditor({
             <label>
               Second day
               <select
+                autoComplete="off"
                 aria-label="Second day to swap"
                 value={secondSwapDay}
                 onChange={(event) =>
@@ -556,6 +560,7 @@ function TemplateEditor({
                   <label className="template-day-name-field">
                     Day name (optional)
                     <input
+                      autoComplete="off"
                       aria-label={`${day.label} workout name`}
                       maxLength={100}
                       placeholder="e.g. Legs"
@@ -626,6 +631,7 @@ function TemplateEditor({
                               <label>
                                 Cardio mode
                                 <select
+                                  autoComplete="off"
                                   aria-label={`${exercise.name} cardio mode on ${day.label}`}
                                   value={entry.cardioMode ?? 'duration'}
                                   onChange={(event) => {
@@ -674,6 +680,7 @@ function TemplateEditor({
                                 <label>
                                   Target distance ({distanceUnit})
                                   <input
+                                    autoComplete="off"
                                     aria-label={`${exercise.name} target distance on ${day.label}`}
                                     inputMode="decimal"
                                     type="number"
@@ -703,6 +710,7 @@ function TemplateEditor({
                               <label>
                                 Target reps
                                 <input
+                                  autoComplete="off"
                                   aria-label={`${exercise?.name ?? 'Exercise'} target reps on ${day.label}`}
                                   inputMode="numeric"
                                   type="number"
@@ -720,6 +728,7 @@ function TemplateEditor({
                               <label>
                                 Target sets
                                 <input
+                                  autoComplete="off"
                                   aria-label={`${exercise?.name ?? 'Exercise'} target sets on ${day.label}`}
                                   inputMode="numeric"
                                   type="number"
@@ -933,6 +942,7 @@ function TimeTargetFields({
       <label>
         <span className="sr-only">{ariaLabel} minutes</span>
         <input
+          autoComplete="off"
           aria-label={`${ariaLabel} minutes`}
           inputMode="numeric"
           type="number"
@@ -945,6 +955,7 @@ function TimeTargetFields({
       <label>
         <span className="sr-only">{ariaLabel} seconds</span>
         <input
+          autoComplete="off"
           aria-label={`${ariaLabel} seconds`}
           inputMode="numeric"
           type="number"

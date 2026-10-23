@@ -98,6 +98,11 @@ and editing also have stable nested routes: `/exercises/new`, `/exercises/:id`, 
 `/exercises/:id/edit`. Weekly templates follow the same list/detail/editor
 pattern at `/templates/new`, `/templates/:id`, and `/templates/:id/edit`.
 
+App forms and editable controls request `autocomplete="off"` to discourage
+browser profile, address, payment, and previously entered values from appearing
+in exercise, template, or workout fields. This is a browser hint: Android's
+keyboard and autofill service can still show their own suggestions.
+
 The catalogue has separate muscle and exercise views. The muscle view renders a
 read-only built-in hierarchy sourced from the ExRx directory: only leaf records
 are selectable, while group and subgroup headings are navigation metadata.

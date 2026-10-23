@@ -329,6 +329,7 @@ function HistoryDetailsPage({
       {saveError && <p className="notice history-edit-error">{saveError}</p>}
       {editing ? (
         <form
+          autoComplete="off"
           id="history-workout-editor"
           className="history-workout-exercises"
           onSubmit={(event) => void save(event)}
@@ -378,6 +379,7 @@ function HistoryDetailsPage({
                               <label>
                                 Duration (seconds)
                                 <input
+                                  autoComplete="off"
                                   inputMode="numeric"
                                   type="number"
                                   min="0"
@@ -394,6 +396,7 @@ function HistoryDetailsPage({
                               <label>
                                 Distance ({distanceUnit})
                                 <input
+                                  autoComplete="off"
                                   inputMode="decimal"
                                   type="number"
                                   min="0"
@@ -420,6 +423,7 @@ function HistoryDetailsPage({
                                 <label>
                                   Weight ({weightUnit})
                                   <input
+                                    autoComplete="off"
                                     inputMode="decimal"
                                     type="number"
                                     min="0"
@@ -443,6 +447,7 @@ function HistoryDetailsPage({
                               <label>
                                 Reps
                                 <input
+                                  autoComplete="off"
                                   inputMode="numeric"
                                   type="number"
                                   min="0"
@@ -577,6 +582,7 @@ function IntervalHistoryEditor({
         <label>
           Prep time (seconds)
           <input
+            autoComplete="off"
             aria-label={`${exercise.exerciseName} prep time in history`}
             inputMode="numeric"
             type="number"
@@ -597,6 +603,7 @@ function IntervalHistoryEditor({
         <label>
           Work time (seconds)
           <input
+            autoComplete="off"
             aria-label={`${exercise.exerciseName} work time in history`}
             inputMode="numeric"
             type="number"
@@ -617,6 +624,7 @@ function IntervalHistoryEditor({
         <label>
           Rest time (seconds)
           <input
+            autoComplete="off"
             aria-label={`${exercise.exerciseName} rest time in history`}
             inputMode="numeric"
             type="number"
@@ -637,6 +645,7 @@ function IntervalHistoryEditor({
         <label>
           Rounds
           <input
+            autoComplete="off"
             aria-label={`${exercise.exerciseName} rounds in history`}
             inputMode="numeric"
             type="number"
@@ -654,6 +663,7 @@ function IntervalHistoryEditor({
       <label className="history-interval-work-duration">
         Total work time (seconds)
         <input
+          autoComplete="off"
           aria-label={`${exercise.exerciseName} total work time in history`}
           inputMode="numeric"
           type="number"
