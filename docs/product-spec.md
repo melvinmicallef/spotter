@@ -202,6 +202,8 @@ While online, a user can:
 - assign an optional name to each weekday, such as "Legs" or "Chest & Back";
 - swap all exercises between any two weekdays; exercise targets and optional
   day names move with the exercises, including when one weekday is a rest day;
+  the editor opens the day selectors in a modal from a compact swap icon beside
+  Cancel, and dismissing the modal leaves the draft unchanged;
 - remove and reorder exercises within each day; and
 - configure type-appropriate initial targets, with repetitions shown before
   sets for strength and calisthenics exercises; and

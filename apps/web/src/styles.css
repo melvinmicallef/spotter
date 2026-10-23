@@ -1187,27 +1187,10 @@ small {
 }
 .template-day-swap-controls {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(130px, 0.55fr) minmax(
-      130px,
-      0.55fr
-    );
-  align-items: end;
-  gap: 10px;
-  padding: 14px;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: var(--surface-deep);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
-.template-day-swap-copy h3,
-.template-day-swap-copy p {
-  margin: 0;
-}
-.template-day-swap-copy p {
-  margin-top: 4px;
-  color: var(--text-muted);
-  font-size: 0.8rem;
-}
-.template-day-swap-controls > label {
+.template-day-swap-controls label {
   display: flex;
   min-width: 0;
   flex-direction: column;
@@ -1256,15 +1239,40 @@ small {
   white-space: pre-wrap;
 }
 .template-editor-actions {
-  justify-content: space-between;
-  flex-wrap: wrap;
   margin-top: 4px;
 }
 .template-editor-action-buttons {
   display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.template-editor-secondary-actions {
+  display: flex;
+  flex: 0 0 auto;
   align-items: center;
   gap: 8px;
-  margin-left: auto;
+}
+.template-swap-trigger {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+}
+.template-swap-trigger svg {
+  width: 21px;
+  height: 21px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 .target-fields {
   display: grid;
@@ -2120,12 +2128,6 @@ small {
   .exercise-details-hero {
     grid-template-columns: 1fr;
   }
-  .template-day-swap-controls {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .template-day-swap-copy {
-    grid-column: 1 / -1;
-  }
   .workout-card.workout-strength-card {
     grid-template-columns: minmax(130px, 0.8fr) minmax(0, 1.2fr);
     gap: 10px;
@@ -2139,9 +2141,6 @@ small {
 @media (max-width: 540px) {
   .template-day-swap-controls {
     grid-template-columns: minmax(0, 1fr);
-  }
-  .template-day-swap-copy {
-    grid-column: auto;
   }
   .workout-active-page > .section-heading {
     align-items: flex-start;

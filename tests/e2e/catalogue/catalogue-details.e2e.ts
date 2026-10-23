@@ -215,13 +215,34 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
   await expectAutofillDisabled(page);
   const template = page.locator('.template-card');
   await page.setViewportSize({ width: 390, height: 844 });
-  const swapControlsBounds = await template
-    .locator('.template-day-swap-controls')
-    .boundingBox();
-  expect(swapControlsBounds).not.toBeNull();
-  expect(swapControlsBounds!.x + swapControlsBounds!.width).toBeLessThanOrEqual(
-    390,
-  );
+  const swapTrigger = template.getByRole('button', {
+    name: 'Swap workout days',
+  });
+  await expect(swapTrigger).toBeVisible();
+  await expect(
+    page.getByRole('dialog', { name: 'Swap workout days' }),
+  ).toHaveCount(0);
+  await expect(template.getByLabel('First day to swap')).toHaveCount(0);
+  const [swapTriggerBounds, cancelBounds] = await Promise.all([
+    swapTrigger.boundingBox(),
+    template.getByRole('button', { name: 'Cancel' }).boundingBox(),
+  ]);
+  expect(swapTriggerBounds).not.toBeNull();
+  expect(cancelBounds).not.toBeNull();
+  expect(Math.abs(swapTriggerBounds!.y - cancelBounds!.y)).toBeLessThan(2);
+  await swapTrigger.click();
+  const swapDialog = page.getByRole('dialog', { name: 'Swap workout days' });
+  await expect(swapDialog).toBeVisible();
+  await expectAutofillDisabled(page);
+  const dialogBounds = await swapDialog.boundingBox();
+  expect(dialogBounds).not.toBeNull();
+  expect(dialogBounds!.x).toBeGreaterThanOrEqual(0);
+  expect(dialogBounds!.x + dialogBounds!.width).toBeLessThanOrEqual(390);
+  await swapDialog
+    .getByLabel('First day to swap')
+    .selectOption({ label: today });
+  await swapDialog.getByRole('button', { name: 'Cancel' }).click();
+  await expect(swapDialog).toHaveCount(0);
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth),
   ).toBeLessThanOrEqual(390);
@@ -262,15 +283,18 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
     .getByLabel(`${cardioName} target distance on ${today}`)
     .fill('5');
 
-  const firstSwapDay = template.getByLabel('First day to swap');
-  const secondSwapDay = template.getByLabel('Second day to swap');
-  const swapDaysButton = template.getByRole('button', { name: 'Swap days' });
+  await swapTrigger.click();
+  const firstSwapDay = swapDialog.getByLabel('First day to swap');
+  const secondSwapDay = swapDialog.getByLabel('Second day to swap');
+  const swapDaysButton = swapDialog.getByRole('button', { name: 'Swap days' });
+  await expect(firstSwapDay).toHaveValue('');
   await expect(swapDaysButton).toBeDisabled();
   await firstSwapDay.selectOption({ label: today });
   await secondSwapDay.selectOption({ label: today });
   await expect(swapDaysButton).toBeDisabled();
   await secondSwapDay.selectOption({ label: otherDay });
   await swapDaysButton.click();
+  await expect(swapDialog).toHaveCount(0);
   await expect(
     template.getByLabel(`${strengthName} target reps on ${today}`),
   ).toHaveCount(0);
@@ -303,12 +327,15 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
     reopenedTemplate.getByLabel(`${strengthName} target reps on ${otherDay}`),
   ).toHaveValue('10');
   await reopenedTemplate
+    .getByRole('button', { name: 'Swap workout days' })
+    .click();
+  await swapDialog
     .getByLabel('First day to swap')
     .selectOption({ label: today });
-  await reopenedTemplate
+  await swapDialog
     .getByLabel('Second day to swap')
     .selectOption({ label: otherDay });
-  await reopenedTemplate.getByRole('button', { name: 'Swap days' }).click();
+  await swapDialog.getByRole('button', { name: 'Swap days' }).click();
   await expect(
     reopenedTemplate.getByLabel(`${today} workout name`),
   ).toHaveValue('Chest & Back');

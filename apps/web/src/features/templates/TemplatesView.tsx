@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import type {
   CardioMode,
@@ -397,8 +397,8 @@ function TemplateEditor({
 }) {
   const [draft, setDraft] = useState<WorkoutTemplateInput>(initial);
   const [pickerDay, setPickerDay] = useState<DayOfWeek>();
-  const [firstSwapDay, setFirstSwapDay] = useState<DayOfWeek | ''>('');
-  const [secondSwapDay, setSecondSwapDay] = useState<DayOfWeek | ''>('');
+  const [swapDialogOpen, setSwapDialogOpen] = useState(false);
+  const swapTrigger = useRef<HTMLButtonElement>(null);
 
   function updateEntry(
     index: number,
@@ -422,14 +422,14 @@ function TemplateEditor({
     });
   }
 
-  function swapSelectedDays() {
-    if (!firstSwapDay || !secondSwapDay || firstSwapDay === secondSwapDay)
-      return;
-    setDraft((current) =>
-      swapTemplateDays(current, firstSwapDay, secondSwapDay),
-    );
-    setFirstSwapDay('');
-    setSecondSwapDay('');
+  function closeSwapDialog() {
+    setSwapDialogOpen(false);
+    swapTrigger.current?.focus();
+  }
+
+  function swapSelectedDays(firstDay: DayOfWeek, secondDay: DayOfWeek) {
+    setDraft((current) => swapTemplateDays(current, firstDay, secondDay));
+    closeSwapDialog();
   }
 
   function move(day: DayOfWeek, dayIndex: number, direction: -1 | 1) {
@@ -491,59 +491,6 @@ function TemplateEditor({
               }
             />
           </label>
-          <div className="template-day-swap-controls">
-            <div className="template-day-swap-copy">
-              <h3>Swap workout days</h3>
-              <p>
-                Swap all exercises and their optional day names between two
-                weekdays.
-              </p>
-            </div>
-            <label>
-              First day
-              <select
-                autoComplete="off"
-                aria-label="First day to swap"
-                value={firstSwapDay}
-                onChange={(event) =>
-                  setFirstSwapDay(
-                    event.target.value === ''
-                      ? ''
-                      : (Number(event.target.value) as DayOfWeek),
-                  )
-                }
-              >
-                <option value="">Choose a day</option>
-                {WEEKDAYS.map((day) => (
-                  <option key={day.value} value={day.value}>
-                    {day.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Second day
-              <select
-                autoComplete="off"
-                aria-label="Second day to swap"
-                value={secondSwapDay}
-                onChange={(event) =>
-                  setSecondSwapDay(
-                    event.target.value === ''
-                      ? ''
-                      : (Number(event.target.value) as DayOfWeek),
-                  )
-                }
-              >
-                <option value="">Choose a day</option>
-                {WEEKDAYS.map((day) => (
-                  <option key={day.value} value={day.value}>
-                    {day.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
           <div className="week-grid">
             {WEEKDAYS.map((day) => {
               const entries = draft.exercises
@@ -802,28 +749,148 @@ function TemplateEditor({
           )}
 
           <div className="inline-actions template-editor-actions">
-            <button
-              className="secondary"
-              type="button"
-              disabled={
-                !firstSwapDay ||
-                !secondSwapDay ||
-                firstSwapDay === secondSwapDay
-              }
-              onClick={swapSelectedDays}
-            >
-              Swap days
-            </button>
             <div className="template-editor-action-buttons">
-              <button className="secondary" type="button" onClick={onCancel}>
-                Cancel
-              </button>
+              <div className="template-editor-secondary-actions">
+                <button
+                  ref={swapTrigger}
+                  className="icon-button template-swap-trigger"
+                  type="button"
+                  aria-label="Swap workout days"
+                  title="Swap workout days"
+                  onClick={() => setSwapDialogOpen(true)}
+                >
+                  <SwapDaysIcon />
+                </button>
+                <button className="secondary" type="button" onClick={onCancel}>
+                  Cancel
+                </button>
+              </div>
               <button type="submit">{submitLabel}</button>
             </div>
           </div>
         </form>
       </fieldset>
+      {swapDialogOpen && (
+        <SwapDaysDialog onClose={closeSwapDialog} onSwap={swapSelectedDays} />
+      )}
     </section>
+  );
+}
+
+function SwapDaysDialog({
+  onClose,
+  onSwap,
+}: {
+  onClose: () => void;
+  onSwap: (firstDay: DayOfWeek, secondDay: DayOfWeek) => void;
+}) {
+  const [firstDay, setFirstDay] = useState<DayOfWeek | ''>('');
+  const [secondDay, setSecondDay] = useState<DayOfWeek | ''>('');
+
+  useEffect(() => {
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') onClose();
+    }
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [onClose]);
+
+  return (
+    <div
+      className="modal-backdrop"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <section
+        className="confirm-dialog swap-days-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="swap-days-title"
+        aria-describedby="swap-days-description"
+      >
+        <header>
+          <div>
+            <span className="eyebrow">WEEKLY PLAN</span>
+            <h2 id="swap-days-title">Swap workout days</h2>
+          </div>
+          <button
+            className="icon-button"
+            type="button"
+            aria-label="Close swap dialog"
+            onClick={onClose}
+          >
+            ×
+          </button>
+        </header>
+        <p id="swap-days-description">
+          Swap all exercises, targets, and optional day names between two
+          weekdays.
+        </p>
+        <div className="template-day-swap-controls">
+          <label>
+            First day
+            <select
+              autoComplete="off"
+              autoFocus
+              aria-label="First day to swap"
+              value={firstDay}
+              onChange={(event) =>
+                setFirstDay(
+                  event.target.value === ''
+                    ? ''
+                    : (Number(event.target.value) as DayOfWeek),
+                )
+              }
+            >
+              <option value="">Choose a day</option>
+              {WEEKDAYS.map((day) => (
+                <option key={day.value} value={day.value}>
+                  {day.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Second day
+            <select
+              autoComplete="off"
+              aria-label="Second day to swap"
+              value={secondDay}
+              onChange={(event) =>
+                setSecondDay(
+                  event.target.value === ''
+                    ? ''
+                    : (Number(event.target.value) as DayOfWeek),
+                )
+              }
+            >
+              <option value="">Choose a day</option>
+              {WEEKDAYS.map((day) => (
+                <option key={day.value} value={day.value}>
+                  {day.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <div className="confirm-dialog-actions">
+          <button className="secondary" type="button" onClick={onClose}>
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={!firstDay || !secondDay || firstDay === secondDay}
+            onClick={() => {
+              if (firstDay && secondDay && firstDay !== secondDay)
+                onSwap(firstDay, secondDay);
+            }}
+          >
+            Swap days
+          </button>
+        </div>
+      </section>
+    </div>
   );
 }
 
@@ -868,6 +935,14 @@ function PencilIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <path d="M4 20h4l11-11-4-4L4 16v4Zm13-17 4 4-2 2-4-4 2-2Z" />
+    </svg>
+  );
+}
+
+function SwapDaysIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M4 7h15m-4-4 4 4-4 4M20 17H5m4-4-4 4 4 4" />
     </svg>
   );
 }
