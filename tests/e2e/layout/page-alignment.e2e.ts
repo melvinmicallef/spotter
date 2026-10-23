@@ -67,3 +67,69 @@ test('keeps long pages horizontally aligned with the other pages', async ({
     );
   }
 });
+
+test('uses the same viewport gradient on every page', async ({ page }) => {
+  for (const width of [390, 1280]) {
+    await page.setViewportSize({ width, height: 720 });
+
+    for (const theme of ['dark', 'light']) {
+      await page.goto('/settings');
+      await page.evaluate(
+        (value) => localStorage.setItem('spotter-theme', value),
+        theme,
+      );
+
+      let reference: number[][] | undefined;
+      for (const path of [
+        '/workout',
+        '/history',
+        '/muscles',
+        '/exercises',
+        '/templates',
+        '/settings',
+        '/stretching',
+      ]) {
+        await page.goto(path);
+        await expect(page.locator('.app-shell')).toBeVisible();
+        const screenshot = await page.screenshot();
+        const pixels = await page.evaluate(
+          async ({ base64, width: viewportWidth }) => {
+            const bytes = Uint8Array.from(atob(base64), (character) =>
+              character.charCodeAt(0),
+            );
+            const bitmap = await createImageBitmap(
+              new Blob([bytes], { type: 'image/png' }),
+            );
+            const canvas = document.createElement('canvas');
+            canvas.width = bitmap.width;
+            canvas.height = bitmap.height;
+            const context = canvas.getContext('2d')!;
+            context.drawImage(bitmap, 0, 0);
+            const edge = viewportWidth === 390 ? 2 : 30;
+            return [
+              [edge, 160],
+              [viewportWidth - edge, 160],
+              [viewportWidth - edge, 100],
+            ].map(([x, y]) =>
+              Array.from(context.getImageData(x, y, 1, 1).data),
+            );
+          },
+          { base64: screenshot.toString('base64'), width },
+        );
+
+        reference ??= pixels;
+        const largestDifference = Math.max(
+          ...pixels.flatMap((pixel, index) =>
+            pixel.map((value, channel) =>
+              Math.abs(value - reference![index]![channel]!),
+            ),
+          ),
+        );
+        expect(
+          largestDifference,
+          `${theme} background on ${path} at ${width}px`,
+        ).toBeLessThanOrEqual(2);
+      }
+    }
+  }
+});

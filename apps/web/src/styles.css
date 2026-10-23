@@ -26,8 +26,9 @@
   --sync-error: #ffb2a5;
   color: var(--text);
   background:
-    radial-gradient(circle at 90% 0, var(--page-glow) 0, transparent 30%),
+    radial-gradient(circle 32vmax at 90% 0, var(--page-glow), transparent),
     var(--page-bg);
+  background-attachment: fixed;
   font-family:
     Inter,
     ui-sans-serif,
