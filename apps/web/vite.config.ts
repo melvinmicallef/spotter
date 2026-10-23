@@ -7,6 +7,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'prompt',
+      useCredentials: true,
       includeAssets: [
         'spotter.svg',
         'spotter-maskable.svg',

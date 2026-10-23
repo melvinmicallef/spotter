@@ -207,14 +207,20 @@ replaced.
 
 ### Install on Android
 
-Open Spotter in Chrome on Android through HTTPS. If Spotter runs on another
+Open Spotter in an Android browser through HTTPS. If Spotter runs on another
 computer or server, put an HTTPS reverse proxy in front of it and open that
 HTTPS address on the phone. The plain HTTP address is suitable for local
 development on the same device, but a LAN address such as
 `http://192.168.1.20:3000` is not a secure origin and cannot be installed as a
-PWA. Tap Spotter's **Install** action when it appears, or open Chrome's menu
-and choose **Install app** or **Add to Home screen**. The app manifest includes
-192px and 512px PNG icons and a maskable icon for Android.
+PWA. Tap Spotter's **Install** action when it appears, or use the browser menu's
+install or home-screen action. When an authenticating proxy prompts for login,
+refresh Spotter after signing in before checking the install action. The
+manifest link sends same-origin credentials so the browser can load it through
+the proxy. The app manifest includes 192px and 512px PNG icons and a maskable
+icon for Android. Brave may create a home-screen shortcut instead of an Android
+WebAPK. After deploying a new image, reopen Spotter while online and tap
+**Update now** if prompted. If a shortcut icon does not change after an icon
+update, remove and recreate the shortcut.
 
 The application currently targets a trusted, single-user deployment. Put an
 authentication-aware reverse proxy in front of it before exposing it to an

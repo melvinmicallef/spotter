@@ -60,6 +60,8 @@ The PWA manifest provides standalone display, a root start URL and scope,
 captures Chromium's install prompt when the browser exposes it. Production
 deployments opened on another device must use HTTPS for browser installation;
 localhost is suitable only when the browser is on the same development device.
+The manifest link requests same-origin credentials so an authenticating reverse
+proxy, such as Cloudflare Access, can serve the manifest after login.
 
 The light/dark appearance choice is a device-only preference stored in
 `localStorage`, separate from workout and synchronization state. A small inline

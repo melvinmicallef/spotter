@@ -185,6 +185,10 @@ test('installs its shell and synchronizes one offline workout after reload', asy
 
   await page.goto('/');
   await expect(page.getByRole('status')).toContainText('Online');
+  await expect(page.locator('link[rel="manifest"]')).toHaveAttribute(
+    'crossorigin',
+    'use-credentials',
+  );
 
   const manifestResponse = await request.get('/manifest.webmanifest');
   expect(manifestResponse.ok()).toBe(true);
