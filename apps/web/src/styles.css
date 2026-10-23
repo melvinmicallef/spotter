@@ -25,7 +25,9 @@
   --update-bg: #10241d;
   --sync-error: #ffb2a5;
   color: var(--text);
-  background: var(--page-bg);
+  background:
+    radial-gradient(circle at 90% 0, var(--page-glow) 0, transparent 30%),
+    var(--page-bg);
   font-family:
     Inter,
     ui-sans-serif,
@@ -70,9 +72,6 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background:
-    radial-gradient(circle at 90% 0, var(--page-glow) 0, transparent 30%),
-    var(--page-bg);
 }
 button,
 input,
@@ -2102,6 +2101,30 @@ small {
   place-content: center;
   justify-items: center;
   color: var(--text-muted);
+}
+@media (min-width: 761px) {
+  :root {
+    scrollbar-gutter: stable both-edges;
+  }
+  .app-header,
+  .bottom-nav {
+    right: auto;
+    left: 50%;
+    width: 100vw;
+    transform: translateX(-50%);
+  }
+  .app-header {
+    padding-right: max(
+      22px,
+      calc((100vw - 1120px) / 2 + 22px),
+      calc(22px + (100vw - 100%) / 2)
+    );
+    padding-left: max(
+      22px,
+      calc((100vw - 1120px) / 2 + 22px),
+      calc(22px + (100vw - 100%) / 2)
+    );
+  }
 }
 @media (max-width: 760px) {
   .app-shell {
