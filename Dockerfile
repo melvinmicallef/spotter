@@ -1,4 +1,4 @@
-ARG APP_VERSION=1.0.0
+ARG APP_VERSION=1.1.0
 ARG GIT_COMMIT=unknown
 
 FROM node:24-bookworm-slim AS build

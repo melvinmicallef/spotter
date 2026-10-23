@@ -4,9 +4,9 @@ Spotter releases are deliberate. A pushed, strict Semantic Version tag first
 runs the `Validate` workflow; its dependent publish job calls the reusable
 image workflow only after validation succeeds and confirms the tag points to
 the validated commit. Ordinary branch pushes and pull requests only validate.
-Manual release dispatch runs its own checks before it can publish. Releases
-`v0.1.0` and `v0.2.0` are published. Do not create the `v1.0.0` release tag
-until the stable-contract acceptance criteria and browser test matrix pass.
+Manual release dispatch runs its own checks before it can publish. The first
+stable release was `v1.0.0`. This guide uses `v1.1.0` as an example; complete
+the checklist before tagging each release.
 
 ## Version and image policy
 
@@ -14,15 +14,15 @@ until the stable-contract acceptance criteria and browser test matrix pass.
   build suffix. Examples: `v1.0.0` and `v1.1.0-beta.1`.
 - The tag version must match the root package version, ignoring only optional
   SemVer build metadata.
-- A stable `v1.0.0` tag publishes `1.0.0`, `1.0`, and `latest`; earlier
+- A stable `v1.1.0` tag publishes `1.1.0`, `1.1`, and `latest`; earlier
   immutable version tags remain available.
 - A prerelease such as `v1.1.0-beta.1` publishes only
   `1.1.0-beta.1`; it does not move `1.1` or `latest`.
 - The image receives `APP_VERSION` without the leading `v`, so `/api/version`
-  reports `1.0.0` for tag `v1.0.0`.
+  reports `1.1.0` for tag `v1.1.0`.
 - A manual workflow run publishes its explicit image tag, or the unique
   `sha-<full-commit>` fallback. Its application version is the package version
-  plus `sha` build metadata, such as `1.0.0+sha.0123456789ab`.
+  plus `sha` build metadata, such as `1.1.0+sha.0123456789ab`.
 - Strings that merely start with `v` but are not valid Semantic Versions fail
   before registry login or image publication.
 
@@ -46,8 +46,8 @@ Playwright browser tests before the package-write job.
 - [ ] `package.json` and workspace package versions match the intended release.
 - [ ] `CHANGELOG.md` moves completed entries from `Unreleased` into a dated
       `[VERSION]` section and contains user-facing upgrade notes.
-- [ ] Database changes include tested forward migrations, or for `1.0.0` the
-      tested clean baseline and explicit reset warning.
+- [ ] Database changes include tested forward migrations. If there are no
+      database changes, the release notes state that the current data is kept.
 
 ### Automated and manual verification
 
@@ -75,8 +75,8 @@ Playwright browser tests before the package-write job.
 - [ ] Create an annotated tag only after the checklist is complete:
 
   ```bash
-  git tag -a v1.0.0 -m "Spotter v1.0.0"
-  git push origin develop v1.0.0
+  git tag -a v1.1.0 -m "Spotter v1.1.0"
+  git push origin develop v1.1.0
   ```
 
 - [ ] Confirm the `Publish container` workflow succeeded for the tagged

@@ -66,7 +66,7 @@ test('keeps device preferences and shows a saved stretching poster offline', asy
   expect(Math.abs(frame!.height - image!.height)).toBeLessThanOrEqual(1);
 
   await context.setOffline(false);
-  await expect(page.getByRole('status')).toContainText('Online');
+  await expect(page.locator('.status-bar')).toContainText('Online');
   await page.getByRole('link', { name: 'Settings' }).click();
   await page.getByRole('button', { name: 'Remove stretching poster' }).click();
   const confirmation = page.getByRole('alertdialog');

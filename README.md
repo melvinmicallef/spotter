@@ -6,7 +6,7 @@ as a single Docker image.
 
 The project is developed on the `develop` branch. Its npm workspace contains
 the React client, Express server, and shared wire contracts. The current release
-is `1.0.0`.
+is `1.1.0`.
 
 Client features and their unit tests live under `apps/web/src/features`;
 server routes are grouped under `apps/server/src/features`, with SQLite code in
@@ -197,7 +197,7 @@ services:
 
 The `./data` directory next to `compose.yaml` stores the SQLite database and
 uploaded exercise images on the host, outside the container. To pin upgrades,
-replace `latest` with a released version such as `1.0.0`.
+replace `latest` with a released version such as `1.1.0`.
 
 Start the instance:
 
@@ -237,7 +237,7 @@ Open the repository at its root and ask the new chat to read `AGENTS.md` and the
 documentation listed above before changing files. A complete starter prompt is
 available in [the project handoff](docs/project-context.md#starter-prompt-for-a-new-ai-chat).
 
-Release `v1.0.0` is the current version. Releases should follow the acceptance,
+Release `v1.1.0` is the current version. Releases should follow the acceptance,
 test, accessibility, mobile QA, and release-candidate gates in the
 [release guide](docs/releasing.md).
 
@@ -262,5 +262,5 @@ Container publishing is triggered by:
 Images will be published to `ghcr.io/melvinmicallef/spotter`.
 Stable tags publish exact, minor, and `latest` image tags. Prereleases publish
 only the exact prerelease version, and manual runs publish only an explicit tag
-or a unique `sha-<commit>` fallback. Release `v1.0.0` publishes `1.0.0`,
-`1.0`, and `latest`; earlier immutable image tags remain available.
+or a unique `sha-<commit>` fallback. Release `v1.1.0` publishes `1.1.0`,
+`1.1`, and `latest`; earlier immutable image tags remain available.

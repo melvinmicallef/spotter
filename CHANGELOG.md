@@ -6,6 +6,36 @@ All notable changes to Spotter are recorded here. The format follows
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-23
+
+### Changed
+
+- The runner artwork is used for the application and Android install icons,
+  including the maskable icon.
+- Swapping template days opens a dialog from a compact icon button, so the
+  controls fit on portrait screens.
+- Frontend, backend, and browser-test files are grouped by feature.
+
+### Fixed
+
+- The PWA manifest uses same-origin credentials so authenticated reverse
+  proxies can serve it during Android installation.
+- Form fields now disable autocomplete to suppress unrelated password,
+  address, and payment suggestions in workout and catalogue entry.
+- Muscles and Settings stay horizontally aligned with other pages when a
+  desktop scrollbar appears. The page gradient is consistent across routes.
+- Stretching posters display at their natural aspect ratio without black
+  bands above or below the image on phones.
+- Browser tests handle asynchronous catalogue deletion and concurrent PWA
+  update notices during connection-status checks.
+
+### Upgrade notes
+
+Keep the mounted `/data` directory and browser site data when upgrading from
+`1.0.0`; this release does not change the SQLite or IndexedDB schemas. Reopen
+Spotter online to receive the updated PWA. If an Android home-screen shortcut
+keeps the old icon, remove and recreate the shortcut.
+
 ## [1.0.0] - 2026-10-23
 
 Spotter's first stable contract covers trusted, single-user deployments. The
@@ -79,7 +109,8 @@ See the [operations guide](docs/operations.md#upgrade) for the reset procedure.
   template management, SQLite API, synchronization, and single-container
   deployment.
 
-[Unreleased]: https://github.com/melvinmicallef/spotter/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/melvinmicallef/spotter/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/melvinmicallef/spotter/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/melvinmicallef/spotter/compare/v0.2.0...v1.0.0
 [0.2.0]: https://github.com/melvinmicallef/spotter/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/melvinmicallef/spotter/releases/tag/v0.1.0

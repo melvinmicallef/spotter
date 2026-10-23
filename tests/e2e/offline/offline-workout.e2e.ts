@@ -184,7 +184,7 @@ test('installs its shell and synchronizes one offline workout after reload', asy
   expect(templateResponse.ok()).toBe(true);
 
   await page.goto('/');
-  await expect(page.getByRole('status')).toContainText('Online');
+  await expect(page.locator('.status-bar')).toContainText('Online');
   await expect(page.locator('link[rel="manifest"]')).toHaveAttribute(
     'crossorigin',
     'use-credentials',
@@ -266,7 +266,7 @@ test('installs its shell and synchronizes one offline workout after reload', asy
   ).toBeEnabled();
 
   await context.setOffline(true);
-  await expect(page.getByRole('status')).toContainText('Offline');
+  await expect(page.locator('.status-bar')).toContainText('Offline');
 
   await expect(
     page.getByRole('button', { name: 'Start an open workout' }),
@@ -345,7 +345,9 @@ test('installs its shell and synchronizes one offline workout after reload', asy
   await expect.poll(() => acknowledgementDropped).toBe(true);
   await expect.poll(() => outboxSize(page)).toBeGreaterThan(0);
   await expect.poll(() => outboxSize(page), { timeout: 15_000 }).toBe(0);
-  await expect(page.getByRole('status')).not.toContainText('changes waiting');
+  await expect(page.locator('.status-bar')).not.toContainText(
+    'changes waiting',
+  );
 
   const historyResponse = await request.get('/api/workouts');
   expect(historyResponse.ok()).toBe(true);

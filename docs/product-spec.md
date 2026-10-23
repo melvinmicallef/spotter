@@ -1,6 +1,6 @@
 # Spotter Product Specification
 
-Status: Current product behavior for the `1.0.0` release. Items in "Open
+Status: Current product behavior for the `1.1.0` release. Items in "Open
 product decisions" remain unresolved.
 
 ## Purpose
@@ -32,7 +32,7 @@ be synchronized.
 - Collaborative editing or real-time multi-device workout updates.
 - Publishing a native iOS or Android application.
 
-The initial `0.1.0` release and current `1.0.0` target one trusted user per
+The initial `0.1.0` release and current `1.1.0` target one trusted user per
 deployment without built-in authentication. The server boundary keeps
 ownership and authorization concerns isolated so accounts can be added without
 rewriting the workout model. An untrusted or internet-exposed deployment
