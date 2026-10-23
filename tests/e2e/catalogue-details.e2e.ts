@@ -170,6 +170,7 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
   await exerciseDeleteDialog
     .getByRole('button', { name: 'Delete exercise' })
     .click();
+  await expect(page).toHaveURL(/\/exercises$/);
   await expect(disposableRow).toHaveCount(0);
 
   const addTemplateButton = page.getByRole('button', { name: 'Add template' });
@@ -182,6 +183,8 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
   await page.getByRole('button', { name: 'Create template' }).click();
   await expect(page).toHaveURL(/\/templates\/[0-9a-f-]+$/);
   await expect(page.getByRole('heading', { name: planName })).toBeVisible();
+  const setActiveButton = page.getByRole('button', { name: 'Set active' });
+  if (await setActiveButton.isVisible()) await setActiveButton.click();
   await expect(page.getByText('Active', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: '← Templates' }).click();
   await expect(page).toHaveURL(/\/templates$/);
