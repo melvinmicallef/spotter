@@ -18,10 +18,10 @@ it whenever an implementation decision changes the documented behavior.
 ## Current repository state
 
 - The default branch is `develop`.
-- The project contains a working pre-release application with an npm workspace,
+- The project contains a working application with an npm workspace,
   React PWA, Express API, SQLite persistence, IndexedDB outbox, Docker image,
   and GitHub Actions workflows.
-- The first release `0.1.0` is published; the current release is `0.2.0`.
+- The first release was `0.1.0`; the current release is `1.0.0`.
 - The production image will be `ghcr.io/melvinmicallef/spotter`.
 
 ## Non-negotiable initial constraints
@@ -40,8 +40,8 @@ it whenever an implementation decision changes the documented behavior.
 - Store production database state under the mounted `/data` path.
 - Publish container images only for pushed `v*` tags and manual workflow runs.
   Ordinary commits and pull requests validate but do not publish images.
-- Begin semantic versioning at `0.1.0` and remain on `0.x` while the product and
-  public contracts are under active development.
+- The `1.0.0` release establishes the stable trusted, single-user contract.
+  Future incompatible public-contract changes require a new major version.
 
 Do not weaken the offline guarantees, split production into multiple required
 containers, introduce online catalogue mutations while offline, or publish an
@@ -50,9 +50,9 @@ baseline.
 
 ## Decision discipline
 
-The following remain unresolved beyond the recorded `0.1.0` boundaries:
-authentication and multi-user tenancy, additional exercise measurement types,
-completed-workout editing, and data export/retention.
+The following remain outside the `1.0.0` contract: authentication and
+multi-user tenancy, additional exercise measurement types, and data
+export/retention. Completed-workout set and interval editing is implemented.
 
 Prefer a reversible boundary over silently deciding an unresolved product
 question. When a choice is required to scaffold the project, record it in the
@@ -78,9 +78,8 @@ architecture document or a dedicated decision record and explain its impact.
 
 - `develop` is the source branch unless the repository workflow later defines
   another release process.
-- The first release tag is `v0.1.0`; the current release tag is `v0.2.0`.
-- Normal `0.x` release tags may update `latest`; prerelease tags such as
-  `v0.2.0-beta.1` must not.
+- The first release tag was `v0.1.0`; the current release tag is `v1.0.0`.
+- Stable release tags may update `latest`; prerelease tags must not.
 - A manual image build uses an explicit image tag or a unique `sha-<commit>` tag.
 - A pushed release tag must pass the `Validate` workflow before its dependent
   job calls the container publisher. Manual releases must run the same checks.

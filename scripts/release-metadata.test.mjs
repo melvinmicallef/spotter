@@ -38,6 +38,23 @@ test('normalizes a pushed release tag for the application', () => {
   );
 });
 
+test('normalizes the stable 1.0.0 release tag', () => {
+  assert.deepEqual(
+    resolveReleaseMetadata({
+      eventName: 'push',
+      refName: 'v1.0.0',
+      sha,
+      packageVersion: '1.0.0',
+    }),
+    {
+      appVersion: '1.0.0',
+      imageTag: '',
+      isPrerelease: false,
+      releaseVersion: '1.0.0',
+    },
+  );
+});
+
 test('rejects a pushed tag that only resembles a release tag', () => {
   assert.throws(
     () =>

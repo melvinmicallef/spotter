@@ -238,7 +238,7 @@ network connection, and upgrades without losing an active workout or outbox.
 One image starts with an empty volume, migrates the database, serves the API and
 PWA, reports healthy, preserves data across replacement, and shuts down cleanly.
 
-## Milestone 8: Release automation and `0.2.0` (automation implemented; release candidate pending)
+## Milestone 8: Release automation and `0.2.0` (implemented and released)
 
 ### Deliverables
 
@@ -263,10 +263,21 @@ All `0.2.0` acceptance criteria pass. A deliberate `v0.2.0` tag builds and
 publishes the expected versioned image to `ghcr.io/melvinmicallef/spotter`,
 while a normal commit and pull request only run validation.
 
-The automation, strict tag validation, normalized application versioning,
-complete until the full `0.2.0` acceptance criteria and required test matrix
-pass and the published image has been verified. The `0.1.0` release is already
-published.
+The automation, strict tag validation, normalized application versioning, and
+published `v0.2.0` image are complete.
+
+## Milestone 9: Stable `1.0.0` release
+
+The stable contract covers the documented trusted, single-user deployment and
+the offline workout, online catalogue, template, and history flows. The
+pre-user SQLite schema and IndexedDB namespace reset form the new migration
+baseline. Authentication, multi-user tenancy, additional measurement types,
+and data export/retention remain explicit future decisions.
+
+Before tagging, update versions and release notes, run the full check and
+Playwright suites, build and smoke-test the production container with a mounted
+volume, verify backup and restore, and complete mobile and accessibility QA.
+Document the required data reset for users of `0.1.0` or `0.2.0`.
 
 ## Required test matrix
 

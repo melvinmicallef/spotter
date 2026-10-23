@@ -376,10 +376,10 @@ The runtime image should:
 
 Validation and publication are separate workflows or jobs.
 
-Spotter follows semantic versioning beginning at `0.1.0`. While the application
-is under active development, releases use `0.MINOR.PATCH`: a minor release may
-introduce breaking product, data, or API changes, while a patch release contains
-compatible fixes. Version `1.0.0` will declare the first stable public contract.
+Spotter follows semantic versioning beginning at `0.1.0`. Version `1.0.0`
+declares the first stable public contract for trusted, single-user
+deployments. Future incompatible product, data, or API changes require a major
+version.
 
 Validation runs for pull requests and every branch push and performs:
 
@@ -404,12 +404,12 @@ GitHub Actions cache without changing image contents or tags.
 
 The broad `v*` trigger is guarded by a tested strict SemVer validator before
 registry login or publication. The first release tag `v0.1.0` produced
-`0.1.0`, `0.1`, and `latest`; the current `v0.2.0` release produces `0.2.0`,
-`0.2`, and `latest`, and exposes `0.2.0` (without `v`) through `/api/version`.
+`0.1.0`, `0.1`, and `latest`; the current `v1.0.0` release produces `1.0.0`,
+`1.0`, and `latest`, and exposes `1.0.0` (without `v`) through `/api/version`.
 A prerelease such as `v0.2.0-beta.1` publishes only its exact tag. A manual run
 uses a supplied tag or a unique `sha-<commit>` tag, never moves release aliases,
 and receives a traceable application version such as
-`0.2.0+sha.0123456789ab`.
+`1.0.0+sha.0123456789ab`.
 
 ## Testing strategy
 
@@ -479,7 +479,7 @@ client serializes outbox drains, retries transient failures with bounded
 exponential backoff, and retains rejected operations for user-visible retry.
 Reference data uses the server's monotonically increasing revision cursor.
 
-The current `0.2.0` implementation uses one active workout per device, one
+The current `1.0.0` implementation uses one active workout per device, one
 active weekly ISO-day template, starts from any unfinished day with today
 selected by default, per-device current-week completion markers, strength
 repetitions plus explicit `kg`/`lb` weight, calisthenics

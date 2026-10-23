@@ -4,25 +4,25 @@ Spotter releases are deliberate. A pushed, strict Semantic Version tag first
 runs the `Validate` workflow; its dependent publish job calls the reusable
 image workflow only after validation succeeds and confirms the tag points to
 the validated commit. Ordinary branch pushes and pull requests only validate.
-Manual release dispatch runs its own checks before it can publish. The first
-release `v0.1.0` is published. Do not create the current `v0.2.0` release tag
-until the product acceptance criteria and browser test matrix have passed.
+Manual release dispatch runs its own checks before it can publish. Releases
+`v0.1.0` and `v0.2.0` are published. Do not create the `v1.0.0` release tag
+until the stable-contract acceptance criteria and browser test matrix pass.
 
 ## Version and image policy
 
 - Release tags use `vMAJOR.MINOR.PATCH`, with an optional SemVer prerelease or
-  build suffix. Examples: `v0.1.0` and `v0.2.0-beta.1`.
+  build suffix. Examples: `v1.0.0` and `v1.1.0-beta.1`.
 - The tag version must match the root package version, ignoring only optional
   SemVer build metadata.
-- A stable `v0.2.0` tag publishes `0.2.0`, `0.2`, and `latest`; `v0.1.0`
-  remains available as an immutable image tag.
-- A prerelease such as `v0.2.0-beta.1` publishes only
-  `0.2.0-beta.1`; it does not move `0.2` or `latest`.
+- A stable `v1.0.0` tag publishes `1.0.0`, `1.0`, and `latest`; earlier
+  immutable version tags remain available.
+- A prerelease such as `v1.1.0-beta.1` publishes only
+  `1.1.0-beta.1`; it does not move `1.1` or `latest`.
 - The image receives `APP_VERSION` without the leading `v`, so `/api/version`
-  reports `0.2.0` for tag `v0.2.0`.
+  reports `1.0.0` for tag `v1.0.0`.
 - A manual workflow run publishes its explicit image tag, or the unique
   `sha-<full-commit>` fallback. Its application version is the package version
-  plus `sha` build metadata, such as `0.2.0+sha.0123456789ab`.
+  plus `sha` build metadata, such as `1.0.0+sha.0123456789ab`.
 - Strings that merely start with `v` but are not valid Semantic Versions fail
   before registry login or image publication.
 
@@ -46,8 +46,8 @@ Playwright browser tests before the package-write job.
 - [ ] `package.json` and workspace package versions match the intended release.
 - [ ] `CHANGELOG.md` moves completed entries from `Unreleased` into a dated
       `[VERSION]` section and contains user-facing upgrade notes.
-- [ ] Database changes include tested forward migrations and any compatibility
-      or downgrade warning required by the release.
+- [ ] Database changes include tested forward migrations, or for `1.0.0` the
+      tested clean baseline and explicit reset warning.
 
 ### Automated and manual verification
 
@@ -75,8 +75,8 @@ Playwright browser tests before the package-write job.
 - [ ] Create an annotated tag only after the checklist is complete:
 
   ```bash
-  git tag -a v0.2.0 -m "Spotter v0.2.0"
-  git push origin develop v0.2.0
+  git tag -a v1.0.0 -m "Spotter v1.0.0"
+  git push origin develop v1.0.0
   ```
 
 - [ ] Confirm the `Publish container` workflow succeeded for the tagged

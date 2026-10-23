@@ -1,6 +1,6 @@
 # Spotter Product Specification
 
-Status: Current product behavior for the `0.2.0` release. Items in "Open
+Status: Current product behavior for the `1.0.0` release. Items in "Open
 product decisions" remain unresolved.
 
 ## Purpose
@@ -32,7 +32,7 @@ be synchronized.
 - Collaborative editing or real-time multi-device workout updates.
 - Publishing a native iOS or Android application.
 
-The initial `0.1.0` release and current `0.2.0` target one trusted user per
+The initial `0.1.0` release and current `1.0.0` target one trusted user per
 deployment without built-in authentication. The server boundary keeps
 ownership and authorization concerns isolated so accounts can be added without
 rewriting the workout model. An untrusted or internet-exposed deployment
@@ -334,9 +334,9 @@ The initial conflict policy is deliberately narrow:
 - The SQLite file and related database files live under `/data` in production.
 - Runtime configuration is supplied through environment variables.
 - The container exposes an HTTP health endpoint suitable for orchestration.
-- The first development release is version `0.1.0`; subsequent development
-  releases remain in the `0.x` range until the product and its public contracts
-  are ready for `1.0.0`.
+- The first development release was version `0.1.0`; version `1.0.0`
+  establishes the stable contract for the documented trusted, single-user
+  deployment and workout flows.
 - GitHub Actions publishes to `ghcr.io/melvinmicallef/spotter` only for pushed
   `v*` tags or a manual workflow dispatch.
 - Pull requests and ordinary branch pushes validate the application without
@@ -382,6 +382,8 @@ The first usable release is complete when:
 ## Open product decisions
 
 - What retention or export behavior is required for workout history?
+- Whether built-in authentication and multi-user tenancy are needed.
+- Which additional exercise measurements should be supported.
 
 ## Initial `0.1.0` product decisions carried forward
 

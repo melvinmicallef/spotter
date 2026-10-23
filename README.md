@@ -6,7 +6,7 @@ as a single Docker image.
 
 The project is developed on the `develop` branch. Its npm workspace contains
 the React client, Express server, and shared wire contracts. The current release
-is `0.2.0`.
+is `1.0.0`.
 
 Spotter is a vibe-coded app built with OpenAI Codex.
 
@@ -114,8 +114,8 @@ The following decisions are settled for the initial implementation:
 - GitHub Container Registry at `ghcr.io/melvinmicallef/spotter`;
 - image publication only for pushed `v*` tags or manual workflow dispatch;
 - `develop` as the default branch; and
-- semantic versioning beginning at `0.1.0`, remaining on `0.x` during active
-  development.
+- semantic versioning beginning at `0.1.0`, with `1.0.0` establishing the
+  stable trusted, single-user contract.
 
 Choices explicitly listed as open in the documentation are not finalized and
 must not be silently treated as requirements.
@@ -192,7 +192,7 @@ services:
 
 The `./data` directory next to `compose.yaml` stores the SQLite database and
 uploaded exercise images on the host, outside the container. To pin upgrades,
-replace `latest` with a released version such as `0.2.0`.
+replace `latest` with a released version such as `1.0.0`.
 
 Start the instance:
 
@@ -226,7 +226,7 @@ Open the repository at its root and ask the new chat to read `AGENTS.md` and the
 documentation listed above before changing files. A complete starter prompt is
 available in [the project handoff](docs/project-context.md#starter-prompt-for-a-new-ai-chat).
 
-Release `v0.2.0` is the current version. Releases should follow the acceptance,
+Release `v1.0.0` is the current version. Releases should follow the acceptance,
 test, accessibility, mobile QA, and release-candidate gates in the
 [release guide](docs/releasing.md).
 
@@ -235,13 +235,15 @@ test, accessibility, mobile QA, and release-candidate gates in the
 Ordinary commits and pull requests should run validation such as linting,
 type-checking, tests, and a production build. They should not publish an image.
 
-The first application version was `0.1.0`. Spotter will remain on `0.x`
-versions while its product behavior, data model, and API are still under active
-development. Version `1.0.0` will mark the first stable public contract.
+The first application version was `0.1.0`. Version `1.0.0` establishes the
+stable public contract for trusted, single-user deployments. Authentication,
+multi-user support, export, and retention remain future work. The upgrade from
+`0.2.0` requires a database and browser-data reset; see the
+[operations guide](docs/operations.md#upgrade).
 
 Container publishing is triggered by:
 
-- pushing a strict Semantic Version tag beginning with `v`, such as `v0.2.0`;
+- pushing a strict Semantic Version tag beginning with `v`, such as `v1.0.0`;
   its publish job runs only after `Validate` passes, and malformed
   `v*` tags fail before publication; or
 - starting the release workflow manually through GitHub Actions.
@@ -249,5 +251,5 @@ Container publishing is triggered by:
 Images will be published to `ghcr.io/melvinmicallef/spotter`.
 Stable tags publish exact, minor, and `latest` image tags. Prereleases publish
 only the exact prerelease version, and manual runs publish only an explicit tag
-or a unique `sha-<commit>` fallback. Release `v0.2.0` publishes `0.2.0`,
-`0.2`, and `latest`; the immutable `0.1.0` image remains available.
+or a unique `sha-<commit>` fallback. Release `v1.0.0` publishes `1.0.0`,
+`1.0`, and `latest`; earlier immutable image tags remain available.

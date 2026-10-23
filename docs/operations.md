@@ -44,7 +44,7 @@ clear IndexedDB or other site data stored in a browser profile.
 | `PORT`          | `3000`                 | HTTP listen port inside the container    |
 | `DATABASE_PATH` | `/data/spotter.sqlite` | Canonical SQLite file                    |
 | `MEDIA_PATH`    | `/data/media`          | Uploaded GIF/PNG/JPEG exercise images    |
-| `APP_VERSION`   | `0.2.0`                | Version exposed by `/api/version`        |
+| `APP_VERSION`   | `1.0.0`                | Version exposed by `/api/version`        |
 | `GIT_COMMIT`    | `unknown`              | Build revision exposed by `/api/version` |
 | `WEB_DIST_PATH` | bundled client         | Optional compiled-client override        |
 

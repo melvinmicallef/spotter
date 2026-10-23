@@ -6,6 +6,43 @@ All notable changes to Spotter are recorded here. The format follows
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-23
+
+Spotter's first stable contract covers trusted, single-user deployments. The
+offline workout workflow, API, and database model are now versioned as a stable
+release. Authentication, multi-user support, export, and retention policies
+remain outside this contract.
+
+### Added
+
+- Select any populated weekday from the active plan. Completed days stay marked
+  for the local ISO week and can be repeated after confirmation; cancelling a
+  workout leaves its day available.
+- Optional weekday names and full-day swaps in the template editor, including
+  targets and names.
+- Online editing and deletion of completed workout history, with a fixed
+  exercise roster, dedicated interval-history controls, and strength progress
+  charts.
+- Previous-set hints across templates, a filter for primary muscles in the
+  exercise library, and planned duration beside interval workout controls.
+
+### Changed
+
+- Interval workouts prefill settings from the most recent completed execution
+  of the same exercise and record actual work time when stages are skipped.
+- SQLite starts from one canonical version-one schema. IndexedDB starts from a
+  new `spotter-v2` database so old queued operations cannot sync into the
+  reset server.
+
+### Upgrade warning
+
+**This release cannot open SQLite databases created by `0.1.0` or `0.2.0`.**
+Before replacing an older container, stop it and remove its database file and
+WAL sidecars. Clear Spotter's browser site data, including IndexedDB, and
+remove media files linked only to the old database. This permanently discards
+old workouts, templates, exercises, settings, and unsynchronized browser data.
+See the [operations guide](docs/operations.md#upgrade) for the reset procedure.
+
 ## [0.2.0] - 2026-10-22
 
 ### Added
@@ -42,6 +79,7 @@ All notable changes to Spotter are recorded here. The format follows
   template management, SQLite API, synchronization, and single-container
   deployment.
 
-[Unreleased]: https://github.com/melvinmicallef/spotter/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/melvinmicallef/spotter/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/melvinmicallef/spotter/compare/v0.2.0...v1.0.0
 [0.2.0]: https://github.com/melvinmicallef/spotter/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/melvinmicallef/spotter/releases/tag/v0.1.0
