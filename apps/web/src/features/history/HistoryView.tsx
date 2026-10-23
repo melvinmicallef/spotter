@@ -13,6 +13,7 @@ import { historyRouteFromPath, pathForHistory } from '../../shared/routes.js';
 import { addSet, removeSet, updateSet } from '../workouts/workout.js';
 import { weekdayName } from '../../shared/weekdays.js';
 import { ConfirmDialog } from '../../components/ConfirmDialog.js';
+import { SaveButton } from '../../components/SaveButton.js';
 
 interface HistoryViewProps {
   workouts: Workout[];
@@ -242,7 +243,7 @@ function HistoryDetailsPage({
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!draft) return;
+    if (!draft || saving) return;
     setSaving(true);
     setSaveError(null);
     try {
@@ -288,13 +289,9 @@ function HistoryDetailsPage({
             >
               Cancel
             </button>
-            <button
-              form="history-workout-editor"
-              type="submit"
-              disabled={saving}
-            >
-              {saving ? 'Saving…' : 'Save changes'}
-            </button>
+            <SaveButton form="history-workout-editor" pending={saving}>
+              Save changes
+            </SaveButton>
           </div>
         ) : (
           <button

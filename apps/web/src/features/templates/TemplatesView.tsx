@@ -9,6 +9,8 @@ import type {
 } from '@spotter/shared';
 
 import { api } from '../../shared/api.js';
+import { useSubmission } from '../../shared/use-submission.js';
+import { SaveButton } from '../../components/SaveButton.js';
 import { convertDistance } from '../settings/measurement-system.js';
 import type { DistanceUnit } from '../settings/measurement-system.js';
 import { ConfirmDialog } from '../../components/ConfirmDialog.js';
@@ -78,7 +80,7 @@ export function TemplatesView(props: TemplatesViewProps) {
         notice={offlineNotice}
         onCancel={() => props.onNavigate(pathForTemplate({ kind: 'list' }))}
         onSubmit={(draft) =>
-          void run(
+          run(
             () => api.createTemplate(draft),
             (createdTemplate) => {
               props.onNavigate(
@@ -114,7 +116,7 @@ export function TemplatesView(props: TemplatesViewProps) {
           )
         }
         onSubmit={(draft) =>
-          void run(
+          run(
             () => api.updateTemplate(selectedTemplate.id, draft),
             () =>
               props.onNavigate(
@@ -295,6 +297,16 @@ function TemplateDetails({
             <PencilIcon />
           </button>
           <button
+            className="icon-button exercise-action-button"
+            type="button"
+            aria-label={`Duplicate ${template.name}`}
+            title="Duplicate template"
+            disabled={!online}
+            onClick={onDuplicate}
+          >
+            <DuplicateIcon />
+          </button>
+          <button
             className="icon-button exercise-action-button danger-text"
             type="button"
             aria-label={`Delete ${template.name}`}
@@ -318,14 +330,6 @@ function TemplateDetails({
             Set active
           </button>
         )}
-        <button
-          className="secondary"
-          type="button"
-          disabled={!online}
-          onClick={onDuplicate}
-        >
-          Duplicate
-        </button>
       </div>
       <div className="week-grid template-details-week">
         {WEEKDAYS.map((day) => {
@@ -393,8 +397,9 @@ function TemplateEditor({
   initial: WorkoutTemplateInput;
   notice: ReactNode;
   onCancel: () => void;
-  onSubmit: (draft: WorkoutTemplateInput) => void;
+  onSubmit: (draft: WorkoutTemplateInput) => Promise<void>;
 }) {
+  const { pending, submit } = useSubmission();
   const [draft, setDraft] = useState<WorkoutTemplateInput>(initial);
   const [pickerDay, setPickerDay] = useState<DayOfWeek>();
   const [swapDialogOpen, setSwapDialogOpen] = useState(false);
@@ -460,24 +465,26 @@ function TemplateEditor({
       <span className="eyebrow">WEEKLY PLANS</span>
       <h2>{title}</h2>
       {notice}
-      <fieldset disabled={!online}>
+      <fieldset disabled={!online || pending}>
         <form
           autoComplete="off"
           className="form-card template-card"
           onSubmit={(event) => {
             event.preventDefault();
             if (!draft.name.trim()) return;
-            onSubmit({
-              ...draft,
-              name: draft.name.trim(),
-              notes: null,
-              dayNames: (draft.dayNames ?? [])
-                .map((dayName) => ({
-                  ...dayName,
-                  name: dayName.name.trim(),
-                }))
-                .filter((dayName) => dayName.name),
-            });
+            void submit(() =>
+              onSubmit({
+                ...draft,
+                name: draft.name.trim(),
+                notes: null,
+                dayNames: (draft.dayNames ?? [])
+                  .map((dayName) => ({
+                    ...dayName,
+                    name: dayName.name.trim(),
+                  }))
+                  .filter((dayName) => dayName.name),
+              }),
+            );
           }}
         >
           <label className="field">
@@ -765,7 +772,14 @@ function TemplateEditor({
                   Cancel
                 </button>
               </div>
-              <button type="submit">{submitLabel}</button>
+              <SaveButton
+                pending={pending}
+                pendingLabel={
+                  submitLabel.startsWith('Create') ? 'Creating…' : 'Saving…'
+                }
+              >
+                {submitLabel}
+              </SaveButton>
             </div>
           </div>
         </form>
@@ -935,6 +949,14 @@ function PencilIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <path d="M4 20h4l11-11-4-4L4 16v4Zm13-17 4 4-2 2-4-4 2-2Z" />
+    </svg>
+  );
+}
+
+function DuplicateIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M4 2h12v2H4v12H2V4a2 2 0 0 1 2-2Zm4 4h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Zm0 2v12h12V8H8Z" />
     </svg>
   );
 }

@@ -57,10 +57,9 @@ healthy API response, and load the PWA shell.
   using separate muscle and exercise pages.
 - Explicit strength, calisthenics, and cardio exercise types with
   type-appropriate fields.
-- A compact exercise list and dedicated detail/editor flow, role-aware primary
-  and secondary muscle associations, separate preparation/execution
-  instructions, optional comments, incremental leaf-muscle assignment with
-  primary-first ordering,
+- A compact exercise list and dedicated detail/editor flow, primary target
+  muscle associations, separate preparation/execution
+  instructions, optional comments, incremental leaf-muscle assignment,
   optional workout-visible reference links, and validated GIF/PNG/JPEG images.
 - Dependency-safe deletion behavior that preserves future workout history.
 - API integration tests using an isolated temporary database.
@@ -285,7 +284,7 @@ Document the required data reset for users of `0.1.0` or `0.2.0`.
 | ---------------- | ----------------------------------------------------------------------------------------- |
 | Shared contracts | Valid and invalid wire payloads; backward-compatible parsing where promised               |
 | SQLite           | Fresh migration, upgrade migration, foreign keys, uniqueness, transactions                |
-| Catalogue        | CRUD, list/detail flow, role-aware associations, images, dependencies, validation         |
+| Catalogue        | CRUD, list/detail flow, primary muscle associations, images, dependencies, validation     |
 | Templates        | Ordering, duplication, snapshots, changed/deleted references                              |
 | Workout domain   | Lifecycle, ordering, set edits, completion, history snapshots, fixed-roster history edits |
 | IndexedDB        | Repository operations, version upgrades, atomic workout/outbox writes                     |

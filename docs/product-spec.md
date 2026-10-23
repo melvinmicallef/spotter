@@ -1,6 +1,6 @@
 # Spotter Product Specification
 
-Status: Current product behavior for the `1.1.0` release. Items in "Open
+Status: Current product behavior for the `1.2.0` release. Items in "Open
 product decisions" remain unresolved.
 
 ## Purpose
@@ -32,7 +32,7 @@ be synchronized.
 - Collaborative editing or real-time multi-device workout updates.
 - Publishing a native iOS or Android application.
 
-The initial `0.1.0` release and current `1.1.0` target one trusted user per
+The initial `0.1.0` release and current `1.2.0` target one trusted user per
 deployment without built-in authentication. The server boundary keeps
 ownership and authorization concerns isolated so accounts can be added without
 rewriting the workout model. An untrusted or internet-exposed deployment
@@ -44,7 +44,7 @@ requires an authenticating reverse proxy until that product work is completed.
 
 A selectable leaf in the built-in ExRx muscle hierarchy, used to classify
 exercises. Parent group and subgroup labels organize the catalogue but cannot be
-assigned. A leaf muscle can be linked to many exercises as primary or secondary.
+assigned. A leaf muscle can be linked to many exercises as a primary target.
 
 ### Exercise
 
@@ -128,7 +128,9 @@ reserved for development on the same device.
 Settings allows the user to upload one GIF, PNG, or JPEG stretching poster up
 to 5 MiB. The poster is stored with the server's persistent application data
 and shared by devices using that deployment. The Today workout page provides a
-Show stretching action that opens a simple, uncropped poster view. Replacing or
+Show stretching action that opens a simple, uncropped poster view. When a poster
+is present, its upload controls are hidden; remove it using the preview's X
+and confirmation to upload a replacement. Replacing or
 removing the poster requires a connection; the PWA caches the image after it
 has been loaded so it can be viewed offline on that device.
 
@@ -157,11 +159,11 @@ While online, a user can:
 - choose whether an exercise is strength, calisthenics, or cardio;
 - record preparation and execution instructions separately, with optional
   comments displayed below execution;
-- add target muscles one at a time as primary or secondary, prevent duplicate
-  assignments, allow multiple secondary muscles, and display primary muscles
-  first;
-- attach or replace a GIF, PNG, or JPEG demonstration using click-to-select or
-  drag and drop; removing the displayed image is saved only when the exercise
+- add primary target muscles one at a time and prevent duplicate assignments;
+- attach a GIF, PNG, or JPEG demonstration using click-to-select or drag and
+  drop. Upload controls are hidden while a saved image or a newly selected
+  preview is present; use the preview's X to reveal them and choose a
+  replacement. Removing the displayed image is saved only when the exercise
   changes are saved;
 - add or change an optional exercise reference link; and
 - receive a clear validation or dependency error when a destructive change
@@ -170,6 +172,11 @@ While online, a user can:
 Exercise mutations are unavailable offline. The muscle directory is always
 read-only. Previously synchronized catalogue records may still be used as
 read-only workout references.
+
+Secondary muscle assignments are no longer supported. The `1.2.0` upgrade clears
+existing secondary links from SQLite and the device's cached exercise catalogue.
+Primary links, exercises, templates, workout history, and pending workout
+synchronization are preserved.
 
 The built-in muscle directory contains only selectable leaf entries from the
 ExRx Exercise & Muscle Directory. Top-level areas such as Neck, Shoulders, and
@@ -189,8 +196,10 @@ is deleted or the media is explicitly replaced. The client warms a dedicated
 application cache after synchronizing reference data so uploaded demonstrations
 remain available with the cached exercise catalogue offline. Website import is
 not supported. A manually entered exercise reference URL is copied into the
-workout snapshot and shown during the workout; following that external link
-still requires connectivity unless the destination is independently cached.
+workout snapshot for compatibility and historical data preservation. Reference
+links remain available in the Exercise Library but are hidden from the active
+workout and its guide modal. Following a library reference requires connectivity
+unless the destination is independently cached.
 
 ### Template management
 
@@ -198,7 +207,10 @@ While online, a user can:
 
 - create, rename, duplicate, edit, delete, and activate a weekly template;
 - add multiple exercises to any day of the week from a visual picker that shows
-  demonstration images and filters by exercise name or muscle;
+  demonstration images and the same full muscle paths as the Exercise Library,
+  and filters by exercise name or muscle. Its Done button is in a sticky header
+  so it remains accessible while scrolling; template selection stays open to
+  allow multiple additions;
 - assign an optional name to each weekday, such as "Legs" or "Chest & Back";
 - swap all exercises between any two weekdays; exercise targets and optional
   day names move with the exercises, including when one weekday is a rest day;
@@ -214,8 +226,9 @@ Template exercises do not have notes, and weekly templates do not have notes.
 Template mutations are unavailable offline. A cached template can be used to
 start a workout if all data required for its workout snapshot is available.
 Templates are presented as a compact list. Selecting one opens a read-only
-details page with its weekly schedule; edit and delete actions are available
-from that page, while creation and editing use dedicated, refresh-safe URLs.
+details page with its weekly schedule; edit, duplicate, and delete icon actions
+are grouped together beside the title, separate from the Active or Set active
+control. Creation and editing use dedicated, refresh-safe URLs.
 Deleting a weekly template requires explicit confirmation.
 
 ### Workout tracking
@@ -230,11 +243,21 @@ A user can:
   the template day complete;
 - resume the current in-progress workout;
 - add, remove, and reorder workout exercises;
+- confirm removal of a workout exercise before deleting its recorded sets and
+  progress from that workout. Dismissing the dialog keeps the exercise unchanged;
+  templates and the Exercise Library are unaffected;
+- add an exercise from the workout picker with one selection, which adds it
+  once and immediately closes the picker. Reopening permits another deliberate
+  addition;
 - mark individual exercises complete to collapse them and reopen them when
   needed;
 - add, edit, and remove sets;
 - display strength weights and repetitions in a compact grid, with controls to
-  add or remove each exercise's sets;
+  add or remove each exercise's sets. The table starts compact below its header
+  and grows by one fixed-width column per set, rather than stretching a few sets
+  across the card. On desktop and mobile, horizontal scrolling stays inside the
+  sets area when the table exceeds the available width. Reorder arrows are in a
+  separate footer away from the removal action;
 - show the most recent completed workout entry with recorded strength
   repetitions or weight as placeholders by set position, regardless of the
   template used. Exercise ID is the primary match, with an exact name and type
@@ -252,9 +275,10 @@ A user can:
   stage-transition beeps and resumes its saved countdown after a refresh on
   the same device;
 - open an exercise guide modal with its demonstration, instructions, comments,
-  reference link, and target muscles;
+  and target muscles;
 - finish a workout, with a warning and an option to continue if exercises are
-  still incomplete;
+  still incomplete. On phones, Cancel workout and Finish use labelled close
+  and finish-flag icons; desktop retains their text;
 - view workout history with the local weekday and full date, template name,
   and exercise names;
 - open a completed workout's details page and edit its recorded set count,
@@ -269,6 +293,10 @@ A user can:
 
 Starting, updating, and finishing a workout must work offline after the PWA and
 required reference data have been loaded at least once.
+Partially entered strength sets retain their invalid state and continue to
+block exercise completion and workout finishing. The inline message asking
+for both weight and repetitions is not displayed; validation and persistence
+rules are unchanged.
 Deleting history is online-only. Pending workout changes must synchronize before
 deletion so an older outbox operation cannot recreate the deleted workout.
 Completed-history edits are also online-only and require pending workout changes
@@ -326,6 +354,9 @@ The initial conflict policy is deliberately narrow:
 - The primary workout controls must work comfortably on a phone.
 - Saving a set should not depend on a round trip to the server.
 - Online-only controls visibly indicate when they are unavailable.
+- Save and Create buttons show a spinner and a saving or creating label while
+  their request is pending, and remain disabled until it finishes. Failed
+  requests restore the button so the user can retry without losing the draft.
 - Synchronization errors must preserve the user's local data and offer a retry.
 - PWA installation and update behavior should be predictable; an update must
   not silently replace an active workout.

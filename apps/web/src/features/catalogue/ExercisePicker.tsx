@@ -1,6 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import type { Exercise } from '@spotter/shared';
+import {
+  exerciseMuscleSummary,
+  muscleDisplayName,
+} from '../../shared/exercise-muscles.js';
 
 export function ExercisePicker({
   contextLabel,
@@ -8,19 +12,23 @@ export function ExercisePicker({
   getAddedCount,
   onAdd,
   onClose,
+  selectionMode = 'multiple',
 }: {
   contextLabel: string;
   exercises: Exercise[];
   getAddedCount: (exerciseId: string) => number;
   onAdd: (exercise: Exercise) => void;
   onClose: () => void;
+  selectionMode?: 'single' | 'multiple';
 }) {
+  const selectionMade = useRef(false);
   const [nameFilter, setNameFilter] = useState('');
   const [muscleFilter, setMuscleFilter] = useState('');
   const muscles = useMemo(() => {
     const unique = new Map<string, string>();
     for (const exercise of exercises) {
-      for (const muscle of exercise.muscles) unique.set(muscle.id, muscle.name);
+      for (const muscle of exercise.muscles)
+        unique.set(muscle.id, muscleDisplayName(muscle));
     }
     return [...unique.entries()].sort((left, right) =>
       left[1].localeCompare(right[1]),
@@ -61,14 +69,24 @@ export function ExercisePicker({
             <span className="eyebrow">ADD TO {contextLabel.toUpperCase()}</span>
             <h2 id="exercise-picker-title">Choose exercises</h2>
           </div>
-          <button
-            className="icon-button"
-            type="button"
-            aria-label="Close exercise picker"
-            onClick={onClose}
-          >
-            ×
-          </button>
+          {selectionMode === 'multiple' ? (
+            <button
+              className="secondary exercise-picker-done"
+              type="button"
+              onClick={onClose}
+            >
+              Done
+            </button>
+          ) : (
+            <button
+              className="icon-button exercise-picker-close"
+              type="button"
+              aria-label="Close exercise picker"
+              onClick={onClose}
+            >
+              ×
+            </button>
+          )}
         </header>
         <div className="exercise-picker-filters">
           <label className="field">
@@ -127,14 +145,18 @@ export function ExercisePicker({
                       {exercise.exerciseType}
                     </small>
                   </div>
-                  <small>
-                    {exercise.muscles.length > 0
-                      ? exercise.muscles
-                          .map((muscle) => muscle.name)
-                          .join(' · ')
-                      : 'No muscles assigned'}
-                  </small>
-                  <button type="button" onClick={() => onAdd(exercise)}>
+                  <small>{exerciseMuscleSummary(exercise)}</small>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (selectionMode === 'single') {
+                        if (selectionMade.current) return;
+                        selectionMade.current = true;
+                        onAdd(exercise);
+                        onClose();
+                      } else onAdd(exercise);
+                    }}
+                  >
                     {timesAdded > 0
                       ? `Add again (${timesAdded} added)`
                       : `Add to ${contextLabel}`}
@@ -147,9 +169,6 @@ export function ExercisePicker({
             <p className="empty-state">No exercises match these filters.</p>
           )}
         </div>
-        <button className="secondary full" type="button" onClick={onClose}>
-          Done
-        </button>
       </section>
     </div>
   );

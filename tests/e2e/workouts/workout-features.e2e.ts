@@ -356,9 +356,10 @@ test('records typed sets, previous values, and an audible interval timer', async
     strengthCard.getByLabel(`${strengthName} repetitions set 1`),
   ).toHaveAttribute('inputmode', 'numeric');
   await strengthCard.getByLabel(`${strengthName} weight set 1`).fill('40');
-  await expect(strengthCard.getByRole('alert')).toContainText(
-    'Enter both weight and reps',
-  );
+  await expect(strengthCard.getByRole('alert')).toHaveCount(0);
+  await expect(
+    strengthCard.getByLabel(`${strengthName} weight set 1`),
+  ).toHaveAttribute('aria-invalid', 'true');
   await page.getByRole('button', { name: 'Finish' }).click();
   await expect(page.getByRole('alertdialog')).toHaveCount(0);
   await expect(

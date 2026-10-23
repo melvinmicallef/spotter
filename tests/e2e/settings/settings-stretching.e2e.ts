@@ -38,6 +38,10 @@ test('keeps device preferences and shows a saved stretching poster offline', asy
 
   const preview = page.getByRole('img', { name: 'Current stretching poster' });
   await expect(preview).toBeVisible();
+  await expect(page.locator('.exercise-image-dropzone')).toHaveCount(0);
+  await expect(page.getByLabel('Choose a stretching poster image')).toHaveCount(
+    0,
+  );
   await expect
     .poll(() =>
       preview.evaluate((image: HTMLImageElement) => image.naturalWidth),
@@ -75,6 +79,7 @@ test('keeps device preferences and shows a saved stretching poster offline', asy
     .getByRole('button', { name: 'Cancel', exact: true })
     .click();
   await expect(preview).toBeVisible();
+  await expect(page.locator('.exercise-image-dropzone')).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Remove stretching poster' }).click();
   await page
@@ -82,6 +87,11 @@ test('keeps device preferences and shows a saved stretching poster offline', asy
     .getByRole('button', { name: 'Remove poster' })
     .click();
   await expect(preview).toHaveCount(0);
+  await expect(
+    page.getByRole('button', {
+      name: /Drop an image here or click to choose a file/,
+    }),
+  ).toBeVisible();
   await page.getByRole('link', { name: 'Workout' }).click();
   await page.getByRole('button', { name: 'Show stretching' }).click();
   await expect(

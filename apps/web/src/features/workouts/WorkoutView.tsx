@@ -110,6 +110,9 @@ export function WorkoutView({
   const [exercisePickerOpen, setExercisePickerOpen] = useState(false);
   const [finishWarningOpen, setFinishWarningOpen] = useState(false);
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
+  const [exerciseToRemoveId, setExerciseToRemoveId] = useState<string | null>(
+    null,
+  );
   const [completedDayToConfirm, setCompletedDayToConfirm] =
     useState<DayOfWeek | null>(null);
   const [confirmedRepeatDay, setConfirmedRepeatDay] =
@@ -129,6 +132,9 @@ export function WorkoutView({
   }, [localToday]);
   const exerciseDetails = exercises.find(
     (exercise) => exercise.id === exerciseDetailsId,
+  );
+  const exerciseToRemove = workout?.exercises.find(
+    (entry) => entry.id === exerciseToRemoveId,
   );
   const invalidStrengthSets = workout
     ? hasPartiallyFilledStrengthSet(workout)
@@ -349,15 +355,27 @@ export function WorkoutView({
             Show stretching
           </button>
           <button
-            className="secondary danger-text"
+            className="secondary danger-text workout-mobile-action"
             type="button"
+            aria-label="Cancel workout"
+            title="Cancel workout"
             onClick={() => setCancelConfirmOpen(true)}
           >
-            Cancel workout
+            <svg
+              className="workout-action-icon"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <circle cx="12" cy="12" r="9" />
+              <path d="m8 8 8 8M16 8l-8 8" />
+            </svg>
+            <span className="workout-action-label">Cancel workout</span>
           </button>
           <button
-            className="danger"
+            className="danger workout-mobile-action"
             type="button"
+            aria-label="Finish"
+            title="Finish workout"
             onClick={() => {
               if (invalidStrengthSets) return;
               if (workout.exercises.some((entry) => !entry.completed)) {
@@ -367,7 +385,19 @@ export function WorkoutView({
               }
             }}
           >
-            Finish
+            <svg
+              className="workout-action-icon"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path d="M5 22V3h14v11H5" />
+              <path
+                d="M5 3h5v4H5zm9 0h5v4h-5zm-4 4h4v4h-4zm-5 4h5v3H5zm9 0h5v3h-5z"
+                fill="currentColor"
+                stroke="none"
+              />
+            </svg>
+            <span className="workout-action-label">Finish</span>
           </button>
         </div>
       </div>
@@ -442,51 +472,13 @@ export function WorkoutView({
                           {entry.exerciseType}
                         </small>
                       )}
-                      {entry.referenceUrl && (
-                        <a
-                          className="workout-reference-link"
-                          href={entry.referenceUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          Reference ↗
-                        </a>
-                      )}
                     </div>
                     <div className="inline-actions">
-                      <button
-                        className="icon-button"
-                        type="button"
-                        aria-label={`Move ${entry.exerciseName} up`}
-                        onClick={() =>
-                          onChange((current) =>
-                            actions.moveExercise(current, exerciseIndex, -1),
-                          )
-                        }
-                      >
-                        ↑
-                      </button>
-                      <button
-                        className="icon-button"
-                        type="button"
-                        aria-label={`Move ${entry.exerciseName} down`}
-                        onClick={() =>
-                          onChange((current) =>
-                            actions.moveExercise(current, exerciseIndex, 1),
-                          )
-                        }
-                      >
-                        ↓
-                      </button>
                       <button
                         className="icon-button danger-text"
                         type="button"
                         aria-label={`Remove ${entry.exerciseName}`}
-                        onClick={() =>
-                          onChange((current) =>
-                            actions.removeExercise(current, entry.id),
-                          )
-                        }
+                        onClick={() => setExerciseToRemoveId(entry.id)}
                       >
                         ×
                       </button>
@@ -524,22 +516,58 @@ export function WorkoutView({
                     actions={actions}
                   />
                 )}
-                <button
-                  className="secondary workout-complete-button"
-                  type="button"
-                  disabled={
-                    entry.exerciseType === 'strength' &&
-                    entry.sets.some(isStrengthSetPartiallyEntered)
-                  }
-                  onClick={() =>
-                    onChange((current) =>
-                      actions.setExerciseCompleted(current, entry.id, true),
-                    )
-                  }
-                  aria-label={`Mark ${entry.exerciseName} as completed`}
-                >
-                  ✓ Mark complete
-                </button>
+                <div className="workout-exercise-footer">
+                  <div
+                    className="inline-actions workout-reorder-controls"
+                    role="group"
+                    aria-label={`Reorder ${entry.exerciseName}`}
+                  >
+                    <button
+                      className="icon-button"
+                      type="button"
+                      aria-label={`Move ${entry.exerciseName} up`}
+                      title="Move exercise up"
+                      disabled={exerciseIndex === 0}
+                      onClick={() =>
+                        onChange((current) =>
+                          actions.moveExercise(current, exerciseIndex, -1),
+                        )
+                      }
+                    >
+                      ↑
+                    </button>
+                    <button
+                      className="icon-button"
+                      type="button"
+                      aria-label={`Move ${entry.exerciseName} down`}
+                      title="Move exercise down"
+                      disabled={exerciseIndex === workout.exercises.length - 1}
+                      onClick={() =>
+                        onChange((current) =>
+                          actions.moveExercise(current, exerciseIndex, 1),
+                        )
+                      }
+                    >
+                      ↓
+                    </button>
+                  </div>
+                  <button
+                    className="secondary workout-complete-button"
+                    type="button"
+                    disabled={
+                      entry.exerciseType === 'strength' &&
+                      entry.sets.some(isStrengthSetPartiallyEntered)
+                    }
+                    onClick={() =>
+                      onChange((current) =>
+                        actions.setExerciseCompleted(current, entry.id, true),
+                      )
+                    }
+                    aria-label={`Mark ${entry.exerciseName} as completed`}
+                  >
+                    ✓ Mark complete
+                  </button>
+                </div>
               </>
             )}
           </article>
@@ -561,6 +589,7 @@ export function WorkoutView({
       {exercisePickerOpen && (
         <ExercisePicker
           contextLabel="workout"
+          selectionMode="single"
           exercises={exercises}
           getAddedCount={(exerciseId) =>
             workout.exercises.filter((entry) => entry.exerciseId === exerciseId)
@@ -570,6 +599,23 @@ export function WorkoutView({
             onChange((current) => actions.addExercise(current, exercise))
           }
           onClose={() => setExercisePickerOpen(false)}
+        />
+      )}
+      {exerciseToRemove && (
+        <ConfirmDialog
+          eyebrow="REMOVE EXERCISE"
+          title={`Remove ${exerciseToRemove.exerciseName}?`}
+          message="This exercise and its recorded sets and progress will be removed from this workout only. Your template and Exercise Library will not change."
+          confirmLabel="Remove exercise"
+          cancelLabel="Keep exercise"
+          closeLabel="Close removal confirmation"
+          onCancel={() => setExerciseToRemoveId(null)}
+          onConfirm={() => {
+            setExerciseToRemoveId(null);
+            onChange((current) =>
+              actions.removeExercise(current, exerciseToRemove.id),
+            );
+          }}
         />
       )}
       {finishWarningOpen && (
@@ -735,11 +781,6 @@ function StrengthSets({
                       type="number"
                       min="0"
                       aria-invalid={invalidSet}
-                      aria-describedby={
-                        invalidSet
-                          ? `strength-set-error-${entry.id}`
-                          : undefined
-                      }
                       value={displayWeight(
                         set.weight,
                         set.weightUnit,
@@ -771,9 +812,6 @@ function StrengthSets({
                     type="number"
                     min="0"
                     aria-invalid={invalidSet}
-                    aria-describedby={
-                      invalidSet ? `strength-set-error-${entry.id}` : undefined
-                    }
                     value={set.reps ?? ''}
                     onChange={(event) =>
                       updateEffort(onChange, actions, entry.id, set.id, {
@@ -802,15 +840,6 @@ function StrengthSets({
           </div>
         </div>
       </div>
-      {entry.sets.some(isStrengthSetPartiallyEntered) && (
-        <p
-          className="workout-set-validation"
-          id={`strength-set-error-${entry.id}`}
-          role="alert"
-        >
-          Enter both weight and reps for a set, or clear both fields.
-        </p>
-      )}
     </div>
   );
 }

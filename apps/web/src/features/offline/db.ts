@@ -1,5 +1,6 @@
 import { openDB } from 'idb';
 import type { DBSchema, IDBPDatabase } from 'idb';
+import { primaryMusclesOnly } from '@spotter/shared';
 
 import type {
   Exercise,
@@ -54,18 +55,34 @@ interface SpotterDatabaseSchema extends DBSchema {
 let databasePromise: Promise<IDBPDatabase<SpotterDatabaseSchema>> | undefined;
 
 function database() {
-  databasePromise ??= openDB<SpotterDatabaseSchema>('spotter-v2', 1, {
-    upgrade(db) {
-      const workouts = db.createObjectStore('workouts', { keyPath: 'id' });
-      workouts.createIndex('by-status', 'status');
-      const outbox = db.createObjectStore('outbox', {
-        keyPath: 'operationId',
-      });
-      outbox.createIndex('by-sequence', 'sequence', { unique: true });
-      db.createObjectStore('muscles', { keyPath: 'id' });
-      db.createObjectStore('exercises', { keyPath: 'id' });
-      db.createObjectStore('templates', { keyPath: 'id' });
-      db.createObjectStore('metadata', { keyPath: 'key' });
+  databasePromise ??= openDB<SpotterDatabaseSchema>('spotter-v2', 2, {
+    async upgrade(db, oldVersion, _newVersion, transaction) {
+      if (oldVersion < 1) {
+        const workouts = db.createObjectStore('workouts', { keyPath: 'id' });
+        workouts.createIndex('by-status', 'status');
+        const outbox = db.createObjectStore('outbox', {
+          keyPath: 'operationId',
+        });
+        outbox.createIndex('by-sequence', 'sequence', { unique: true });
+        db.createObjectStore('muscles', { keyPath: 'id' });
+        db.createObjectStore('exercises', { keyPath: 'id' });
+        db.createObjectStore('templates', { keyPath: 'id' });
+        db.createObjectStore('metadata', { keyPath: 'key' });
+      }
+      if (oldVersion < 2) {
+        const exercises = transaction.objectStore('exercises');
+        let cursor = await exercises.openCursor();
+        while (cursor) {
+          await cursor.update({
+            ...cursor.value,
+            muscles: primaryMusclesOnly(
+              cursor.value.muscles,
+            ) as Exercise['muscles'],
+          });
+          cursor = await cursor.continue();
+        }
+        await transaction.objectStore('metadata').delete('referenceRevision');
+      }
     },
   });
   return databasePromise;

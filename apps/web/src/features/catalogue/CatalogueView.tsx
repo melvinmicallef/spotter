@@ -3,6 +3,13 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Exercise, ExerciseInput, Muscle, Workout } from '@spotter/shared';
 
 import { api } from '../../shared/api.js';
+import {
+  exerciseMuscleSummary,
+  muscleDisplayName,
+} from '../../shared/exercise-muscles.js';
+export { exerciseMuscleSummary } from '../../shared/exercise-muscles.js';
+import { useSubmission } from '../../shared/use-submission.js';
+import { SaveButton } from '../../components/SaveButton.js';
 import type { WeightUnit } from '../settings/measurement-system.js';
 import { ConfirmDialog } from '../../components/ConfirmDialog.js';
 import { StrengthProgressChart } from '../history/StrengthProgressChart.js';
@@ -83,7 +90,7 @@ export function ExercisesView(props: ExercisesViewProps) {
         onCancel={() => props.onNavigate(pathForExercise({ kind: 'list' }))}
         onError={props.onError}
         onSubmit={(draft, imageFile) =>
-          void run(
+          run(
             async () => {
               const image = imageFile
                 ? await api.uploadImage(imageFile)
@@ -130,7 +137,7 @@ export function ExercisesView(props: ExercisesViewProps) {
         }
         onError={props.onError}
         onSubmit={(draft, imageFile, removeImage) =>
-          void run(
+          run(
             async () => {
               const replacement = imageFile
                 ? await api.uploadImage(imageFile)
@@ -396,6 +403,7 @@ export function ExerciseDetailsModal({
         <ExerciseInfo
           exercise={exercise}
           titleId="exercise-details-modal-title"
+          showReference={false}
         />
       </section>
     </div>
@@ -406,16 +414,15 @@ function ExerciseInfo({
   exercise,
   actions,
   titleId,
+  showReference = true,
 }: {
   exercise: Exercise;
   actions?: ReactNode;
   titleId?: string;
+  showReference?: boolean;
 }) {
   const primary = exercise.muscles.filter(
     (muscle) => muscle.role === 'primary',
-  );
-  const secondary = exercise.muscles.filter(
-    (muscle) => muscle.role === 'secondary',
   );
   return (
     <div className="exercise-details-hero">
@@ -440,7 +447,7 @@ function ExerciseInfo({
           <h3>Comments</h3>
           <p>{exercise.comments || 'No comments added.'}</p>
         </div>
-        {exercise.referenceUrl && (
+        {showReference && exercise.referenceUrl && (
           <a
             className="exercise-reference-link"
             href={exercise.referenceUrl}
@@ -451,7 +458,6 @@ function ExerciseInfo({
           </a>
         )}
         <MuscleGroup label="Primary muscles" muscles={primary} />
-        <MuscleGroup label="Secondary muscles" muscles={secondary} />
       </div>
     </div>
   );
@@ -478,8 +484,9 @@ function ExerciseEditorPage({
     draft: ExerciseDraft,
     imageFile: File | undefined,
     removeImage: boolean,
-  ) => void;
+  ) => Promise<void>;
 }) {
+  const { pending, submit } = useSubmission();
   const [name, setName] = useState(exercise?.name ?? '');
   const [exerciseType, setExerciseType] = useState<
     ExerciseInput['exerciseType']
@@ -490,16 +497,17 @@ function ExerciseEditorPage({
   const [referenceUrl, setReferenceUrl] = useState(
     exercise?.referenceUrl ?? '',
   );
-  const [selectedMuscles, setSelectedMuscles] = useState<MuscleRoles>(
-    Object.fromEntries(
-      exercise?.muscles.map((muscle) => [muscle.id, muscle.role]) ?? [],
-    ),
+  const [selectedMuscles, setSelectedMuscles] = useState<string[]>(
+    exercise?.muscles
+      .filter((muscle) => muscle.role === 'primary')
+      .map((muscle) => muscle.id) ?? [],
   );
   const [imageFile, setImageFile] = useState<File>();
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string>();
   const [removeImage, setRemoveImage] = useState(false);
   const [imageDragActive, setImageDragActive] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const hasImage = Boolean(imageFile || (exercise?.media && !removeImage));
 
   useEffect(
     () => () => {
@@ -531,25 +539,27 @@ function ExerciseEditorPage({
       <span className="eyebrow">EXERCISE LIBRARY</span>
       <h2>{title}</h2>
       {notice}
-      <fieldset disabled={!online}>
+      <fieldset disabled={!online || pending}>
         <form
           autoComplete="off"
           className="form-card exercise-editor-form"
           onSubmit={(event) => {
             event.preventDefault();
             if (!name.trim()) return;
-            onSubmit(
-              {
-                name: name.trim(),
-                exerciseType,
-                preparation: preparation.trim() || null,
-                execution: execution.trim() || null,
-                comments: comments.trim() || null,
-                referenceUrl: referenceUrl.trim() || null,
-                muscles: exerciseMuscleLinks(selectedMuscles),
-              },
-              imageFile,
-              removeImage,
+            void submit(() =>
+              onSubmit(
+                {
+                  name: name.trim(),
+                  exerciseType,
+                  preparation: preparation.trim() || null,
+                  execution: execution.trim() || null,
+                  comments: comments.trim() || null,
+                  referenceUrl: referenceUrl.trim() || null,
+                  muscles: exerciseMuscleLinks(selectedMuscles),
+                },
+                imageFile,
+                removeImage,
+              ),
             );
           }}
         >
@@ -617,7 +627,7 @@ function ExerciseEditorPage({
           </label>
           <div className="field">
             <span>Target muscles</span>
-            <MuscleRolesEditor
+            <TargetMusclesEditor
               muscles={muscles}
               selected={selectedMuscles}
               onChange={setSelectedMuscles}
@@ -625,18 +635,20 @@ function ExerciseEditorPage({
           </div>
           <div className="field">
             <span>Exercise image</span>
-            <input
-              ref={imageInputRef}
-              className="sr-only"
-              type="file"
-              accept="image/gif,image/png,image/jpeg,.gif,.png,.jpg,.jpeg"
-              aria-label="Choose an exercise image"
-              onChange={(event) => {
-                handleImageFile(event.target.files?.[0]);
-                event.target.value = '';
-              }}
-            />
-            {(imageFile || (exercise?.media && !removeImage)) && (
+            {!hasImage && (
+              <input
+                ref={imageInputRef}
+                className="sr-only"
+                type="file"
+                accept="image/gif,image/png,image/jpeg,.gif,.png,.jpg,.jpeg"
+                aria-label="Choose an exercise image"
+                onChange={(event) => {
+                  handleImageFile(event.target.files?.[0]);
+                  event.target.value = '';
+                }}
+              />
+            )}
+            {hasImage && (
               <div className="exercise-image-preview">
                 {imageFile ? (
                   imagePreviewUrl ? (
@@ -670,30 +682,28 @@ function ExerciseEditorPage({
                 </button>
               </div>
             )}
-            <button
-              className={`exercise-image-dropzone${
-                imageDragActive ? ' is-dragging' : ''
-              }`}
-              type="button"
-              onClick={() => imageInputRef.current?.click()}
-              onDragOver={(event) => {
-                event.preventDefault();
-                setImageDragActive(true);
-              }}
-              onDragLeave={() => setImageDragActive(false)}
-              onDrop={(event) => {
-                event.preventDefault();
-                setImageDragActive(false);
-                handleImageFile(event.dataTransfer.files[0]);
-              }}
-            >
-              <span>
-                {imageFile || (exercise?.media && !removeImage)
-                  ? 'Drop an image here or click to replace it'
-                  : 'Drop an image here or click to choose a file'}
-              </span>
-              <small>GIF, PNG, or JPEG · Maximum 5 MB</small>
-            </button>
+            {!hasImage && (
+              <button
+                className={`exercise-image-dropzone${
+                  imageDragActive ? ' is-dragging' : ''
+                }`}
+                type="button"
+                onClick={() => imageInputRef.current?.click()}
+                onDragOver={(event) => {
+                  event.preventDefault();
+                  setImageDragActive(true);
+                }}
+                onDragLeave={() => setImageDragActive(false)}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  setImageDragActive(false);
+                  handleImageFile(event.dataTransfer.files[0]);
+                }}
+              >
+                <span>Drop an image here or click to choose a file</span>
+                <small>GIF, PNG, or JPEG · Maximum 5 MB</small>
+              </button>
+            )}
             {removeImage && !imageFile && (
               <p className="exercise-image-removal-notice" role="status">
                 Image will be removed when you save.{' '}
@@ -711,9 +721,12 @@ function ExerciseEditorPage({
             <button className="secondary" type="button" onClick={onCancel}>
               Cancel
             </button>
-            <button type="submit">
+            <SaveButton
+              pending={pending}
+              pendingLabel={exercise ? 'Saving…' : 'Creating…'}
+            >
               {exercise ? 'Save changes' : 'Create exercise'}
-            </button>
+            </SaveButton>
           </div>
         </form>
       </fieldset>
@@ -867,26 +880,11 @@ interface ExerciseDraft {
   muscles: ExerciseInput['muscles'];
 }
 
-type MuscleRole = ExerciseInput['muscles'][number]['role'];
-type MuscleRoles = Record<string, MuscleRole>;
-
-export function exerciseMuscleLinks(selected: MuscleRoles) {
-  return Object.entries(selected)
-    .sort((left, right) => roleOrder(left[1]) - roleOrder(right[1]))
-    .map(([muscleId, role]) => ({
-      muscleId,
-      role,
-    }));
-}
-
-export function exerciseMuscleSummary(exercise: Pick<Exercise, 'muscles'>) {
-  const primary = exercise.muscles
-    .filter((muscle) => muscle.role === 'primary')
-    .map(muscleDisplayName);
-  const secondary = exercise.muscles
-    .filter((muscle) => muscle.role === 'secondary')
-    .map(muscleDisplayName);
-  return [...primary, ...secondary].join(' · ') || 'No target muscles';
+export function exerciseMuscleLinks(selected: string[]) {
+  return selected.map((muscleId) => ({
+    muscleId,
+    role: 'primary' as const,
+  }));
 }
 
 export function validateExerciseImage(file?: Pick<File, 'size' | 'type'>) {
@@ -900,32 +898,22 @@ export function validateExerciseImage(file?: Pick<File, 'size' | 'type'>) {
   return null;
 }
 
-function MuscleRolesEditor({
+function TargetMusclesEditor({
   muscles,
   selected,
   onChange,
 }: {
   muscles: Muscle[];
-  selected: MuscleRoles;
-  onChange: (roles: MuscleRoles) => void;
+  selected: string[];
+  onChange: (muscleIds: string[]) => void;
 }) {
   const [muscleId, setMuscleId] = useState('');
-  const [role, setRole] = useState<MuscleRole>('primary');
-  const availableMuscles = muscles.filter((muscle) => !selected[muscle.id]);
-  const assignedMuscles = Object.entries(selected)
-    .map(([id, assignedRole]) => ({
-      muscle: muscles.find((muscle) => muscle.id === id),
-      role: assignedRole,
-    }))
-    .filter(
-      (entry): entry is { muscle: Muscle; role: MuscleRole } =>
-        entry.muscle !== undefined,
-    )
-    .sort(
-      (left, right) =>
-        roleOrder(left.role) - roleOrder(right.role) ||
-        left.muscle.name.localeCompare(right.muscle.name),
-    );
+  const availableMuscles = muscles.filter(
+    (muscle) => !selected.includes(muscle.id),
+  );
+  const assignedMuscles = muscles
+    .filter((muscle) => selected.includes(muscle.id))
+    .sort((left, right) => left.name.localeCompare(right.name));
 
   return (
     <div className="muscle-assignment-editor">
@@ -934,31 +922,15 @@ function MuscleRolesEditor({
         role="group"
         aria-label="Assigned muscles"
       >
-        {assignedMuscles.map(({ muscle, role: assignedRole }) => (
+        {assignedMuscles.map((muscle) => (
           <div className="assigned-muscle-row" key={muscle.id}>
             <strong>{muscleDisplayName(muscle)}</strong>
-            <select
-              autoComplete="off"
-              aria-label={`${muscle.name} assigned role`}
-              value={assignedRole}
-              onChange={(event) =>
-                onChange({
-                  ...selected,
-                  [muscle.id]: event.target.value as MuscleRole,
-                })
-              }
-            >
-              <option value="primary">Primary</option>
-              <option value="secondary">Secondary</option>
-            </select>
             <button
               className="icon-button danger-text"
               type="button"
               aria-label={`Remove ${muscle.name}`}
               onClick={() => {
-                const next = { ...selected };
-                delete next[muscle.id];
-                onChange(next);
+                onChange(selected.filter((id) => id !== muscle.id));
               }}
             >
               ×
@@ -992,25 +964,13 @@ function MuscleRolesEditor({
             ))}
           </select>
         </label>
-        <label>
-          Role
-          <select
-            autoComplete="off"
-            aria-label="Muscle role"
-            value={role}
-            onChange={(event) => setRole(event.target.value as MuscleRole)}
-          >
-            <option value="primary">Primary</option>
-            <option value="secondary">Secondary</option>
-          </select>
-        </label>
         <button
           className="secondary"
           type="button"
           disabled={!muscleId}
           onClick={() => {
-            if (!muscleId || selected[muscleId]) return;
-            onChange({ ...selected, [muscleId]: role });
+            if (!muscleId || selected.includes(muscleId)) return;
+            onChange([...selected, muscleId]);
             setMuscleId('');
           }}
         >
@@ -1019,18 +979,6 @@ function MuscleRolesEditor({
       </div>
     </div>
   );
-}
-
-function roleOrder(role: MuscleRole): number {
-  return role === 'primary' ? 0 : 1;
-}
-
-function muscleDisplayName(
-  muscle: Pick<Muscle, 'group' | 'subgroup' | 'name'>,
-) {
-  return [muscle.group, muscle.subgroup, muscle.name]
-    .filter(Boolean)
-    .join(' › ');
 }
 
 function groupMuscleOptions(muscles: Muscle[]) {

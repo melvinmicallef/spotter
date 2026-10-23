@@ -10,6 +10,38 @@ import {
 } from './index.js';
 
 describe('service contracts', () => {
+  it('discards secondary assignments from older clients and defaults new assignments to primary', () => {
+    const primary = '52ebad50-675f-46cf-bb76-64a89693dc80';
+    const secondary = '720f12fb-ec82-44c6-8377-d8af853970b5';
+    const input = exerciseInputSchema.parse({
+      name: 'Press',
+      muscles: [
+        { muscleId: primary },
+        { muscleId: secondary, role: 'secondary' },
+      ],
+    });
+    expect(input.muscles).toEqual([{ muscleId: primary, role: 'primary' }]);
+    const result = exerciseSchema.parse({
+      id: primary,
+      name: 'Press',
+      media: null,
+      source: null,
+      createdAt: '2026-10-23T00:00:00.000Z',
+      updatedAt: '2026-10-23T00:00:00.000Z',
+      muscles: [
+        { id: primary, name: 'Chest', role: 'primary' },
+        { id: secondary, name: 'Triceps', role: 'secondary' },
+      ],
+    });
+    expect(result.muscles.map((muscle) => muscle.id)).toEqual([primary]);
+    expect(
+      exerciseInputSchema.safeParse({
+        name: 'Press',
+        muscles: [{ muscleId: primary, role: 'invalid' }],
+      }).success,
+    ).toBe(false);
+  });
+
   it('accepts valid health and version responses', () => {
     expect(
       healthResponseSchema.parse({

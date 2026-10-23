@@ -106,6 +106,37 @@ describe('catalogue, templates, and synchronization API', () => {
       .expect((response) => expect(response.body.changed).toBe(false));
   });
 
+  it('never saves or returns secondary muscles sent by an older client', async () => {
+    const muscles = await request(app).get('/api/muscles').expect(200);
+    const primaryId = muscles.body[0].id as string;
+    const secondaryId = muscles.body[1].id as string;
+    const created = await request(app)
+      .post('/api/exercises')
+      .send({
+        name: 'Primary-only press',
+        muscles: [
+          { muscleId: primaryId, role: 'primary' },
+          { muscleId: secondaryId, role: 'secondary' },
+        ],
+      })
+      .expect(201);
+    expect(created.body.muscles).toHaveLength(1);
+    expect(created.body.muscles[0]).toMatchObject({
+      id: primaryId,
+      role: 'primary',
+    });
+    const updated = await request(app)
+      .patch(`/api/exercises/${created.body.id}`)
+      .send({
+        name: 'Primary-only press',
+        muscles: [{ muscleId: secondaryId, role: 'secondary' }],
+      })
+      .expect(200);
+    expect(updated.body.muscles).toEqual([]);
+    const reference = await request(app).get('/api/reference').expect(200);
+    expect(reference.body.exercises[0].muscles).toEqual([]);
+  });
+
   it('applies a workout exactly once and preserves its exercise snapshot', async () => {
     const exerciseId = randomUUID();
     await request(app)

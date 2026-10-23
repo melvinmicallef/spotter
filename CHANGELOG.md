@@ -6,6 +6,54 @@ All notable changes to Spotter are recorded here. The format follows
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-23
+
+### Changed
+
+- Save and Create buttons show a spinner and stay disabled during submission;
+  failed requests allow retry without losing the draft.
+- Template duplication is an icon beside Edit and Delete, separate from Active.
+- Exercise and stretching-poster upload controls are hidden while an image is
+  present; remove the preview to choose a replacement.
+- AI contributors must discuss breaking changes, migrations, and data deletion
+  with the owner before implementing the affected work.
+- Removing an exercise during a workout now requires confirmation, including
+  offline; dismissing the dialog preserves its recorded sets and progress.
+- Exercise pickers show full muscle paths. Template pickers keep Done in a
+  sticky header; workout pickers close after one selection.
+- Active workouts use mobile cancel/finish icons, separate exercise reordering
+  from removal, and place sets beneath the header. Sets tables start compact,
+  grow as sets are added, and scroll horizontally when space runs out.
+- Active workouts hide reference links and the partial-strength-set message
+  while preserving reference data and all validation rules.
+- GIF list playback remains unchanged after evaluating viewport control; a
+  reliable pause mechanism would need additional media handling without a
+  demonstrated significant benefit.
+
+### Removed
+
+- Secondary muscle assignments and role selectors throughout the application.
+  All exercise muscle assignments are now primary targets.
+
+### Upgrade notes
+
+For `1.2.0`, startup automatically applies SQLite migration
+two to delete secondary muscle links and drop their role column. The PWA also
+upgrades its cached exercise catalogue to remove secondary links, even offline.
+Primary targets, exercises, templates, workout history, and pending workout
+synchronization are kept. Back up `/data` before upgrading; deleted secondary
+assignments can only be recovered from that backup. Older clients' secondary
+assignments are ignored by the upgraded API.
+Do not downgrade to `1.1.0` against the migrated database; restore a pre-upgrade
+backup instead. Keep browser site data so unsynchronized workouts are retained.
+
+### Known limitations
+
+Dependencies are unchanged by owner decision. `npm audit --omit=dev` reports
+the existing high-severity Zod 4.1.12 advisory
+[GHSA-mrhx-c7xc-m3w5](https://github.com/advisories/GHSA-mrhx-c7xc-m3w5).
+Continue to use the documented trusted, single-user deployment model.
+
 ## [1.1.0] - 2026-10-23
 
 ### Changed

@@ -110,7 +110,7 @@ Exercises use a compact image/title/target-muscle list; a selected exercise
 opens a detail page with separate edit and delete actions. Deletion requires an
 explicit confirmation before the online request is sent. Muscle source links
 open ExRx in a new browser tab so the catalogue remains available.
-Exercises own their strength/calisthenics/cardio category, muscle roles,
+Exercises own their strength/calisthenics/cardio category, primary target muscles,
 separate preparation and execution instructions, optional comments, and
 uploaded image. A server-managed application setting points to the single
 stretching-poster image. The image is shared across devices and is stored using
@@ -119,12 +119,12 @@ loads so the poster can be viewed offline. The presentation and measurement
 system preferences remain device-local.
 
 The exercise editor assigns muscles incrementally rather than rendering the
-entire catalogue. Duplicate assignments are excluded, multiple secondary
-muscles are supported, and assigned-muscle payloads and UI rows order primary
-roles before secondary roles. An exercise can also store a manually entered,
+entire catalogue. All assignments are primary targets; duplicate assignments
+are excluded and there are no role selectors. An exercise can also store a manually entered,
 validated HTTP/HTTPS reference URL. That URL is copied through template read
-models into the workout-exercise snapshot, so it remains visible during an
-active workout and in locally persisted workout data.
+models into the workout-exercise snapshot and remains in locally persisted
+workout data. Active workout cards and their guide modal hide references;
+Exercise Library details continue to display them.
 
 ### IndexedDB stores
 
@@ -143,11 +143,13 @@ calls throughout the UI. Proposed logical stores are:
 IndexedDB schema upgrades must be versioned and tested with data from the
 previous supported version.
 
-The pre-user reset starts the browser at version one of the `spotter-v2`
-IndexedDB database. The earlier `spotter` namespace is not read, so old cached
-references or pending operations cannot repopulate the reset server. Future
-browser migrations increment the version within `spotter-v2` and preserve its
-workouts and outbox.
+The pre-user reset started the browser at version one of the `spotter-v2`
+IndexedDB database. Version two removes secondary muscle links from cached
+exercises and invalidates the reference revision so the next online refresh
+reloads the catalogue. Workouts, templates, progress markers, and the outbox
+are preserved, including when upgrading offline. The earlier `spotter`
+namespace is not read. Future migrations increment the version within
+`spotter-v2` and preserve its workouts and outbox.
 
 ### Local write path
 
@@ -222,8 +224,12 @@ upgrade runs because older databases did not record when activation happened.
 Each template day opens the same client-side exercise picker over the cached
 exercise reference data. The picker filters locally by case-insensitive name or
 associated muscle and renders uploaded demonstration images from their existing
-media URLs; choosing an exercise only updates the template draft until the user
-saves it through the online template API.
+media URLs. The picker shares full muscle-path formatting with the Exercise
+Library. Its sticky header contains Done for multi-select template editing;
+choosing an exercise only updates the template draft until the user saves it
+through the online template API. In an active workout the picker uses single
+selection, guards against repeated selection events, and closes immediately
+after adding one entry through the normal local workout command.
 
 The template editor can swap the full exercise lists between any two weekdays,
 including a rest day. Each exercise's targets and optional day names move with
@@ -247,6 +253,20 @@ when no exercise or setting still references it. The PWA prefetches referenced
 uploaded images into a dedicated Workbox/Cache API cache; IndexedDB remains the
 source of truth for exercise metadata and workout state. Website extraction is
 not exposed by the API or client.
+
+Viewport-controlled GIF playback was evaluated for this UI update and is not
+implemented. The existing lists use native `img` elements, whose
+[HTMLImageElement API](https://developer.mozilla.org/en-US/docs/Web/API/HTMLImageElement)
+does not provide animation pause/resume controls. CSS hiding or removing an
+element is not a reliable pause mechanism for a cached animated image.
+Native lazy loading only defers loading; it does not control playback after
+loading. Reference synchronization already prefetches media for offline use,
+so lazy loading alone would not remove that network cost. A reliable solution
+would need additional static posters/frame capture or a different animation
+format with playback controls. Those approaches add memory, processing, and
+scroll-time swapping complexity without an established performance bottleneck
+or measured significant benefit in the current application. Keep native GIF
+behavior until profiling on representative mobile devices justifies that work.
 
 ## Server application
 
@@ -334,6 +354,38 @@ rather than running against an unknown schema. Each migration runs in a
 transaction. Future table rebuilds that require temporarily disabling foreign
 keys must do so before the transaction, run `foreign_key_check` before commit,
 and restore enforcement even on failure.
+
+Migration two, `primary_muscles_only`, rebuilds `exercise_muscles` with only
+`exercise_id` and `muscle_id`, retaining primary links and deleting secondary
+links. It removes the role column and preserves both foreign keys, the
+composite primary key, and the muscle index. It increments the reference
+revision once so connected devices refresh their cached catalogue. The
+unchanged baseline migration remains in the history. The 1.x wire format keeps
+`role: 'primary'` for compatibility; legacy secondary links are discarded at
+the input/response boundary, and omitted roles default to primary. No secondary
+assignments can be persisted through the API. Workout snapshots do not store
+muscle assignments and are unchanged.
+
+### Agreed secondary-muscle removal for 1.2.0
+
+- Decision status: agreed.
+- Owner instruction: "Remove the secondary muscle feature from everywhere. Db
+  as well" and "when the v1.2.0 starts it will clear and drop second muscles".
+  The owner subsequently requested the next minor tag and release.
+- Target release: `1.2.0`.
+- Affected data: SQLite secondary links and the role column, cached exercise
+  muscle links in IndexedDB, and secondary assignments sent by older clients.
+- Preserved data: primary links, exercise records and media, templates, workout
+  snapshots and history, progress markers, and pending synchronization.
+- Treatment and compatibility: append migration two on server startup; upgrade
+  the browser cache to version two even offline. Retain `role: 'primary'` on
+  the 1.x wire format and ignore secondary input as explicitly requested.
+- Recovery: back up `/data` before upgrading. Deleted assignments require that
+  backup to recover; do not run 1.1.0 on the migrated database. Keep browser site
+  data because a server backup does not contain unsynchronized local workouts.
+- Verification: fresh and repeat-start migration tests, foreign-key/uniqueness
+  checks, API compatibility tests, cache-upgrade tests preserving workouts and
+  outbox, and Docker volume backup/restore and restart smoke checks.
 
 The final schema uses each parent/position uniqueness constraint as the index
 for ordered template entries, workout exercises, and sets. Separate indexes
@@ -429,12 +481,12 @@ GitHub Actions cache without changing image contents or tags.
 
 The broad `v*` trigger is guarded by a tested strict SemVer validator before
 registry login or publication. The first release tag `v0.1.0` produced
-`0.1.0`, `0.1`, and `latest`; the current `v1.1.0` release produces `1.1.0`,
-`1.1`, and `latest`, and exposes `1.1.0` (without `v`) through `/api/version`.
+`0.1.0`, `0.1`, and `latest`; the current `v1.2.0` release produces `1.2.0`,
+`1.2`, and `latest`, and exposes `1.2.0` (without `v`) through `/api/version`.
 A prerelease such as `v0.2.0-beta.1` publishes only its exact tag. A manual run
 uses a supplied tag or a unique `sha-<commit>` tag, never moves release aliases,
 and receives a traceable application version such as
-`1.1.0+sha.0123456789ab`.
+`1.2.0+sha.0123456789ab`.
 
 ## Testing strategy
 
@@ -504,7 +556,7 @@ client serializes outbox drains, retries transient failures with bounded
 exponential backoff, and retains rejected operations for user-visible retry.
 Reference data uses the server's monotonically increasing revision cursor.
 
-The current `1.1.0` implementation uses one active workout per device, one
+The current `1.2.0` implementation uses one active workout per device, one
 active weekly ISO-day template, starts from any unfinished day with today
 selected by default, per-device current-week completion markers, strength
 repetitions plus explicit `kg`/`lb` weight, calisthenics

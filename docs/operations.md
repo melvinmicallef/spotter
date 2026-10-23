@@ -44,7 +44,7 @@ clear IndexedDB or other site data stored in a browser profile.
 | `PORT`          | `3000`                 | HTTP listen port inside the container    |
 | `DATABASE_PATH` | `/data/spotter.sqlite` | Canonical SQLite file                    |
 | `MEDIA_PATH`    | `/data/media`          | Uploaded GIF/PNG/JPEG exercise images    |
-| `APP_VERSION`   | `1.1.0`                | Version exposed by `/api/version`        |
+| `APP_VERSION`   | `1.2.0`                | Version exposed by `/api/version`        |
 | `GIT_COMMIT`    | `unknown`              | Build revision exposed by `/api/version` |
 | `WEB_DIST_PATH` | bundled client         | Optional compiled-client override        |
 
@@ -68,6 +68,17 @@ writable by UID/GID `1000`, and start the container. Check `/api/health` and
 the workout history before discarding the previous copy.
 
 ## Upgrade
+
+The `1.2.0` release automatically removes secondary muscle assignments
+on startup. SQLite migration two keeps primary links and drops the muscle-role
+column; the updated PWA removes secondary links from its IndexedDB cache.
+Existing workouts, templates, and pending synchronization are preserved. Back
+up `/data` before upgrading: removed secondary links require a backup to
+recover. Keep browser site data and reopen the PWA to apply its cache upgrade.
+The API retains `role: 'primary'` on the wire for 1.x clients and ignores older
+clients' secondary assignments. Do not run `1.1.0` against the migrated database;
+restore a pre-upgrade backup to roll back. A server backup does not include
+unsynchronized device-local workouts.
 
 The one-time pre-user schema reset replaces the migration history used by
 `0.1.0` and `0.2.0`. Those database files cannot be opened by this baseline.

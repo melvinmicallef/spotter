@@ -670,10 +670,10 @@ export class SpotterStore {
     const muscles = this.database
       .prepare(
         `SELECT muscles.id, muscles.name, muscles.group_name,
-          muscles.subgroup_name, exercise_muscles.role
+          muscles.subgroup_name
          FROM exercise_muscles JOIN muscles ON muscles.id = exercise_muscles.muscle_id
          WHERE exercise_muscles.exercise_id = ?
-         ORDER BY exercise_muscles.role, muscles.name COLLATE NOCASE`,
+         ORDER BY muscles.name COLLATE NOCASE`,
       )
       .all(row.id)
       .map((muscle) => ({
@@ -681,7 +681,7 @@ export class SpotterStore {
         name: String((muscle as Row).name),
         group: String((muscle as Row).group_name),
         subgroup: nullableString((muscle as Row).subgroup_name),
-        role: (muscle as Row).role as 'primary' | 'secondary',
+        role: 'primary' as const,
       }));
     return {
       id: String(row.id),
@@ -852,9 +852,9 @@ export class SpotterStore {
       .prepare('DELETE FROM exercise_muscles WHERE exercise_id = ?')
       .run(id);
     const insert = this.database.prepare(
-      'INSERT INTO exercise_muscles (exercise_id, muscle_id, role) VALUES (?, ?, ?)',
+      'INSERT INTO exercise_muscles (exercise_id, muscle_id) VALUES (?, ?)',
     );
-    for (const muscle of muscles) insert.run(id, muscle.muscleId, muscle.role);
+    for (const muscle of muscles) insert.run(id, muscle.muscleId);
   }
 
   private replaceTemplateExercises(

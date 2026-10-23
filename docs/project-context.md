@@ -18,7 +18,7 @@ The repository is public at `https://github.com/melvinmicallef/spotter`.
   management, typed and offline workouts, synchronization, PWA packaging,
   container delivery, and CI/release automation are present
 - First release: `0.1.0` (`v0.1.0`)
-- Current release: `1.1.0` (`v1.1.0`)
+- Current release: `1.2.0` (`v1.2.0`)
 - Planned image: `ghcr.io/melvinmicallef/spotter`
 - Current documents: product specification, architecture, implementation plan,
   this handoff, and repository agent instructions
@@ -122,7 +122,7 @@ workflow; a dependent job calls the publisher only after validation succeeds
 and confirms the tag still references the validated commit. Manual dispatch
 runs the same checks before publishing.
 
-The first release `v0.1.0` and current release `v1.1.0` are published. A stable
+The first release was `v0.1.0`; `v1.2.0` is the current release version. A stable
 semantic-version tag publishes exact, minor, and `latest`
 image tags. A prerelease such as `v0.2.0-beta.1` publishes only its exact tag.
 A manually dispatched build uses an explicit tag or a collision-safe
@@ -171,7 +171,7 @@ introduced without replacing the workout model or synchronization core.
   startup rejects unknown or altered migration histories.
 - `idb` provides the browser repository boundary. Workout and outbox changes
   share one transaction; synchronization is serialized and idempotent.
-- The current `1.1.0` product contract includes one active workout per device,
+- The current `1.2.0` product contract includes one active workout per device,
   strength/calisthenics/cardio types, ISO-weekday templates with optional named
   days and full day swaps that move exercises, targets, and names together,
   any unfinished day selectable with today as the default, device-local
@@ -193,17 +193,28 @@ introduced without replacing the workout model or synchronization core.
 - A single stretching-poster image is configured online in Settings and shared
   across devices on the deployment; Today opens its uncropped view. Appearance
   and measurement preferences remain device-local.
+- The `1.2.0` upgrade removes secondary muscles. SQLite migration two
+  retains primary assignments and drops the muscle-role column. IndexedDB
+  version two cleans cached exercise links while preserving active workouts
+  and pending synchronization. The API keeps a fixed primary role for 1.x
+  compatibility and discards secondary assignments from older clients.
 
 These are the implementation decisions at the `1.0.0` boundary. Changes to
 public behavior follow semantic versioning.
 
 ## Release and next task
 
-Release `v1.1.0` improves Android installation behind an authenticating proxy,
-input autofill behavior, template day swapping, the runner icon, and page
-layout. It retains the `1.0.0` SQLite and browser storage baseline, so
-upgrading from `1.0.0` keeps existing data. Continue with the open product
-decisions after this release.
+Before implementing migrations, deleting or silently discarding existing data,
+or introducing incompatible behavior, follow the
+[AI breaking-change README](ai-breaking-changes.md): notify the owner, discuss
+the data treatment and next release, and record the agreed decision.
+
+Release `v1.2.0` improves save feedback, template pickers and action placement,
+uploaded-image controls, and active-workout layout and removal confirmation.
+The owner approved deleting secondary muscle assignments for this release;
+primary targets, workouts, templates, and pending sync are preserved. Back up
+`/data` before upgrading and keep browser site data. Continue with the open
+product decisions after this release.
 
 ## Starter prompt for a new AI chat
 
@@ -212,7 +223,8 @@ Copy this prompt into a new chat opened at the repository root:
 ```text
 Continue development of Spotter from this repository. Before changing files,
 read AGENTS.md, README.md, docs/project-context.md, docs/product-spec.md,
-docs/architecture.md, and docs/implementation-plan.md. Treat the documented
+docs/architecture.md, docs/implementation-plan.md, and
+docs/ai-breaking-changes.md. Treat the documented
 baseline decisions as requirements and the listed open decisions as unresolved.
 Inspect the current branch and worktree, summarize the state, and implement the
 next incomplete milestone from docs/implementation-plan.md. Keep the offline

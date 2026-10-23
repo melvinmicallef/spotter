@@ -6,22 +6,15 @@ import {
   validateExerciseImage,
 } from './CatalogueView.js';
 
-describe('exercise muscle roles', () => {
-  it('preserves primary and secondary roles when preparing an update', () => {
-    expect(
-      exerciseMuscleLinks({
-        triceps: 'secondary',
-        chest: 'primary',
-        shoulders: 'secondary',
-      }),
-    ).toEqual([
+describe('exercise target muscles', () => {
+  it('prepares only primary muscle links', () => {
+    expect(exerciseMuscleLinks(['chest', 'shoulders'])).toEqual([
       { muscleId: 'chest', role: 'primary' },
-      { muscleId: 'triceps', role: 'secondary' },
-      { muscleId: 'shoulders', role: 'secondary' },
+      { muscleId: 'shoulders', role: 'primary' },
     ]);
   });
 
-  it('summarizes primary muscles before secondary muscles', () => {
+  it('summarizes primary muscles', () => {
     expect(
       exerciseMuscleSummary({
         muscles: [
@@ -30,7 +23,7 @@ describe('exercise muscle roles', () => {
             name: 'Triceps',
             group: 'Upper Arms',
             subgroup: null,
-            role: 'secondary',
+            role: 'primary',
           },
           {
             id: 'chest',
@@ -41,7 +34,7 @@ describe('exercise muscle roles', () => {
           },
         ],
       }),
-    ).toBe('Chest › Chest · Upper Arms › Triceps');
+    ).toBe('Upper Arms › Triceps · Chest › Chest');
     expect(exerciseMuscleSummary({ muscles: [] })).toBe('No target muscles');
   });
 

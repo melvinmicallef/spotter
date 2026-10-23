@@ -50,7 +50,22 @@ export const muscleSchema = z.object({
   updatedAt: isoDateTimeSchema,
 });
 
-export const muscleRoleSchema = z.enum(['primary', 'secondary']);
+// Retain the primary role on the wire for compatibility with 1.x clients.
+export const muscleRoleSchema = z.literal('primary').default('primary');
+
+export function primaryMusclesOnly(value: unknown): unknown {
+  return Array.isArray(value)
+    ? value.filter(
+        (entry: unknown) =>
+          !(
+            entry &&
+            typeof entry === 'object' &&
+            'role' in entry &&
+            entry.role === 'secondary'
+          ),
+      )
+    : value;
+}
 export const exerciseTypeSchema = z.enum([
   'strength',
   'calisthenics',
@@ -122,7 +137,7 @@ export const exerciseSchema = z.object({
   execution: nullableNoteSchema,
   comments: nullableNoteSchema,
   referenceUrl: httpUrlSchema.nullable().default(null),
-  muscles: z.array(exerciseMuscleSchema),
+  muscles: z.preprocess(primaryMusclesOnly, z.array(exerciseMuscleSchema)),
   media: exerciseMediaSchema.nullable(),
   source: exerciseSourceSchema.nullable(),
   createdAt: isoDateTimeSchema,
@@ -139,15 +154,18 @@ export const exerciseInputSchema = z.object({
   referenceUrl: httpUrlSchema.nullable().default(null),
   mediaId: uuidSchema.nullable().default(null),
   source: exerciseSourceInputSchema.nullable().default(null),
-  muscles: z
-    .array(z.object({ muscleId: uuidSchema, role: muscleRoleSchema }))
-    .max(30)
-    .default([])
-    .refine(
-      (links) =>
-        new Set(links.map((link) => link.muscleId)).size === links.length,
-      'A muscle can only be linked once',
-    ),
+  muscles: z.preprocess(
+    primaryMusclesOnly,
+    z
+      .array(z.object({ muscleId: uuidSchema, role: muscleRoleSchema }))
+      .max(30)
+      .default([])
+      .refine(
+        (links) =>
+          new Set(links.map((link) => link.muscleId)).size === links.length,
+        'A muscle can only be linked once',
+      ),
+  ),
 });
 
 export const templateExerciseSchema = z

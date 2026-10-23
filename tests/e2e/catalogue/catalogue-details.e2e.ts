@@ -16,8 +16,6 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
 }) => {
   const suffix = crypto.randomUUID().slice(0, 8);
   const primaryName = 'Sternal';
-  const secondaryName = 'Triceps Brachii';
-  const secondaryTwoName = 'Anterior';
   const referenceUrl =
     'https://exrx.net/WeightExercises/PectoralSternal/BBBenchPress';
   const strengthName = `Image press ${suffix}`;
@@ -64,31 +62,22 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
   await page.getByLabel('Execution').fill('Control the descent');
   await page.getByLabel('Comments').fill('Keep elbows soft');
   await page.getByLabel('Reference website (optional)').fill(referenceUrl);
-  await page.getByLabel('Muscle to add').selectOption({ label: secondaryName });
-  await page.getByLabel('Muscle role').selectOption('secondary');
-  await page.getByRole('button', { name: 'Add muscle' }).click();
-  await page
-    .getByLabel('Muscle to add')
-    .selectOption({ label: `Deltoid › ${secondaryTwoName}` });
-  await page.getByLabel('Muscle role').selectOption('secondary');
-  await page.getByRole('button', { name: 'Add muscle' }).click();
   await page
     .getByLabel('Muscle to add')
     .selectOption({ label: `Pectoralis Major › ${primaryName}` });
-  await page.getByLabel('Muscle role').selectOption('primary');
+  await expect(page.getByLabel('Muscle role')).toHaveCount(0);
   await page.getByRole('button', { name: 'Add muscle' }).click();
   const assignedMuscles = page.getByLabel('Assigned muscles');
   await expect(
     assignedMuscles.locator('.assigned-muscle-row').nth(0),
   ).toContainText(primaryName);
-  await expect(assignedMuscles).toContainText(secondaryName);
-  await expect(assignedMuscles).toContainText(secondaryTwoName);
+  await expect(assignedMuscles.locator('select')).toHaveCount(0);
   await expect(
-    assignedMuscles.locator('.assigned-muscle-row').nth(1).locator('select'),
-  ).toHaveValue('secondary');
-  await expect(
-    assignedMuscles.locator('.assigned-muscle-row').nth(2).locator('select'),
-  ).toHaveValue('secondary');
+    page
+      .getByLabel('Muscle to add')
+      .locator('option')
+      .filter({ hasText: primaryName }),
+  ).toHaveCount(0);
   await page.getByLabel('Exercise image').setInputFiles({
     name: 'press.png',
     mimeType: 'image/png',
@@ -113,8 +102,6 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
     .locator('button.exercise-library-row')
     .filter({ hasText: strengthName });
   await expect(strengthRow).toContainText(primaryName);
-  await expect(strengthRow).toContainText(secondaryName);
-  await expect(strengthRow).toContainText(secondaryTwoName);
   await expect(
     strengthRow.getByRole('img', { name: `${strengthName} demonstration` }),
   ).toBeVisible();
@@ -128,12 +115,7 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
   await expect(page.getByText('Primary muscles').locator('..')).toContainText(
     primaryName,
   );
-  await expect(page.getByText('Secondary muscles').locator('..')).toContainText(
-    secondaryName,
-  );
-  await expect(page.getByText('Secondary muscles').locator('..')).toContainText(
-    secondaryTwoName,
-  );
+  await expect(page.getByText('Secondary muscles')).toHaveCount(0);
   await expect(
     page.getByRole('button', { name: `Delete ${strengthName}` }),
   ).toBeVisible();
@@ -253,7 +235,7 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
   let picker = page.getByRole('dialog', { name: 'Choose exercises' });
   await expectAutofillDisabled(page);
   await picker.getByLabel('Filter by muscle').selectOption({
-    label: primaryName,
+    label: `Chest › Pectoralis Major › ${primaryName}`,
   });
   await picker.getByLabel('Filter by name').fill(strengthName);
   await expect(
@@ -366,9 +348,7 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
   await exerciseGuide
     .getByRole('button', { name: 'Close exercise details' })
     .click();
-  await expect(
-    page.getByRole('link', { name: 'Reference' }).first(),
-  ).toHaveAttribute('href', referenceUrl);
+  await expect(page.locator('.workout-active-page a[href]')).toHaveCount(0);
   await page.getByLabel(`${strengthName} weight set 1`).fill('52.5');
   await page.getByLabel(`${strengthName} repetitions set 1`).fill('10');
   await page

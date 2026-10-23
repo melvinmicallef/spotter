@@ -8,14 +8,96 @@ import { describe, expect, it } from 'vitest';
 import { migrations, openDatabase } from './database.js';
 
 describe('database baseline and migrations', () => {
+  it('upgrades the 1.1.0 database by removing secondary links and the role column once', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'spotter-primary-muscles-'));
+    const path = join(directory, 'spotter.sqlite');
+    const previous = new Database(path);
+    previous.exec(migrations[0]!.sql);
+    previous.exec(`
+      CREATE TABLE schema_migrations (version INTEGER PRIMARY KEY, name TEXT NOT NULL, applied_at TEXT NOT NULL);
+      INSERT INTO schema_migrations VALUES (1, 'baseline', '2026-10-23T00:00:00.000Z');
+      INSERT INTO muscles (id, name, group_name, created_at, updated_at) VALUES
+        ('primary', 'Primary', 'Test', 'now', 'now'),
+        ('secondary', 'Secondary', 'Test', 'now', 'now');
+      INSERT INTO exercises (id, name, exercise_category, created_at, updated_at)
+        VALUES ('exercise', 'Press', 'strength', 'now', 'now');
+      INSERT INTO exercise_muscles VALUES ('exercise', 'primary', 'primary'), ('exercise', 'secondary', 'secondary');
+      INSERT INTO workout_sessions (id, name, status, started_at, updated_at)
+        VALUES ('workout', 'Recorded workout', 'completed', 'now', 'now');
+      INSERT INTO workout_exercises (id, workout_id, exercise_id, exercise_name, exercise_category, position)
+        VALUES ('entry', 'workout', 'exercise', 'Press snapshot', 'strength', 0);
+      INSERT INTO workout_sets (id, workout_exercise_id, position, reps, weight, weight_unit, completed)
+        VALUES ('set', 'entry', 0, 8, 20, 'kg', 1);
+      UPDATE app_metadata SET value = '8' WHERE key = 'reference_revision';
+    `);
+    previous.close();
+    try {
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        const upgraded = openDatabase(path);
+        try {
+          expect(
+            upgraded.prepare('SELECT * FROM exercise_muscles').all(),
+          ).toEqual([{ exercise_id: 'exercise', muscle_id: 'primary' }]);
+          expect(
+            upgraded
+              .prepare(
+                "SELECT value FROM app_metadata WHERE key = 'reference_revision'",
+              )
+              .get(),
+          ).toEqual({ value: '9' });
+          expect(
+            upgraded
+              .prepare('SELECT exercise_name FROM workout_exercises')
+              .get(),
+          ).toEqual({ exercise_name: 'Press snapshot' });
+          expect(
+            upgraded.prepare('SELECT reps, weight FROM workout_sets').get(),
+          ).toEqual({ reps: 8, weight: 20 });
+          expect(upgraded.pragma('foreign_key_check')).toEqual([]);
+          expect(() =>
+            upgraded
+              .prepare(
+                "INSERT INTO exercise_muscles VALUES ('missing', 'primary')",
+              )
+              .run(),
+          ).toThrow();
+          expect(() =>
+            upgraded
+              .prepare(
+                "INSERT INTO exercise_muscles VALUES ('exercise', 'primary')",
+              )
+              .run(),
+          ).toThrow();
+          expect(() =>
+            upgraded.prepare("DELETE FROM muscles WHERE id = 'primary'").run(),
+          ).toThrow();
+        } finally {
+          upgraded.close();
+        }
+      }
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
   it('creates the canonical schema with foreign keys and no legacy columns', () => {
     const database = openDatabase(':memory:');
-    expect(migrations).toHaveLength(1);
+    expect(migrations).toHaveLength(2);
     expect(database.pragma('foreign_keys', { simple: true })).toBe(1);
     expect(database.pragma('foreign_key_check')).toEqual([]);
     expect(
       database.prepare('SELECT version, name FROM schema_migrations').all(),
-    ).toEqual([{ version: 1, name: 'baseline' }]);
+    ).toEqual([
+      { version: 1, name: 'baseline' },
+      { version: 2, name: 'primary_muscles_only' },
+    ]);
+    expect(
+      database
+        .prepare(
+          "SELECT name FROM pragma_table_info('exercise_muscles') WHERE name = 'role'",
+        )
+        .all(),
+    ).toEqual([]);
     expect(
       database
         .prepare(
@@ -69,7 +151,7 @@ describe('database baseline and migrations', () => {
           count: number;
         }
       ).count,
-    ).toBe(1);
+    ).toBe(2);
     second.close();
     rmSync(directory, { recursive: true, force: true });
   });

@@ -92,6 +92,32 @@ button {
 button:hover:not(:disabled) {
   filter: brightness(1.12);
 }
+.save-button-progress {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.save-spinner {
+  width: 1.2em;
+  height: 1.2em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  animation: save-spin 0.8s linear infinite;
+}
+@keyframes save-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .save-spinner {
+    animation: none;
+  }
+}
 button:disabled,
 fieldset:disabled button,
 fieldset:disabled input,
@@ -645,8 +671,7 @@ small {
 .workout-guide-button {
   margin: 8px 0 14px;
 }
-.exercise-reference-link,
-.workout-reference-link {
+.exercise-reference-link {
   color: var(--accent);
 }
 .exercise-reference-link {
@@ -853,7 +878,7 @@ small {
 }
 .workout-card.workout-strength-card {
   display: grid;
-  grid-template-columns: minmax(180px, 0.75fr) minmax(0, 1.75fr);
+  grid-template-columns: minmax(0, 1fr);
   align-items: start;
   gap: 16px;
 }
@@ -957,6 +982,28 @@ small {
   min-width: 0;
   flex-direction: column;
   gap: 8px;
+  width: 100%;
+}
+.workout-exercise-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.workout-reorder-controls .icon-button {
+  min-width: 44px;
+  min-height: 44px;
+}
+.workout-action-icon {
+  display: none;
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 .strength-workout-grid-scroll {
   min-width: 0;
@@ -972,6 +1019,8 @@ small {
 .strength-grid-set {
   display: grid;
   flex: 0 0 86px;
+  width: 86px;
+  min-width: 0;
   grid-template-rows: 27px 40px 40px;
 }
 .calisthenics-grid-set {
@@ -1041,16 +1090,6 @@ small {
   right: 0;
   transform: translateY(-50%);
   font-size: 0.67rem;
-}
-.workout-set-validation {
-  margin: 0;
-  padding: 8px 10px;
-  border: 1px solid var(--notice-border);
-  border-radius: 8px;
-  color: var(--notice-text);
-  background: var(--notice-bg);
-  font-size: 0.78rem;
-  font-weight: 650;
 }
 .strength-grid-add {
   display: grid;
@@ -1122,16 +1161,13 @@ small {
 }
 .assigned-muscle-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(120px, 0.45fr) 38px;
+  grid-template-columns: minmax(0, 1fr) 38px;
   align-items: center;
   gap: 8px;
   padding: 9px 11px;
 }
 .assigned-muscle-row + .assigned-muscle-row {
   border-top: 1px solid var(--border);
-}
-.assigned-muscle-row select {
-  padding-block: 8px;
 }
 .empty-muscle-assignment {
   margin: 0;
@@ -1140,7 +1176,7 @@ small {
 }
 .muscle-add-controls {
   display: grid;
-  grid-template-columns: minmax(160px, 1fr) minmax(120px, 0.5fr) auto;
+  grid-template-columns: minmax(160px, 1fr) auto;
   align-items: end;
   gap: 8px;
 }
@@ -1341,12 +1377,6 @@ small {
   font-size: 0.66rem;
   text-transform: uppercase;
 }
-.workout-reference-link {
-  display: inline-block;
-  margin-left: 8px;
-  font-size: 0.78rem;
-  font-weight: 750;
-}
 .target-summary {
   margin: -2px 0 2px;
   color: var(--text-muted);
@@ -1450,10 +1480,24 @@ small {
   background: #ff8c7a;
 }
 .exercise-picker > header {
+  position: sticky;
+  top: -20px;
+  z-index: 1;
   display: flex;
+  flex: 0 0 auto;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
+  margin: -20px -20px 0;
+  padding: 20px;
+  background: var(--surface-solid);
+  border-bottom: 1px solid var(--border);
+}
+.exercise-picker-done,
+.exercise-picker-close {
+  flex: 0 0 auto;
+  min-width: 44px;
+  min-height: 44px;
 }
 .exercise-picker h2 {
   margin: 3px 0 0;
@@ -1471,7 +1515,7 @@ small {
 }
 .exercise-picker-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr));
   gap: 12px;
 }
 .exercise-picker-card {
@@ -2123,6 +2167,20 @@ small {
   }
 }
 @media (max-width: 760px) {
+  .workout-mobile-action {
+    display: inline-flex;
+    min-width: 44px;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+  }
+  .workout-mobile-action .workout-action-label {
+    display: none;
+  }
+  .workout-action-icon {
+    display: block;
+  }
   .app-shell {
     padding: 82px 14px 100px;
   }
@@ -2148,7 +2206,6 @@ small {
     grid-template-columns: 1fr;
   }
   .workout-card.workout-strength-card {
-    grid-template-columns: minmax(130px, 0.8fr) minmax(0, 1.2fr);
     gap: 10px;
     padding: 12px;
   }
@@ -2175,15 +2232,11 @@ small {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
   .workout-card.workout-strength-card {
-    grid-template-columns: minmax(112px, 0.9fr) minmax(0, 1.1fr);
     gap: 8px;
     padding: 10px;
   }
   .muscle-add-controls {
-    grid-template-columns: 1fr 1fr;
-  }
-  .muscle-add-controls > button {
-    grid-column: 1 / -1;
+    grid-template-columns: minmax(0, 1fr) auto;
   }
   .brand > span:last-child {
     display: none;

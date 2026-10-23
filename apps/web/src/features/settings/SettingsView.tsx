@@ -118,43 +118,45 @@ export function SettingsView({
               </button>
             </div>
           )}
-          <input
-            ref={fileInputRef}
-            className="sr-only"
-            type="file"
-            accept="image/gif,image/png,image/jpeg,.gif,.png,.jpg,.jpeg"
-            aria-label="Choose a stretching poster image"
-            disabled={!online || savingPoster}
-            onChange={(event) => {
-              handlePosterFile(event.target.files?.[0]);
-              event.target.value = '';
-            }}
-          />
-          <button
-            className={`exercise-image-dropzone${dragActive ? ' is-dragging' : ''}`}
-            type="button"
-            disabled={!online || savingPoster}
-            onClick={() => fileInputRef.current?.click()}
-            onDragOver={(event) => {
-              event.preventDefault();
-              setDragActive(true);
-            }}
-            onDragLeave={() => setDragActive(false)}
-            onDrop={(event) => {
-              event.preventDefault();
-              setDragActive(false);
-              handlePosterFile(event.dataTransfer.files[0]);
-            }}
-          >
-            <span>
-              {savingPoster
-                ? 'Saving stretching poster…'
-                : stretchingPoster
-                  ? 'Drop an image here or click to replace it'
+          {!stretchingPoster && (
+            <input
+              ref={fileInputRef}
+              className="sr-only"
+              type="file"
+              accept="image/gif,image/png,image/jpeg,.gif,.png,.jpg,.jpeg"
+              aria-label="Choose a stretching poster image"
+              disabled={!online || savingPoster}
+              onChange={(event) => {
+                handlePosterFile(event.target.files?.[0]);
+                event.target.value = '';
+              }}
+            />
+          )}
+          {!stretchingPoster && (
+            <button
+              className={`exercise-image-dropzone${dragActive ? ' is-dragging' : ''}`}
+              type="button"
+              disabled={!online || savingPoster}
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={(event) => {
+                event.preventDefault();
+                setDragActive(true);
+              }}
+              onDragLeave={() => setDragActive(false)}
+              onDrop={(event) => {
+                event.preventDefault();
+                setDragActive(false);
+                handlePosterFile(event.dataTransfer.files[0]);
+              }}
+            >
+              <span>
+                {savingPoster
+                  ? 'Saving stretching poster…'
                   : 'Drop an image here or click to choose a file'}
-            </span>
-            <small>GIF, PNG, or JPEG · Maximum 5 MB</small>
-          </button>
+              </span>
+              <small>GIF, PNG, or JPEG · Maximum 5 MB</small>
+            </button>
+          )}
           {!online && (
             <p className="stretching-poster-offline" role="status">
               Connect to upload, replace, or remove the poster.

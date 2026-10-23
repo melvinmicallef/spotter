@@ -13,6 +13,57 @@ afterEach(async () => {
 });
 
 describe('local workout repository', () => {
+  it('removes secondary muscles from a version-one cache without losing workouts or pending sync', async () => {
+    const previous = await openDB('spotter-v2', 1, {
+      upgrade(db) {
+        const workouts = db.createObjectStore('workouts', { keyPath: 'id' });
+        workouts.createIndex('by-status', 'status');
+        const outbox = db.createObjectStore('outbox', {
+          keyPath: 'operationId',
+        });
+        outbox.createIndex('by-sequence', 'sequence', { unique: true });
+        for (const store of ['muscles', 'exercises', 'templates'])
+          db.createObjectStore(store, { keyPath: 'id' });
+        db.createObjectStore('metadata', { keyPath: 'key' });
+      },
+    });
+    const workout = exampleWorkout();
+    const operation = {
+      operationId: crypto.randomUUID(),
+      kind: 'upsert_workout',
+      workout,
+      sequence: 1,
+      attempts: 0,
+      failure: null,
+      createdAt: workout.startedAt,
+    };
+    await previous.put('workouts', workout);
+    await previous.put('outbox', operation);
+    await previous.put('metadata', { key: 'referenceRevision', value: 8 });
+    await previous.put('exercises', {
+      id: 'press',
+      muscles: [
+        { id: 'chest', role: 'primary' },
+        { id: 'triceps', role: 'secondary' },
+      ],
+    });
+    previous.close();
+
+    expect((await localRepository.references()).exercises[0]?.muscles).toEqual([
+      { id: 'chest', role: 'primary' },
+    ]);
+    expect(await localRepository.activeWorkout()).toEqual(workout);
+    expect(await localRepository.outbox()).toEqual([operation]);
+    expect(await localRepository.referenceRevision()).toBeUndefined();
+    await localRepository.resetConnectionForTests();
+    const upgraded = await openDB('spotter-v2');
+    expect(upgraded.version).toBe(2);
+    expect((await upgraded.get('exercises', 'press')).muscles).toEqual([
+      { id: 'chest', role: 'primary' },
+    ]);
+    upgraded.close();
+  });
+
   it('starts in a new store without replaying operations from the old namespace', async () => {
     const previous = await openDB('spotter', 1, {
       upgrade(database) {

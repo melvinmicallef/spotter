@@ -11,6 +11,7 @@ Read these documents in order:
 3. `docs/product-spec.md`
 4. `docs/architecture.md`
 5. `docs/implementation-plan.md`
+6. `docs/ai-breaking-changes.md`
 
 The repository documentation is the durable source of project context. Update
 it whenever an implementation decision changes the documented behavior.
@@ -21,7 +22,7 @@ it whenever an implementation decision changes the documented behavior.
 - The project contains a working application with an npm workspace,
   React PWA, Express API, SQLite persistence, IndexedDB outbox, Docker image,
   and GitHub Actions workflows.
-- The first release was `0.1.0`; the current release is `1.1.0`.
+- The first release was `0.1.0`; the current release is `1.2.0`.
 - The production image will be `ghcr.io/melvinmicallef/spotter`.
 
 ## Non-negotiable initial constraints
@@ -49,6 +50,14 @@ image for every commit without an explicit product decision changing the
 baseline.
 
 ## Decision discipline
+
+Follow [the AI breaking-change README](docs/ai-breaking-changes.md). Notify the
+owner before implementing any change that migrates, deletes, clears, drops,
+or silently discards existing data, or breaks an existing contract. Explain
+the affected data, alternatives, recovery, and proposed release; discuss and
+agree on the handling before proceeding with that part of the work. This
+includes SQLite, IndexedDB, pending synchronization, media, and API fields.
+Record explicit prior approval rather than asking again for the same decision.
 
 The following remain outside the `1.0.0` contract: authentication and
 multi-user tenancy, additional exercise measurement types, and data
@@ -78,7 +87,7 @@ architecture document or a dedicated decision record and explain its impact.
 
 - `develop` is the source branch unless the repository workflow later defines
   another release process.
-- The first release tag was `v0.1.0`; the current release tag is `v1.1.0`.
+- The first release tag was `v0.1.0`; the current release tag is `v1.2.0`.
 - Stable release tags may update `latest`; prerelease tags must not.
 - A manual image build uses an explicit image tag or a unique `sha-<commit>` tag.
 - A pushed release tag must pass the `Validate` workflow before its dependent

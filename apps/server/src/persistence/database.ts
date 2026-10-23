@@ -198,6 +198,24 @@ export const migrations: readonly Migration[] = [
       );
     `,
   },
+  {
+    version: 2,
+    name: 'primary_muscles_only',
+    sql: `
+      CREATE TABLE exercise_muscles_primary (
+        exercise_id TEXT NOT NULL REFERENCES exercises(id) ON DELETE CASCADE,
+        muscle_id TEXT NOT NULL REFERENCES muscles(id) ON DELETE RESTRICT,
+        PRIMARY KEY (exercise_id, muscle_id)
+      );
+      INSERT INTO exercise_muscles_primary (exercise_id, muscle_id)
+        SELECT exercise_id, muscle_id FROM exercise_muscles WHERE role = 'primary';
+      DROP TABLE exercise_muscles;
+      ALTER TABLE exercise_muscles_primary RENAME TO exercise_muscles;
+      CREATE INDEX exercise_muscles_muscle_idx ON exercise_muscles(muscle_id);
+      UPDATE app_metadata SET value = CAST(value AS INTEGER) + 1
+        WHERE key = 'reference_revision';
+    `,
+  },
 ];
 
 export type SpotterDatabase = Database.Database;
