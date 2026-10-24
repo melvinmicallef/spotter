@@ -6,7 +6,28 @@ All notable changes to Spotter are recorded here. The format follows
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-10-24
+
+### Fixed
+
+- A successful reference refresh that finishes after the browser disconnects
+  no longer restores an incorrect Online status or enables online-only edits.
+  A deterministic browser regression test holds a response across disconnect
+  and verifies both the completed refresh and the subsequent reconnect.
+
+### Upgrade notes
+
+This patch includes the History UI improvements listed under `1.3.0`. That tag
+remains unchanged, but its failed offline browser test blocked image publication.
+`1.3.1` is the corrective release. Upgrading from `1.2.0` adds no SQLite or
+IndexedDB migration and preserves all data; retain `/data` and browser site data.
+Dependency versions are unchanged; the Zod and body-parser advisories disclosed
+below still apply.
+
 ## [1.3.0] - 2026-10-24
+
+The tag exists, but container publication was blocked by an offline-status race
+in browser validation. Its changes are included in `1.3.1`.
 
 ### Changed
 

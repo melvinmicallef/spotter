@@ -237,7 +237,8 @@ export function App() {
       );
       setServerWorkouts(workouts);
       setStretchingPoster(settings.stretchingPoster);
-      setOnline(true);
+      // This refresh may finish after an offline event has already fired.
+      setOnline(navigator.onLine);
     } catch (error) {
       setOnline(false);
       setRetryAfterMs((current) => current ?? 5_000);

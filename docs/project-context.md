@@ -18,7 +18,7 @@ The repository is public at `https://github.com/melvinmicallef/spotter`.
   management, typed and offline workouts, synchronization, PWA packaging,
   container delivery, and CI/release automation are present
 - First release: `0.1.0` (`v0.1.0`)
-- Current release: `1.3.0` (`v1.3.0`)
+- Current release: `1.3.1` (`v1.3.1`)
 - Planned image: `ghcr.io/melvinmicallef/spotter`
 - Current documents: product specification, architecture, implementation plan,
   this handoff, and repository agent instructions
@@ -122,7 +122,7 @@ workflow; a dependent job calls the publisher only after validation succeeds
 and confirms the tag still references the validated commit. Manual dispatch
 runs the same checks before publishing.
 
-The first release was `v0.1.0`; `v1.3.0` is the current release version. A stable
+The first release was `v0.1.0`; `v1.3.1` is the current release version. A stable
 semantic-version tag publishes exact, minor, and `latest`
 image tags. A prerelease such as `v0.2.0-beta.1` publishes only its exact tag.
 A manually dispatched build uses an explicit tag or a collision-safe
@@ -171,7 +171,7 @@ introduced without replacing the workout model or synchronization core.
   startup rejects unknown or altered migration histories.
 - `idb` provides the browser repository boundary. Workout and outbox changes
   share one transaction; synchronization is serialized and idempotent.
-- The current `1.3.0` product contract includes one active workout per device,
+- The current `1.3.1` product contract includes one active workout per device,
   strength/calisthenics/cardio types, ISO-weekday templates with optional named
   days and full day swaps that move exercises, targets, and names together,
   any unfinished day selectable with today as the default, device-local
@@ -209,9 +209,11 @@ or introducing incompatible behavior, follow the
 [AI breaking-change README](ai-breaking-changes.md): notify the owner, discuss
 the data treatment and next release, and record the agreed decision.
 
-Release `v1.3.0` makes History summary cards count-only, uses compact horizontal
+Release `v1.3.1` makes History summary cards count-only, uses compact horizontal
 strength/calisthenics set editors, retains badge backgrounds on hover, and wraps
-history headings and actions on phones. Upgrading from `1.2.0` adds no schema
+history headings and actions on phones. It fixes a late-refresh race that could
+restore Online after disconnecting. `v1.3.0` remains unchanged, but its failed
+offline browser test blocked publication. Upgrading from `1.2.0` adds no schema
 migration and preserves all data. Keep `/data` and browser site data. Older
 installations crossing `1.2.0` still apply its approved secondary-muscle cleanup.
 Continue with the open product decisions after this release.

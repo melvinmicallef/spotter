@@ -35,7 +35,7 @@ const config = {
   PORT: Number(port),
   DATABASE_PATH: databasePath,
   MEDIA_PATH: mediaPath,
-  APP_VERSION: '1.3.0-e2e',
+  APP_VERSION: '1.3.1-e2e',
   GIT_COMMIT: 'e2e',
 };
 const app = createApp(config, {

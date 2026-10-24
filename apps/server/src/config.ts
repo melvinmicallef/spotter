@@ -8,7 +8,7 @@ const configSchema = z.object({
   DATABASE_PATH: z.string().min(1).default('./data/spotter.sqlite'),
   MEDIA_PATH: z.string().min(1).default('./data/media'),
   WEB_DIST_PATH: z.string().min(1).optional(),
-  APP_VERSION: z.string().min(1).default('1.3.0'),
+  APP_VERSION: z.string().min(1).default('1.3.1'),
   GIT_COMMIT: z.string().min(1).default('development'),
 });
 

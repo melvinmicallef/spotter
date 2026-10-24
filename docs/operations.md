@@ -44,7 +44,7 @@ clear IndexedDB or other site data stored in a browser profile.
 | `PORT`          | `3000`                 | HTTP listen port inside the container    |
 | `DATABASE_PATH` | `/data/spotter.sqlite` | Canonical SQLite file                    |
 | `MEDIA_PATH`    | `/data/media`          | Uploaded GIF/PNG/JPEG exercise images    |
-| `APP_VERSION`   | `1.3.0`                | Version exposed by `/api/version`        |
+| `APP_VERSION`   | `1.3.1`                | Version exposed by `/api/version`        |
 | `GIT_COMMIT`    | `unknown`              | Build revision exposed by `/api/version` |
 | `WEB_DIST_PATH` | bundled client         | Optional compiled-client override        |
 
@@ -69,7 +69,7 @@ the workout history before discarding the previous copy.
 
 ## Upgrade
 
-Upgrading from `1.2.0` to `1.3.0` adds no database or browser-store migration.
+Upgrading from `1.2.0` to `1.3.1` adds no database or browser-store migration.
 Keep `/data` and browser site data; exercise records, templates, workout history,
 and pending synchronization are unchanged. Reopen the PWA online for the new UI.
 

@@ -1,6 +1,6 @@
 # Spotter Product Specification
 
-Status: Current product behavior for the `1.3.0` release. Items in "Open
+Status: Current product behavior for the `1.3.1` release. Items in "Open
 product decisions" remain unresolved.
 
 ## Purpose
@@ -32,7 +32,7 @@ be synchronized.
 - Collaborative editing or real-time multi-device workout updates.
 - Publishing a native iOS or Android application.
 
-The initial `0.1.0` release and current `1.3.0` target one trusted user per
+The initial `0.1.0` release and current `1.3.1` target one trusted user per
 deployment without built-in authentication. The server boundary keeps
 ownership and authorization concerns isolated so accounts can be added without
 rewriting the workout model. An untrusted or internet-exposed deployment
@@ -331,6 +331,8 @@ exercise entry, or set.
 
 The interface must show whether the application is offline, whether changes
 are waiting to synchronize, and whether the last synchronization failed.
+A refresh that began online but completes after disconnecting must not restore
+the Online indicator or enable online-only controls while the browser is offline.
 Each workout edit, including typed measurements and exercise completion, is
 saved to IndexedDB with its outbox operation. Closing or refreshing the PWA must
 not discard saved local workout changes.
