@@ -369,7 +369,8 @@ test('manages the exercise library, weekly plan, and typed workout history', asy
   const historyRow = page
     .locator('.history-entry')
     .filter({ hasText: planName });
-  await expect(historyRow).toContainText(strengthName);
+  await expect(historyRow).toContainText('2 exercises');
+  await expect(historyRow).not.toContainText(strengthName);
   await historyRow.locator('.history-open-button').click();
   const strengthHistory = page
     .locator('.history-exercise')

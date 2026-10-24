@@ -319,7 +319,8 @@ test('installs its shell and synchronizes one offline workout after reload', asy
   const historyRow = page
     .locator('.history-entry')
     .filter({ hasText: `Offline week ${suffix}` });
-  await expect(historyRow).toContainText(exerciseName);
+  await expect(historyRow).toContainText('1 exercise');
+  await expect(historyRow).not.toContainText(exerciseName);
   await historyRow.locator('.history-open-button').click();
   const historyDetails = page
     .locator('.history-exercise')

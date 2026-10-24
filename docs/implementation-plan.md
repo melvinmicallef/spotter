@@ -131,7 +131,9 @@ snapshot for any populated day.
 - Upload one persistent stretching poster in Settings and open its uncropped
   view from Today; cache the media response after it loads for offline viewing.
 - Finish a workout and view history.
-- Show exercise names in the history list and open completed workout details.
+- Show date, template/day, and exercise count in compact history cards; retain
+  exercise names in completed-workout details. Edit strength and calisthenics
+  sets in compact side-by-side columns matching the active workout layout.
 - Edit historical set counts and measurements online without changing the
   workout's exercise entries or order. Edit interval settings and total work
   time without presenting interval results as sets.

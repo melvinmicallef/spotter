@@ -38,19 +38,19 @@ test('normalizes a pushed release tag for the application', () => {
   );
 });
 
-test('normalizes the stable 1.2.0 release tag', () => {
+test('normalizes the stable 1.3.0 release tag', () => {
   assert.deepEqual(
     resolveReleaseMetadata({
       eventName: 'push',
-      refName: 'v1.2.0',
+      refName: 'v1.3.0',
       sha,
-      packageVersion: '1.2.0',
+      packageVersion: '1.3.0',
     }),
     {
-      appVersion: '1.2.0',
+      appVersion: '1.3.0',
       imageTag: '',
       isPrerelease: false,
-      releaseVersion: '1.2.0',
+      releaseVersion: '1.3.0',
     },
   );
 });

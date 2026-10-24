@@ -6,7 +6,7 @@ as a single Docker image.
 
 The project is developed on the `develop` branch. Its npm workspace contains
 the React client, Express server, and shared wire contracts. The current release
-is `1.2.0`.
+is `1.3.0`.
 
 Client features and their unit tests live under `apps/web/src/features`;
 server routes are grouped under `apps/server/src/features`, with SQLite code in
@@ -176,8 +176,9 @@ comments and reference links, and validated GIF, PNG, or JPEG demonstrations.
 Workout entry uses compact, type-specific fields. Optional names for each
 weekday are supported, and the template editor can swap full workout days,
 including their exercises, targets, and names. Template-wide notes are no
-longer part of the template editor. History shows exercise names,
-opens completed-workout details, and supports online set-value and set-count
+longer part of the template editor. History cards show the date, template/day,
+and exercise count; details retain the full exercise list. History supports
+online set-value and set-count
 edits without changing a workout's exercise list. Interval history has a
 dedicated editor for its prep, work, rest, rounds, and recorded work time.
 Strength exercise details include Epley estimated one-rep max and
@@ -200,7 +201,7 @@ services:
 
 The `./data` directory next to `compose.yaml` stores the SQLite database and
 uploaded exercise images on the host, outside the container. To pin upgrades,
-replace `latest` with a released version such as `1.2.0`.
+replace `latest` with a released version such as `1.3.0`.
 
 Start the instance:
 
@@ -240,9 +241,10 @@ Open the repository at its root and ask the new chat to read `AGENTS.md` and the
 documentation listed above before changing files. A complete starter prompt is
 available in [the project handoff](docs/project-context.md#starter-prompt-for-a-new-ai-chat).
 
-Release `v1.2.0` is the current version. Back up `/data` before upgrading: this
-release removes secondary muscle assignments while preserving primary targets,
-workouts, templates, and pending sync. See the [upgrade guide](docs/operations.md#upgrade).
+Release `v1.3.0` is the current version. Upgrading from `1.2.0` preserves all
+data without a new migration. Keep `/data` and browser site data. Older
+installations crossing `1.2.0` still apply its secondary-muscle cleanup; see
+the [upgrade guide](docs/operations.md#upgrade).
 Releases should follow the acceptance,
 test, accessibility, mobile QA, and release-candidate gates in the
 [release guide](docs/releasing.md).
@@ -268,5 +270,5 @@ Container publishing is triggered by:
 Images will be published to `ghcr.io/melvinmicallef/spotter`.
 Stable tags publish exact, minor, and `latest` image tags. Prereleases publish
 only the exact prerelease version, and manual runs publish only an explicit tag
-or a unique `sha-<commit>` fallback. Release `v1.2.0` publishes `1.2.0`,
-`1.2`, and `latest`; earlier immutable image tags remain available.
+or a unique `sha-<commit>` fallback. Release `v1.3.0` publishes `1.3.0`,
+`1.3`, and `latest`; earlier immutable image tags remain available.

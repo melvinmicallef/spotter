@@ -1568,15 +1568,18 @@ small {
   background: transparent;
   text-align: left;
 }
+.history-open-button:hover:not(:disabled) {
+  filter: none;
+}
+.history-open-button:hover .history-open-meta > span:last-child,
+.history-open-button:focus-visible .history-open-meta > span:last-child {
+  color: var(--accent);
+  text-decoration: underline;
+}
 .history-open-copy {
   display: grid;
   min-width: 0;
   gap: 3px;
-}
-.history-exercise-names {
-  color: var(--text-secondary);
-  font-size: 0.84rem;
-  line-height: 1.45;
 }
 .history-open-meta {
   display: grid;
@@ -1599,6 +1602,16 @@ small {
 .history-workout-exercises {
   display: grid;
   gap: 14px;
+}
+.history-details-page > .section-heading {
+  flex-wrap: wrap;
+}
+.history-details-page > .section-heading > div:first-child {
+  min-width: 0;
+}
+.history-details-page h2,
+.history-exercise h3 {
+  overflow-wrap: anywhere;
 }
 .history-exercise {
   display: block;
@@ -1653,9 +1666,6 @@ small {
   padding: 10px;
   border-radius: 10px;
   background: var(--surface-deep);
-}
-.history-edit-set.calisthenics-edit-set {
-  grid-template-columns: 52px minmax(0, 1fr) 36px;
 }
 .history-edit-set > strong {
   align-self: center;

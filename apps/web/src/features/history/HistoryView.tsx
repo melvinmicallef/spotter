@@ -95,13 +95,6 @@ export function HistoryView({
                 <span className="history-open-copy">
                   <strong>{workoutDate}</strong>
                   <small>{templateName}</small>
-                  <span className="history-exercise-names">
-                    {workout.exercises.length > 0
-                      ? workout.exercises
-                          .map((exercise) => exercise.exerciseName)
-                          .join(' · ')
-                      : 'No exercises'}
-                  </span>
                 </span>
                 <span className="history-open-meta">
                   <span>
@@ -362,6 +355,26 @@ function HistoryDetailsPage({
                       changeIntervalWorkDuration(exercise.id, durationSeconds)
                     }
                   />
+                ) : exercise.exerciseType !== 'cardio' ? (
+                  <HistoryRepetitionSets
+                    exercise={exercise}
+                    weightUnit={weightUnit}
+                    onChangeSet={(setId, patch) =>
+                      changeSet(exercise.id, setId, patch)
+                    }
+                    onRemoveSet={(setId) =>
+                      setDraft((current) =>
+                        current
+                          ? removeSet(current, exercise.id, setId)
+                          : current,
+                      )
+                    }
+                    onAddSet={() =>
+                      setDraft((current) =>
+                        current ? addSet(current, exercise.id) : current,
+                      )
+                    }
+                  />
                 ) : (
                   <>
                     <div className="history-edit-set-list">
@@ -371,93 +384,46 @@ function HistoryDetailsPage({
                           key={set.id}
                         >
                           <strong>Set {setIndex + 1}</strong>
-                          {exercise.exerciseType === 'cardio' ? (
-                            <>
-                              <label>
-                                Duration (seconds)
-                                <input
-                                  autoComplete="off"
-                                  inputMode="numeric"
-                                  type="number"
-                                  min="0"
-                                  value={set.durationSeconds ?? ''}
-                                  onChange={(event) =>
-                                    changeSet(exercise.id, set.id, {
-                                      durationSeconds: inputNumber(
-                                        event.target.value,
-                                      ),
-                                    })
-                                  }
-                                />
-                              </label>
-                              <label>
-                                Distance ({distanceUnit})
-                                <input
-                                  autoComplete="off"
-                                  inputMode="decimal"
-                                  type="number"
-                                  min="0"
-                                  step="0.01"
-                                  value={
-                                    convertDistance(
-                                      set.distance,
-                                      set.distanceUnit,
-                                      distanceUnit,
-                                    ) ?? ''
-                                  }
-                                  onChange={(event) =>
-                                    changeSet(exercise.id, set.id, {
-                                      distance: inputNumber(event.target.value),
-                                      distanceUnit,
-                                    })
-                                  }
-                                />
-                              </label>
-                            </>
-                          ) : (
-                            <>
-                              {exercise.exerciseType === 'strength' && (
-                                <label>
-                                  Weight ({weightUnit})
-                                  <input
-                                    autoComplete="off"
-                                    inputMode="decimal"
-                                    type="number"
-                                    min="0"
-                                    step="0.1"
-                                    value={
-                                      convertWeight(
-                                        set.weight,
-                                        set.weightUnit,
-                                        weightUnit,
-                                      ) ?? ''
-                                    }
-                                    onChange={(event) =>
-                                      changeSet(exercise.id, set.id, {
-                                        weight: inputNumber(event.target.value),
-                                        weightUnit,
-                                      })
-                                    }
-                                  />
-                                </label>
-                              )}
-                              <label>
-                                Reps
-                                <input
-                                  autoComplete="off"
-                                  inputMode="numeric"
-                                  type="number"
-                                  min="0"
-                                  value={set.reps ?? ''}
-                                  onChange={(event) =>
-                                    changeSet(exercise.id, set.id, {
-                                      reps: inputNumber(event.target.value),
-                                    })
-                                  }
-                                />
-                              </label>
-                            </>
-                          )}
+                          <label>
+                            Duration (seconds)
+                            <input
+                              autoComplete="off"
+                              inputMode="numeric"
+                              type="number"
+                              min="0"
+                              value={set.durationSeconds ?? ''}
+                              onChange={(event) =>
+                                changeSet(exercise.id, set.id, {
+                                  durationSeconds: inputNumber(
+                                    event.target.value,
+                                  ),
+                                })
+                              }
+                            />
+                          </label>
+                          <label>
+                            Distance ({distanceUnit})
+                            <input
+                              autoComplete="off"
+                              inputMode="decimal"
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={
+                                convertDistance(
+                                  set.distance,
+                                  set.distanceUnit,
+                                  distanceUnit,
+                                ) ?? ''
+                              }
+                              onChange={(event) =>
+                                changeSet(exercise.id, set.id, {
+                                  distance: inputNumber(event.target.value),
+                                  distanceUnit,
+                                })
+                              }
+                            />
+                          </label>
                           <button
                             className="icon-button danger-text history-remove-set"
                             type="button"
@@ -550,6 +516,99 @@ function HistoryDetailsPage({
         </div>
       )}
     </section>
+  );
+}
+
+function HistoryRepetitionSets({
+  exercise,
+  weightUnit,
+  onChangeSet,
+  onRemoveSet,
+  onAddSet,
+}: {
+  exercise: WorkoutExercise;
+  weightUnit: WeightUnit;
+  onChangeSet: (setId: string, patch: Partial<WorkoutSet>) => void;
+  onRemoveSet: (setId: string) => void;
+  onAddSet: () => void;
+}) {
+  const strength = exercise.exerciseType === 'strength';
+  return (
+    <div
+      className="strength-workout-grid-scroll"
+      role="group"
+      aria-label={`${exercise.exerciseName} sets`}
+      tabIndex={0}
+    >
+      <div className="strength-workout-grid">
+        {exercise.sets.map((set, index) => (
+          <div
+            className={`strength-grid-set${strength ? '' : ' calisthenics-grid-set'}`}
+            key={set.id}
+          >
+            <div className="strength-grid-set-heading">
+              <span>Set {index + 1}</span>
+              <button
+                className="icon-button danger-text"
+                type="button"
+                aria-label={`Remove ${exercise.exerciseName} set ${index + 1}`}
+                onClick={() => onRemoveSet(set.id)}
+              >
+                ×
+              </button>
+            </div>
+            {strength && (
+              <div className="strength-grid-cell strength-grid-weight">
+                <div className="strength-grid-number-unit">
+                  <input
+                    autoComplete="off"
+                    aria-label={`${exercise.exerciseName} weight set ${index + 1} (${weightUnit})`}
+                    placeholder="Wt"
+                    inputMode="decimal"
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    value={
+                      convertWeight(set.weight, set.weightUnit, weightUnit) ??
+                      ''
+                    }
+                    onChange={(event) =>
+                      onChangeSet(set.id, {
+                        weight: inputNumber(event.target.value),
+                        weightUnit,
+                      })
+                    }
+                  />
+                  <span className="unit-label">{weightUnit}</span>
+                </div>
+              </div>
+            )}
+            <div className="strength-grid-cell strength-grid-reps">
+              <input
+                autoComplete="off"
+                aria-label={`${exercise.exerciseName} repetitions set ${index + 1}`}
+                placeholder="Reps"
+                inputMode="numeric"
+                type="number"
+                min="0"
+                value={set.reps ?? ''}
+                onChange={(event) =>
+                  onChangeSet(set.id, { reps: inputNumber(event.target.value) })
+                }
+              />
+            </div>
+          </div>
+        ))}
+        <div
+          className={`strength-grid-add${strength ? '' : ' calisthenics-grid-add'}`}
+        >
+          <span className="strength-grid-set-heading">Sets</span>
+          <button className="secondary" type="button" onClick={onAddSet}>
+            + Add set
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 

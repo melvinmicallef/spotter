@@ -6,7 +6,7 @@ import type { Workout } from '@spotter/shared';
 import { HistoryView } from './HistoryView.js';
 
 describe('workout history details', () => {
-  it('renders snapshot names, measurements, and every level of notes', () => {
+  it('preserves snapshot details but summarizes the history list with counts only', () => {
     const now = new Date().toISOString();
     const workout: Workout = {
       id: crypto.randomUUID(),
@@ -58,6 +58,29 @@ describe('workout history details', () => {
     expect(html).toContain('Session note');
     expect(html).toContain('Exercise note');
     expect(html).toContain('Set note');
+    for (const count of [0, 1, 4]) {
+      const summary = renderToStaticMarkup(
+        <HistoryView
+          workouts={[
+            {
+              ...workout,
+              exercises: Array.from({ length: count }, (_, position) => ({
+                ...workout.exercises[0]!,
+                id: crypto.randomUUID(),
+                position,
+              })),
+            },
+          ]}
+          routePath="/history"
+          online
+          onDeleteWorkout={() => {}}
+        />,
+      );
+      expect(summary).toContain(`${count} exercise${count === 1 ? '' : 's'}`);
+      expect(summary).not.toContain('Deleted deadlift');
+      expect(summary).toContain('Pull session');
+      expect(summary).toContain('View details');
+    }
   });
 
   it('renders cardio duration and distance instead of strength fields', () => {

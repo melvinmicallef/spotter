@@ -481,12 +481,12 @@ GitHub Actions cache without changing image contents or tags.
 
 The broad `v*` trigger is guarded by a tested strict SemVer validator before
 registry login or publication. The first release tag `v0.1.0` produced
-`0.1.0`, `0.1`, and `latest`; the current `v1.2.0` release produces `1.2.0`,
-`1.2`, and `latest`, and exposes `1.2.0` (without `v`) through `/api/version`.
+`0.1.0`, `0.1`, and `latest`; the current `v1.3.0` release produces `1.3.0`,
+`1.3`, and `latest`, and exposes `1.3.0` (without `v`) through `/api/version`.
 A prerelease such as `v0.2.0-beta.1` publishes only its exact tag. A manual run
 uses a supplied tag or a unique `sha-<commit>` tag, never moves release aliases,
 and receives a traceable application version such as
-`1.2.0+sha.0123456789ab`.
+`1.3.0+sha.0123456789ab`.
 
 ## Testing strategy
 
@@ -556,7 +556,7 @@ client serializes outbox drains, retries transient failures with bounded
 exponential backoff, and retains rejected operations for user-visible retry.
 Reference data uses the server's monotonically increasing revision cursor.
 
-The current `1.2.0` implementation uses one active workout per device, one
+The current `1.3.0` implementation uses one active workout per device, one
 active weekly ISO-day template, starts from any unfinished day with today
 selected by default, per-device current-week completion markers, strength
 repetitions plus explicit `kg`/`lb` weight, calisthenics

@@ -6,6 +6,37 @@ All notable changes to Spotter are recorded here. The format follows
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-10-24
+
+### Changed
+
+- History summary cards show the exercise count instead of concatenated names.
+- Strength and calisthenics history editors use compact horizontal set columns
+  matching the workout screen, with in-grid Add set and removal controls.
+
+### Fixed
+
+- History card hover no longer brightens the exercise-count badge until its
+  background disappears; View details provides the hover and keyboard-focus cue.
+- Completed-workout headings and action buttons wrap on narrow screens to avoid
+  horizontal page overflow.
+
+### Upgrade notes
+
+Upgrading from `1.2.0` preserves all data. This release adds no SQLite or
+IndexedDB migration. Keep `/data` and browser site data, and reopen the PWA
+online to receive the updated interface. Earlier installations still apply the
+existing `1.2.0` secondary-muscle cleanup when crossing that version; see its
+backup and rollback notes below.
+
+### Known limitations
+
+Dependency versions remain unchanged. `npm audit --omit=dev` reports two
+high-severity advisories in the existing dependencies: Zod
+[GHSA-mrhx-c7xc-m3w5](https://github.com/advisories/GHSA-mrhx-c7xc-m3w5) and
+body-parser [GHSA-27r3-jxmh-p828](https://github.com/advisories/GHSA-27r3-jxmh-p828).
+Use the documented trusted, single-user deployment model.
+
 ## [1.2.0] - 2026-10-23
 
 ### Changed

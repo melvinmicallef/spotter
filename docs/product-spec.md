@@ -1,6 +1,6 @@
 # Spotter Product Specification
 
-Status: Current product behavior for the `1.2.0` release. Items in "Open
+Status: Current product behavior for the `1.3.0` release. Items in "Open
 product decisions" remain unresolved.
 
 ## Purpose
@@ -32,7 +32,7 @@ be synchronized.
 - Collaborative editing or real-time multi-device workout updates.
 - Publishing a native iOS or Android application.
 
-The initial `0.1.0` release and current `1.2.0` target one trusted user per
+The initial `0.1.0` release and current `1.3.0` target one trusted user per
 deployment without built-in authentication. The server boundary keeps
 ownership and authorization concerns isolated so accounts can be added without
 rewriting the workout model. An untrusted or internet-exposed deployment
@@ -279,13 +279,22 @@ A user can:
 - finish a workout, with a warning and an option to continue if exercises are
   still incomplete. On phones, Cancel workout and Finish use labelled close
   and finish-flag icons; desktop retains their text;
-- view workout history with the local weekday and full date, template name,
-  and exercise names;
+- view compact workout history cards with the local weekday and full date,
+  template/day name, exercise count, and View details, without listing exercise
+  names on the summary card. The count badge retains its fill on hover and
+  keyboard focus; View details highlights the interactive state. The full
+  exercise list remains in the details;
 - open a completed workout's details page and edit its recorded set count,
   repetitions, weight, duration, or distance without adding, removing, or
   reordering its exercise entries. Interval cardio has a dedicated history
   editor for its prep, work, rest, rounds, and total recorded work time, with no
   set-count or distance fields;
+- edit strength and calisthenics history sets in the same compact horizontal
+  layout as active workouts: one column per set, weight above repetitions for
+  strength, repetitions only for calisthenics, removal in the set heading, and
+  Add set at the end. Columns stay compact and scroll within the card when
+  needed. Cancel discards the draft; Save changes keeps existing online-only
+  rules, units, notes, and workout snapshots intact;
 - view a strength exercise's progress over workout dates using Epley estimated
   one-rep max and total training volume (weight × repetitions summed across
   sets); and
